@@ -1,5 +1,10 @@
 ---
 import Desktop from "../layouts/Desktop.astro";
+import { getProjects } from "../lib/projects";
+
+// Reading the projects is what fails the build on bad content (#36); pages
+// that show them replace this line.
+await getProjects();
 ---
 
 <Desktop

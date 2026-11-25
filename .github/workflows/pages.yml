@@ -28,7 +28,9 @@ jobs:
         run: bunx astro check
       - name: Tests
         run: bun test
-      - name: Build (with the path collision check)
+      # The workflow's own token (contents: read, set above) is the only credential:
+      # the project facts and the collision check read public repositories with it.
+      - name: Build (projects, then the path collision check)
         run: bun run build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
