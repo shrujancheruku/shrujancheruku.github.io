@@ -1,4 +1,5 @@
 ---
+import ContactWindow from "./ContactWindow.astro";
 // Every window of the desktop. Which are on show, and where, is decided by the
 // workspaces' tilings (src/lib/workspaces.ts); this file only holds them.
 // Windows other tickets build are placeholders until then.
@@ -52,4 +53,4 @@ const projects = Array.from({ length: featured }, (_, i) => i + 1);
 {[1, 2, 3, 4].map((n) => <Window id={`photo-${n}`}><Placeholder ticket={45} /></Window>)}
 
 <!-- contact -->
-<Window id="contact" label="contact — zsh"><Placeholder ticket={46} /></Window>
+<ContactWindow />
