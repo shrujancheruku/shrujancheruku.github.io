@@ -3,10 +3,13 @@
 // A trackpad flick keeps sending events for a second or more after the
 // fingers lift, and on a busy page those events can arrive hundreds of ms
 // apart. A gap alone cannot tell such a tail from a new gesture, but its
-// magnitude can: a tail only decays. So after a step, an event is the tail
-// while it comes the same way as the one before, no larger, and within
-// `tailMs` of it. A delta that rises again, turns round, or comes after a
-// longer silence is a new gesture.
+// magnitude can: a tail decays. So after a step, an event is the tail while
+// it comes the same way as the one before, no more than twice its size, and
+// within `tailMs` of it. A tail may rise that far: on a busy page Chromium
+// coalesces queued wheel events into one and sums their deltas, so two tail
+// events arrive as one larger one. A delta that more than doubles and is
+// big enough to step, turns round, or comes after a longer silence is a new
+// gesture.
 //
 // A mouse wheel sends equal notches, each a gesture of its own. Equal deltas
 // are tail only when they come close together, as momentum does; an equal
@@ -56,7 +59,9 @@ export function createWheelGate({
     if (Math.sign(delta) !== Math.sign(before)) return false;
     const size = Math.abs(delta);
     const was = Math.abs(before);
-    if (size > was) return false;
+    // a coalesced pair at most doubles; a new flick out of a decayed tail
+    // jumps well past that
+    if (size > 2 * was && size >= threshold) return false;
     if (size === was && gap >= steadyMs && size >= threshold) return false;
     return gap < tailMs || held;
   };

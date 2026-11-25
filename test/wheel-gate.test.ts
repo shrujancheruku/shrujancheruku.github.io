@@ -95,6 +95,47 @@ describe("the wheel gate", () => {
     expect(drive(gate(), trace, 11895 - 10584)).toEqual([10584]);
   });
 
+  describe("a flick whose events the browser coalesced", () => {
+    // On a busy page Chromium merges queued wheel events into one and sums
+    // their deltas, so a tail can rise once without being a new gesture.
+    const coalesced = (merge: number): [number, number][] => {
+      const deltas = [...FLICK];
+      deltas.splice(merge, 2, (deltas[merge] ?? 0) + (deltas[merge + 1] ?? 0));
+      return deltas.map((d, i) => [i * 33, d]);
+    };
+
+    test("is one step when a late pair is merged (15 + 12 after 19)", () => {
+      const merge = FLICK.indexOf(15);
+      expect(coalesced(merge)[merge]?.[1]).toBe(27);
+      expect(drive(gate(), coalesced(merge))).toEqual([0]);
+    });
+
+    test("is one step when an early pair is merged (60 + 48 after 76)", () => {
+      const merge = FLICK.indexOf(60);
+      expect(coalesced(merge)[merge]?.[1]).toBe(108);
+      expect(drive(gate(), coalesced(merge))).toEqual([0]);
+    });
+
+    test("is one step with no re-tile holding the gate", () => {
+      const g = gate();
+      const merge = FLICK.indexOf(15);
+      const steps = coalesced(merge).filter(([t, d]) => g.feed(t, d)).length;
+      expect(steps).toBe(1);
+    });
+  });
+
+  test("a new flick out of a decayed tail still steps", () => {
+    // the tail has decayed to 20 when a new flick starts at 60
+    const events: [number, number][] = [
+      [0, 120],
+      [40, 60],
+      [80, 30],
+      [120, 20],
+      [1000, 60],
+    ];
+    expect(drive(gate(), events)).toEqual([0, 1000]);
+  });
+
   test("a flick with a long tail through the whole re-tile is one step", () => {
     // 60 ms apart, so the tail runs on for 780 ms of the 900 ms re-tile
     expect(drive(gate(), flickAt(0, 60))).toEqual([0]);
