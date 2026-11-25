@@ -424,8 +424,8 @@ $('#root').innerHTML=`<div class="screen">
   <div class="bar"><div class="ws">${WS.map((n,i)=>`<b data-act="ws" data-w="${i}" title="${n}">${i+1}<span class="d"> ${n}</span></b>`).join('')}</div>
     <div class="rt">${vk==='E'?'':`<span data-act="archive" id="barArch"><span class="d">archive</span><span class="m">▤</span></span>`}<div class="tg">
       <button class="ib" data-act="ws" data-w="0" aria-label="home"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 9.2 10 3.8l6.5 5.4v7.3h-13z"/><path d="M8.2 16.5v-4.2h3.6v4.2"/></svg><span class="tip">home <kbd>H</kbd></span></button>
-      <button class="ib" data-act="ws" data-w="4" aria-label="contact"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.8" y="4.8" width="14.4" height="10.4" rx="2"/><path d="m3.4 6 6.6 5 6.6-5"/></svg><span class="tip">contact <kbd>M</kbd></span></button>
-      <button class="ib" data-act="crt" id="crtB" aria-label="crt"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.6" y="3.4" width="14.8" height="10.4" rx="2"/><path d="M5.4 6.8h9.2M5.4 9.6h9.2M7.4 16.8h5.2M10 13.8v3"/></svg><span class="tip">crt <b data-crt-state></b> <kbd>C</kbd></span></button>
+      <button class="ib" data-act="ws" data-w="4" aria-label="contact"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.8" y="4.8" width="14.4" height="10.4" rx="2"/><path d="m3.4 6 6.6 5 6.6-5"/></svg><span class="tip">contact <kbd>C</kbd></span></button>
+      <button class="ib" data-act="crt" id="crtB" aria-label="crt effect"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.6" y="3.4" width="14.8" height="10.4" rx="2"/><path d="M5.4 6.8h9.2M5.4 9.6h9.2M7.4 16.8h5.2M10 13.8v3"/></svg><span class="tip">CRT Effect <b data-crt-state></b> <kbd>E</kbd></span></button>
       <button class="ib th halo" data-act="theme-ui" aria-label="theme"><i></i><span class="tip">theme <b data-theme-name></b> <kbd>T</kbd></span></button>
     </div><span class="clock d"></span></div></div>
   <div class="area">${BASE_W()}${v.html()}</div>
@@ -566,9 +566,9 @@ $$('.ae').forEach(p=>p.addEventListener('mouseenter',()=>{$$('.ae').forEach(q=>q
 addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select,[contenteditable]')||e.metaKey||e.ctrlKey||e.altKey)return;
   if(e.key==='ArrowLeft')sw(-1);if(e.key==='ArrowRight')sw(1);
   if(e.key==='a')archToggle();if(e.key==='n')toggleN();
-  if(e.key==='t')cycle();if(e.key==='c')setCrt(1-crt);if(e.key==='i')toggleIl();
+  if(e.key==='t')cycle();if(e.key==='e')setCrt(1-crt);if(e.key==='i')toggleIl();
   if(e.key==='s')$('#spec').classList.toggle('on');
-  if(e.key==='h')go(WS_FIRST[0]);if(e.key==='m')go(WS_FIRST[4]);
+  if(e.key==='h')go(WS_FIRST[0]);if(e.key==='c')go(WS_FIRST[4]);
   if(e.key==='Escape'){archClose();$('#themes').classList.remove('on')}});
 const clock=()=>$$('.clock').forEach(c=>c.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));clock();setInterval(clock,10000);
 
