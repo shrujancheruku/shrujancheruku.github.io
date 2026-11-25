@@ -1,0 +1,2 @@
+{ "name": "prototype-archive-window", "private": true,
+  "scripts": { "view": "python3 -m http.server 4520 -d .." } }
