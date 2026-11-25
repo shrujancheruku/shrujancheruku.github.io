@@ -12,11 +12,45 @@ body{transition:background .6s,color .6s}
 .sb b,.a{color:var(--ac);transition:color .6s}.d{opacity:.5}
 #desk{position:absolute;left:calc(1*var(--u));right:calc(.2*var(--u));top:calc(4.8*var(--u));bottom:calc(.2*var(--u))}
 .tile{position:absolute;border:calc(.22*var(--u)) solid var(--dim);border-radius:calc(.8*var(--u));background:var(--bg);overflow:hidden;padding:calc(1.2*var(--u)) calc(1.4*var(--u));
-  font-size:calc(1.15*var(--u));line-height:1.6;white-space:pre;
+  font-size:calc(1.15*var(--u));
   transition:left .5s cubic-bezier(.2,.9,.2,1),top .5s cubic-bezier(.2,.9,.2,1),width .5s cubic-bezier(.2,.9,.2,1),height .5s cubic-bezier(.2,.9,.2,1),opacity .3s,transform .3s,border-color .3s,background .6s}
 .tile.focus{border-color:transparent;background:linear-gradient(var(--bg),var(--bg)) padding-box,linear-gradient(135deg,var(--ac),var(--hot)) border-box}
 .tile.out{opacity:0;transform:scale(.9)}
-.bar{display:inline-block;height:.7em;background:var(--ac);border-radius:2px;vertical-align:middle;transition:width .8s,background .6s}
+/* each window is a TUI: panels are fieldsets, so a title sits on its border as it does in the real app */
+.tile{container-type:size;white-space:nowrap;padding:calc(.8*var(--u)) calc(.9*var(--u));line-height:1.5}
+.app{height:100%;display:flex;flex-direction:column;gap:.3em;min-height:0}
+.app fieldset{border:.1em solid var(--line);border-radius:.45em;padding:0 .7em .3em;min-width:0;min-height:0;overflow:hidden;transition:border-color .6s}
+.app legend{padding:0 .4em;font-size:.92em}.app legend b{color:var(--ac);transition:color .6s}
+.app fieldset.act{border-color:var(--ac)}
+.row{display:flex;gap:.3em;min-height:0;min-width:0}.col{display:flex;flex-direction:column;gap:.3em;min-height:0;min-width:0}
+.g{flex:1 1 0;min-width:0;min-height:0}.fill{height:100%}
+.h{color:var(--hot);transition:color .6s}.add{color:var(--ac);transition:color .6s}
+.sel{background:var(--dim);border-radius:.2em;transition:background .6s}
+/* a meter of blocks, as btop draws them */
+.m{display:flex;align-items:center;gap:.6em}.m>span:first-child{flex:none;width:2.6em}.pc{flex:none;width:3.2em;text-align:right}
+.mt,.pg{flex:1;min-width:1em;height:.62em;background:var(--dim);transition:background .6s}
+.mt{-webkit-mask:repeating-linear-gradient(90deg,#000 0 .32em,transparent .32em .5em);mask:repeating-linear-gradient(90deg,#000 0 .32em,transparent .32em .5em)}
+.mt i,.pg i{display:block;height:100%;background:linear-gradient(90deg,var(--ac),var(--hot));background-size:20em 100%;transition:width .8s}
+.pg{border-radius:99px;overflow:hidden;height:.5em}
+.kv{display:flex;justify-content:space-between;gap:1em}
+.btop .cpu{flex:none}.btop .cores{flex:0 0 58%;padding-bottom:.2em}
+.btop .cg{display:grid;grid-template-columns:1fr 1fr;column-gap:1em}
+.graph{display:flex;align-items:flex-end;gap:0;-webkit-mask:radial-gradient(circle,#000 48%,transparent 52%) 0 100%/.34em .34em;mask:radial-gradient(circle,#000 48%,transparent 52%) 0 100%/.34em .34em}
+.graph i{flex:1;background:linear-gradient(0deg,var(--ac),var(--hot));background-size:100% 12em;background-position:bottom;transition:height .5s}
+.btop .lft{flex:0 0 40%}.btop .lft .m>span:first-child{display:none}
+.pr{display:grid;grid-template-columns:5ch 1fr 5ch 5ch;column-gap:1ch}.pr span:nth-child(n+3){text-align:right}.pr.hd,.tk.hd{font-weight:700;color:var(--ac);transition:color .6s}
+.tk{display:grid;grid-template-columns:2ch 1.4fr 1fr 9ch;column-gap:1.5ch}.tk span{overflow:hidden;text-overflow:ellipsis}.tk span:last-child{text-align:right}.tk.on{color:var(--ac);font-weight:700;transition:color .6s}
+.sp .alb{flex:none}
+.lg .side{flex:0 0 42%}.lg .sth{padding-bottom:0}.lg .hint{display:flex;justify-content:space-between;gap:1em;color:var(--ac);transition:color .6s;overflow:hidden}
+.lg .fl,.lg .br,.lg .log{flex:none}
+.nv{gap:0}.nv .tabs{display:flex;gap:.2em;margin-bottom:.3em}.nv .tabs>*{padding:0 .8em;background:var(--dim);border-radius:.3em .3em 0 0;transition:background .6s}.nv .tabs b{background:none;border-bottom:.12em solid var(--ac)}
+.nv .code{white-space:pre;overflow:hidden}.nv .ln{opacity:.4}.nv .cl{background:var(--dim);transition:background .6s}.nv .cl .ln{opacity:1;color:var(--ac)}
+.nv .sl{display:flex;gap:1em;align-items:center;background:var(--dim);transition:background .6s;overflow:hidden}.nv .mode{background:var(--ac);color:var(--bg);padding:0 .8em;transition:background .6s}.nv .r{margin-left:auto}
+/* a window gives up its secondary panels as it gets smaller */
+@container (max-width:40em){.btop .graph,.lg .main,.sp .alb,.tk .art,.nv .r{display:none}.lg .side{flex:1}.tk{grid-template-columns:2ch 1fr 5ch}.btop .cores{flex:1}}
+@container (max-width:30em){.btop .proc,.sp .st,.lg .hint .d,.nv .tabs span{display:none}.btop .lft{flex:1}.btop .cg{grid-template-columns:1fr}.btop .cg .m:nth-child(n+5){display:none}}
+@container (max-height:26em){.btop .net,.lg .br,.lg .sth,.sp .alb{display:none}}
+@container (max-height:17em){.btop .ld,.lg .log{display:none}}
 .menu{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%) scale(.96);width:calc(40*var(--u));background:var(--bg);border:calc(.22*var(--u)) solid var(--ac);border-radius:calc(.8*var(--u));
   box-shadow:0 calc(2*var(--u)) calc(6*var(--u)) #000a;padding:calc(1.2*var(--u)) calc(1.5*var(--u));font-size:calc(1.3*var(--u));line-height:1.65;white-space:pre;opacity:0;transition:opacity .18s,transform .18s,background .6s,border-color .6s;z-index:5}
 .menu.on{opacity:1;transform:translate(-50%,-50%)}
@@ -38,38 +72,20 @@ const order = Object.keys(THEMES); let ti = Math.max(0, order.indexOf(isCard ? "
 let held = Date.now() + 2500; // the start theme stays up for at least one full beat before the demo switches away
 window.setTheme = n => { if (!THEMES[n]) return; ti = order.indexOf(n); theme(n); held = Date.now() + 2500; };
 const APPS = {
-  nvim: `<span class="d"> 1 </span><span class="a">local</span> path = vim.fn.expand(<span class="a">"~/.local/state/unmacos/theme"</span>)
-<span class="d"> 2 </span>
-<span class="d"> 3 </span><span class="d">-- re-apply when the theme is switched</span>
-<span class="d"> 4 </span>vim.api.nvim_create_autocmd(<span class="a">"VimEnter"</span>, {
-<span class="d"> 5 </span>  once = <span class="a">true</span>,
-<span class="d"> 6 </span>  callback = <span class="a">function</span>()
-<span class="d"> 7 </span>    <span class="a">local</span> w = vim.uv.new_fs_event()
-<span class="d"> 8 </span>    w:start(path, {}, apply)
-<span class="d"> 9 </span>  <span class="a">end</span>,
-<span class="d">10 </span>})
-
-<b class="a"> NORMAL </b> <span class="d"> main  colourscheme.lua</span>`,
-  btop: `<b>cpu</b> <span class="d">M1 Pro</span>
-C0 <i class="bar" style="width:52%"></i> 52%
-C1 <i class="bar" style="width:38%"></i> 38%
-C2 <i class="bar" style="width:41%"></i> 41%
-C3 <i class="bar" style="width:19%"></i> 19%
-
-<b>mem</b> <span class="d">16.0 GiB</span>
-   <i class="bar" style="width:44%"></i> 6.7`,
-  spotify_player: `<b class="a">▶ Playback</b>
-Harrison Lesser · <span class="a">The Reytons</span>
-<span class="d">Alcopops &amp; Charity Shops</span>
-
-<i class="bar" style="width:38%"></i> <span class="d">1:19/3:14</span>`,
-  lazygit: `<b>Files</b>
-<span class="a"> M</span> home/dot_config/rift/config.toml
-<span class="a"> A</span> themes/ristretto.toml
-
-<b>Commits</b>
-<span class="d">7d9573e</span> feat(setup): add the wizard
-<span class="d">a3f1c20</span> feat(themes): ristretto`,
+  nvim: `<div class="app nv"><div class="tabs"><b>colourscheme.lua</b><span class="d">options.lua</span><span class="d">keymaps.lua</span></div><div class="code g"><div class=""><span class="ln">  1 </span><span class="a">local</span> path = vim.fn.expand(<span class="a">"~/.local/state/unmacos/theme"</span>)</div><div class=""><span class="ln">  2 </span></div><div class=""><span class="ln">  3 </span><span class="d">-- re-apply when the theme is switched</span></div><div class=""><span class="ln">  4 </span>vim.api.nvim_create_autocmd(<span class="a">"VimEnter"</span>, {</div><div class=""><span class="ln">  5 </span>  once = <span class="a">true</span>,</div><div class=""><span class="ln">  6 </span>  callback = <span class="a">function</span>()</div><div class=""><span class="ln">  7 </span>    <span class="a">local</span> w = vim.uv.new_fs_event()</div><div class=""><span class="ln">  8 </span>    w:start(path, {}, apply)</div><div class=""><span class="ln">  9 </span>  <span class="a">end</span>,</div><div class="cl"><span class="ln"> 10 </span>})</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div><div class="d">~</div></div><div class="sl"><b class="mode">NORMAL</b><span class="a">main</span><span>lua/config/colourscheme.lua</span><span class="r d">lua · utf-8</span><span class="r2">10:3 · Bot</span></div></div>`,
+  btop: `<div class="app btop"><fieldset class="cpu"><legend><b>1</b>cpu <span class="d">· menu · preset 0</span></legend><div class="row fill"><div class="graph g"></div><fieldset class="cores"><legend>M1 Pro <span class="d">3.2 GHz</span></legend><div class="m"><span><b>CPU</b></span><i class="mt"><i style="width:34%"></i></i><span class="pc" data-j="34">34%</span></div><div class="cg"><div class="m"><span>C0</span><i class="mt"><i style="width:52%"></i></i><span class="pc" data-j="52">52%</span></div><div class="m"><span>C1</span><i class="mt"><i style="width:38%"></i></i><span class="pc" data-j="38">38%</span></div><div class="m"><span>C2</span><i class="mt"><i style="width:41%"></i></i><span class="pc" data-j="41">41%</span></div><div class="m"><span>C3</span><i class="mt"><i style="width:19%"></i></i><span class="pc" data-j="19">19%</span></div><div class="m"><span>C4</span><i class="mt"><i style="width:27%"></i></i><span class="pc" data-j="27">27%</span></div><div class="m"><span>C5</span><i class="mt"><i style="width:12%"></i></i><span class="pc" data-j="12">12%</span></div><div class="m"><span>C6</span><i class="mt"><i style="width:8%"></i></i><span class="pc" data-j="8">8%</span></div><div class="m"><span>C7</span><i class="mt"><i style="width:5%"></i></i><span class="pc" data-j="5">5%</span></div></div><div class="d ld">Load AVG: 2.41 2.10 1.93</div></fieldset></div></fieldset><div class="row g"><div class="col lft"><fieldset class="g"><legend><b>2</b>mem</legend><div class="kv"><span>Total:</span><b>16.0 GiB</b></div><div class="kv"><span>Used:</span><b>6.7 GiB</b></div><div class="m"><i class="mt"><i style="width:42%"></i></i><span class="pc">42%</span></div><div class="kv"><span>Available:</span><b>9.3 GiB</b></div><div class="m"><i class="mt"><i style="width:58%"></i></i><span class="pc">58%</span></div><div class="kv"><span>Cached:</span><b>3.4 GiB</b></div><div class="m"><i class="mt"><i style="width:21%"></i></i><span class="pc">21%</span></div><div class="kv"><span>Free:</span><b>0.6 GiB</b></div><div class="m"><i class="mt"><i style="width:4%"></i></i><span class="pc">4%</span></div></fieldset><fieldset class="net"><legend><b>3</b>net <span class="d">en0</span></legend><div class="kv"><span>↓ download</span><b>1.2 MiB/s</b></div><div class="kv"><span>↑ upload</span><b>84 KiB/s</b></div></fieldset></div><fieldset class="proc g"><legend><b>4</b>proc <span class="d">· filter · tree · cpu lazy</span></legend><div class="pr hd"><span>Pid</span><span>Program</span><span>Mem</span><span>Cpu%</span></div><div class="pr"><span class="d">1284</span><span>firefox</span><span>1.2G</span><span>12.4</span></div><div class="pr sel"><span class="d">4127</span><span>nvim</span><span>212M</span><span>3.1</span></div><div class="pr"><span class="d">903</span><span>ghostty</span><span>188M</span><span>2.8</span></div><div class="pr"><span class="d">388</span><span>WindowServer</span><span>164M</span><span>2.2</span></div><div class="pr"><span class="d">5102</span><span>spotify_player</span><span>46M</span><span>1.9</span></div><div class="pr"><span class="d">612</span><span>rift</span><span>31M</span><span>0.8</span></div><div class="pr"><span class="d">640</span><span>sketchybar</span><span>24M</span><span>0.6</span></div><div class="pr"><span class="d">5220</span><span>btop</span><span>12M</span><span>0.5</span></div><div class="pr"><span class="d">5177</span><span>lazygit</span><span>28M</span><span>0.3</span></div><div class="pr"><span class="d">911</span><span>tmux</span><span>9M</span><span>0.1</span></div><div class="pr"><span class="d">2040</span><span>television</span><span>14M</span><span>0.0</span></div><div class="pr"><span class="d">1</span><span>launchd</span><span>18M</span><span>0.0</span></div></fieldset></div></div>`,
+  spotify_player: `<div class="app sp"><fieldset><legend>Playback</legend><div><b class="a">▶ Harrison Lesser</b> · The Reytons</div><div class="d">Alcopops &amp; Charity Shops</div><div class="d st">repeat: off | shuffle: on | volume: 72% | device: unmacos</div><div class="m"><i class="pg"><i style="width:41%"></i></i><span class="d tm">1:19/3:14</span></div></fieldset><fieldset class="g"><legend>Artist: The Reytons <span class="d">· Top Tracks</span></legend><div class="tk hd"><span>#</span><span>Title</span><span class="art">Artist</span><span>Time</span></div><div class="tk"><span class="d">1</span><span>Kids Off the Estate</span><span class="art">The Reytons</span><span class="d">3:02</span></div><div class="tk"><span class="d">2</span><span>Red Smoke</span><span class="art">The Reytons</span><span class="d">3:21</span></div><div class="tk on"><span class="d">▶</span><span>Harrison Lesser</span><span class="art">The Reytons</span><span class="d">3:14</span></div><div class="tk"><span class="d">4</span><span>Low Life</span><span class="art">The Reytons</span><span class="d">2:58</span></div><div class="tk"><span class="d">5</span><span>Slice of Lime</span><span class="art">The Reytons</span><span class="d">3:09</span></div><div class="tk"><span class="d">6</span><span>On the Back Burner</span><span class="art">The Reytons</span><span class="d">3:27</span></div><div class="tk"><span class="d">7</span><span>Avalanche</span><span class="art">The Reytons</span><span class="d">3:18</span></div><div class="tk"><span class="d">8</span><span>Cash in Hand &amp; Fake IDs</span><span class="art">The Reytons</span><span class="d">3:05</span></div><div class="tk"><span class="d">9</span><span>Antibiotics</span><span class="art">The Reytons</span><span class="d">2:51</span></div><div class="tk"><span class="d">10</span><span>Mind the Gap</span><span class="art">The Reytons</span><span class="d">3:33</span></div></fieldset><div class="row alb"><fieldset class="g"><legend>Albums</legend><div>Kids Off the Estate <span class="d">2021</span></div><div>What's Rock and Roll? <span class="d">2023</span></div><div>Ballad of a Bystander <span class="d">2024</span></div></fieldset><fieldset class="g"><legend>Related Artists</legend><div>The Sherlocks</div><div>The K's</div><div>The Lathums</div></fieldset></div></div>`,
+  lazygit: `<div class="app lg"><div class="row g"><div class="col side"><fieldset><legend><b>[1]</b> Status</legend><span class="a">✓</span> unmacos → main</fieldset><fieldset class="act fl"><legend><b>[2]</b> Files <span class="d">- Worktrees - Submodules</span></legend><div class="sel"><span class="h">&nbsp;M</span> home/dot_config/rift/config.toml</div><div class=""><span class="a">A&nbsp;</span> themes/ristretto.toml</div><div class=""><span class="h">&nbsp;M</span> home/dot_config/sketchybar/colors.sh</div><div class=""><span class="h">??</span> docs/ristretto.png</div></fieldset><fieldset class="br"><legend><b>[3]</b> Local branches <span class="d">- Remotes - Tags</span></legend><div><span class="a">*</span> main <span class="a">✓</span></div><div>&nbsp; feat/ristretto <span class="h">↑2</span></div><div>&nbsp; fix/bar-gap</div></fieldset><fieldset class="g"><legend><b>[4]</b> Commits <span class="d">- Reflog</span></legend><div><span class="a">7d9573e</span> <span class="d">SC</span> feat(setup): add the wizard</div><div><span class="a">a3f1c20</span> <span class="d">SC</span> feat(themes): ristretto</div><div><span class="a">91be04d</span> <span class="d">SC</span> fix(bar): keep the clock clear of the notch</div><div><span class="a">5c2e7aa</span> <span class="d">SC</span> docs(readme): record the theme switch</div><div><span class="a">e08d1f3</span> <span class="d">SC</span> chore(release): v1.5.0</div><div><span class="a">3b77a12</span> <span class="d">SC</span> fix(menu): paste into the app you came from</div><div><span class="a">c41d9e0</span> <span class="d">SC</span> feat(themes): show wallpapers in the picker</div></fieldset><fieldset class="sth"><legend><b>[5]</b> Stash</legend></fieldset></div><div class="col g main"><fieldset class="g"><legend><b>[0]</b> Unstaged changes</legend><div><b>home/dot_config/rift/config.toml</b></div><div class="a">@@ -12,7 +12,7 @@ [settings.layout]</div><div> mode = "bsp"</div><div> [settings.layout.gaps]</div><div class="h">-inner = 6</div><div class="add">+inner = 4</div><div> outer = 4</div><div> </div><div class="a">@@ -31,6 +31,7 @@ [settings.ui]</div><div> [settings.ui.border]</div><div> width = 2</div><div class="add">+radius = 10</div><div> active = "theme"</div></fieldset><fieldset class="log"><legend>Command log</legend><div class="d">git add themes/ristretto.toml</div><div class="d">git fetch origin</div></fieldset></div></div><div class="hint"><span>Stage: &lt;space&gt; | Commit: c | Stash: s | Reset: D | Keybindings: ?</span><span class="d">0.44.1</span></div></div>`,
+};
+// the TUIs are alive: the cpu graph scrolls, the meters jitter and the song's clock runs
+const hist = Array.from({ length: 64 }, (_, i) => 30 + 22 * Math.sin(i / 5) + 14 * Math.sin(i / 1.7)); let sec = 79;
+const tick = () => {
+  hist.push(Math.max(6, Math.min(95, hist.at(-1) + (Math.random() - .5) * 26))); hist.shift();
+  document.querySelectorAll(".graph").forEach(g => { if (!g.children.length) g.innerHTML = "<i></i>".repeat(64); [...g.children].forEach((b, i) => b.style.height = hist[i] + "%"); });
+  if (card) return;
+  document.querySelectorAll("[data-j]").forEach(e => { const v = Math.max(2, Math.min(97, +e.dataset.j + Math.round((Math.random() - .5) * 16))); e.textContent = v + "%"; e.previousElementSibling.firstChild.style.width = v + "%"; });
+  sec = sec >= 194 ? 0 : sec + 1; const f = t => `${t / 60 | 0}:${String(t % 60).padStart(2, "0")}`;
+  document.querySelectorAll(".tm").forEach(e => { e.textContent = `${f(sec)}/3:14`; e.previousElementSibling.firstChild.style.width = sec / 194 * 100 + "%"; });
 };
 let tiles = [], focus = null;
 function layout() { // dwindle: each window splits what is left, alternating direction
@@ -81,7 +97,7 @@ function layout() { // dwindle: each window splits what is left, alternating dir
     t.classList.toggle("focus", t === focus);
   });
 }
-function spawn(app, instant) { const t = document.createElement("div"); t.className = "tile out"; t.innerHTML = APPS[app]; desk.append(t); tiles.push(t); focus = t; const tr = t.style.transition; t.style.transition = "none"; layout(); t.offsetWidth; t.style.transition = tr; if (instant) t.classList.remove("out"); else requestAnimationFrame(() => t.classList.remove("out")); }
+function spawn(app, instant) { const t = document.createElement("div"); t.className = "tile out"; t.innerHTML = APPS[app]; desk.append(t); tiles.push(t); tick(); focus = t; const tr = t.style.transition; t.style.transition = "none"; layout(); t.offsetWidth; t.style.transition = tr; if (instant) t.classList.remove("out"); else requestAnimationFrame(() => t.classList.remove("out")); }
 async function close() { const t = focus; t.classList.add("out"); await sleep(250); t.remove(); tiles = tiles.filter(x => x !== t); focus = tiles.at(-1); layout(); }
 async function keys(html, ms = 900) { $("#keys").innerHTML = html; $("#keys").classList.add("on"); await sleep(ms); }
 const k = (...ks) => ks.map(x => `<kbd>${x}</kbd>`).join("+");
@@ -94,7 +110,7 @@ async function menu(title, items, query, pick) {
 const apps = ["btop", "firefox", "ghostty", "lazygit", "nvim", "orca", "spotify_player"], themes = ["catppuccin", "everforest", "gruvbox", "kanagawa", "nord", "rose-pine", "tokyo-night"];
 // Starts with the desktop already in use. Every beat moves a window AND switches the theme, so both read at once;
 // one window opens and closes inside the cycle. Nothing resets, so the loop has no visible seam.
-(card ? ["nvim", "btop", "spotify_player", "lazygit"] : ["nvim", "btop", "spotify_player"]).forEach(a => spawn(a, true)); focus = tiles[0]; layout();
+(card ? ["nvim", "btop", "spotify_player", "lazygit"] : ["nvim", "btop", "spotify_player"]).forEach(a => spawn(a, true)); focus = tiles[0]; layout(); tick(); if (!card) setInterval(tick, 1000);
 const beat = async key => { // move + theme together
   await keys(`${k("alt", "shift", key)} move · ${k("alt", "ctrl", "shift", "space")} theme`, 350);
   const [a, b, c, ...rest] = tiles; tiles = [c, a, b, ...rest]; focus = c; layout();

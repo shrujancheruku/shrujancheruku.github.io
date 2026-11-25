@@ -28,7 +28,14 @@ body:not(.tC) .pn.focus{background:none}
 /* content */
 #con{display:flex;flex-direction:column;gap:calc(1*var(--u))}
 .p{color:var(--hot)}
-.row{display:grid;grid-template-columns:5ch 2ch 7ch 1fr;column-gap:1.5ch;white-space:nowrap;transition:opacity .3s}
+.row{display:grid;grid-template-columns:4ch 1fr 1ch 6ch 8ch;column-gap:1.2ch;white-space:nowrap;transition:opacity .3s;border-radius:.3em}
+.row .ti{overflow:hidden;text-overflow:ellipsis}
+.row.wait{grid-template-columns:5ch 1fr auto}.row.wait .sz,.row.wait .mo{display:none}
+/* a ticket flashes as it merges */
+.row.flash{animation:fl .9s both}@keyframes fl{from{background:color-mix(in srgb,var(--ac) 45%,transparent)}}
+.row.flash .st{animation:pop .35s both}@keyframes pop{from{transform:scale(1.5)}}
+.still .row.flash,.still .row.flash .st{animation:none}
+#clk{font-variant-numeric:tabular-nums}
 .row.q{opacity:.4}
 .row .st{display:flex;align-items:center;gap:1ch}
 .row.done .st{color:var(--ac)}.row.wait .st{color:var(--hot);font-weight:700}
@@ -41,7 +48,7 @@ body:not(.tC) .pn.focus{background:none}
 #tk{flex:none}#pr{flex:none}
 @media (max-width:520px){#scr,.tA #scr,.tC #scr{display:flex;padding:calc(2*var(--u)) calc(2.2*var(--u));gap:calc(.8*var(--u))}
   .tA #rig{inset:0;width:auto;transform:none}.tA #bez{border:0;padding:0;background:none}.tA #scr{aspect-ratio:auto;height:100%}.tA .neck,.tA .foot,.backdrop{display:none!important}
-  .tC .pn{border:0;padding:0;background:none}.tC .lbl{display:none}}
+  .tC .pn{border:0;padding:0;background:none}.tC .lbl{display:none}.row{grid-template-columns:5ch 2ch 7ch 1fr}.row .ti{display:none}}
 </style>
 <div class="backdrop"></div>
 <div id="rig"><div id="bez" style="flex:1;min-height:0;display:flex;flex-direction:column"><div id="scr" class="scr">
@@ -52,38 +59,44 @@ body:not(.tC) .pn.focus{background:none}
 <script type="module">
 import { $, sleep, still, typeInto } from "./kit.js";
 // the spec: nine tickets, each sized and routed to the cheapest model that can do it
-const T = [[43,"S","haiku"],[44,"S","haiku"],[45,"M","sonnet"],[46,"S","haiku"],[47,"M","sonnet"],[48,"M","sonnet"],[49,"S","haiku"],[50,"M","sonnet"],[51,"L","opus"]];
+const T = [[43,"S","haiku","page titles"],[44,"S","haiku","theme switch"],[45,"M","sonnet","workspace scroll"],[46,"S","haiku","contact terminal"],[47,"M","sonnet","project windows"],[48,"M","sonnet","timeline"],[49,"S","haiku","skill bars"],[50,"M","sonnet","archive window"],[51,"L","opus","pages deploy"]];
 const LABEL = { q: "queued", b: "build", c: "check", done: "merged ✓", wait: "waiting on you" };
 const SPIN = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"; let sp = 0;
-let st = {};
+let st = {}, merged = {}, clock = 0, running = false;
 const draw = () => {
-  $("#rows").innerHTML = T.map(([id, size, model]) => { const s = st[id] || "q";
-    return `<div class="row ${s}"><b>#${id}</b><span class="d">${size}</span><span>${model}</span><span class="st">${s === "b" || s === "c" ? `<span class="sp">${still ? "·" : SPIN[sp % 10]}</span>` : ""}${LABEL[s]}</span></div>`; }).join("");
+  $("#rows").innerHTML = T.map(([id, size, model, title]) => { const s = st[id] || "q", ago = Date.now() - (merged[id] || 0);
+    return `<div class="row ${s}${ago < 900 ? " flash" : ""}" style="animation-delay:-${ago < 900 ? ago : 0}ms"><b>#${id}</b><span class="ti">${title}</span><span class="d sz">${size}</span><span class="mo">${model}</span><span class="st">${s === "b" || s === "c" ? `<span class="sp">${still ? "·" : SPIN[sp % 10]}</span>` : ""}${LABEL[s]}</span></div>`; }).join("");
   const n = T.filter(([id]) => st[id] === "done").length, run = T.filter(([id]) => "bc".includes(st[id] || "q")).length;
-  $("#tally").innerHTML = `<span class="d">integration/shared-playlists-v1</span> <b>${n}/9</b> merged<span class="wide d">${run ? ` · ${run} in progress` : ""}</span>`;
+  $("#tally").innerHTML = `<span class="d">integration/portfolio-site</span> <b>${n}/9</b> merged<span class="wide d">${run ? ` · ${run} in progress` : ""}</span>`;
   $("#fill").style.width = n / 9 * 100 + "%";
 };
 if (!still) setInterval(() => { sp++; document.querySelectorAll(".sp").forEach(e => e.textContent = SPIN[sp % 10]); }, 90);
 const say = (el, html) => { el.innerHTML = `<div class="fade">${html}</div>`; };
-const set = (id, s) => { st[id] = s; draw(); };
+const set = (id, s) => { st[id] = s; if (s === "done") { merged[id] = Date.now(); say($("#ok2"), `<span class="d">merged</span> #${id} ${T.find(t => t[0] === id)[3]}`); } draw(); };
+// the coordinator's message arrives a word at a time, as it does from the model
+const stream = async (el, head, text) => { el.innerHTML = `${head}<span></span><span class="cur"></span>`; const out = el.querySelector("span"); const words = text.split(/(?<= )/);
+  for (const w of words) { out.innerHTML += w.replace(/\n/g, "<br>"); await sleep(w.includes("\n") ? 260 : 55); } el.querySelector(".cur").remove(); };
+// the run's clock: a build takes most of an hour, so it runs fast
+const fmt = t => `${t / 60 | 0}m ${String(t % 60).padStart(2, "0")}s`;
+if (!still) setInterval(() => { if (running) { clock += 17; const c = $("#clk"); if (c) c.textContent = fmt(clock); } }, 100);
 const focus = id => document.querySelectorAll(".pn").forEach(p => p.classList.toggle("focus", p.id === id));
 // [ms to wait, ticket, new state]: tickets that don't depend on each other run at the same time
 const RUN = [[0,43,"b"],[0,44,"b"],[0,45,"b"],[0,51,"b"],[900,43,"c"],[500,44,"c"],[500,43,"done"],[200,46,"b"],[500,44,"done"],[200,47,"b"],[600,45,"c"],[500,46,"c"],[400,45,"done"],[200,48,"b"],[400,46,"done"],[100,49,"b"]];
 const RUN2 = [[0,50,"b"],[500,47,"c"],[400,49,"c"],[400,47,"done"],[300,48,"c"],[300,49,"done"],[500,51,"c"],[300,48,"done"],[700,50,"c"],[400,51,"done"],[600,50,"done"]];
 for (;;) {
-  st = {}; ["#cmd", "#hd", "#co", "#qa", "#ok", "#ok2"].forEach(s => $(s).innerHTML = ""); draw(); focus("con");
+  st = {}; merged = {}; clock = 0; running = false; ["#cmd", "#hd", "#co", "#qa", "#ok", "#ok2"].forEach(s => $(s).innerHTML = ""); draw(); focus("con");
   $("#cmd").innerHTML = '<span class="p">❯ </span><b id="c"></b>'; await sleep(700); await typeInto($("#c"), "/flow:build #42", 16); await sleep(500);
-  say($("#hd"), `<b class="a">flow</b> · #42 Shared playlists v1 <span class="wide d">· 9 tickets · run_7c41</span>`); await sleep(500);
-  say($("#co"), `<b>Coordinator</b><br>Sized nine tickets: 4 small, 4 medium, 1 large.<br>#51 touches packages/records, so it goes to Opus.`); await sleep(900);
+  say($("#hd"), `<b class="a">flow</b> · #42 Portfolio site <span class="wide d">· 9 tickets · <span id="clk">${still ? "38m 12s" : "0m 00s"}</span></span>`); running = true; await sleep(500);
+  await stream($("#co"), "<b>Coordinator</b><br>", "Sized nine tickets: 4 small, 4 medium, 1 large.\n#51 touches the deploy workflow, so it goes to Opus."); await sleep(600);
   focus("tk");
   for (const [ms, id, s] of RUN) { await sleep(ms); set(id, s); }
   await sleep(300); set(50, "wait"); focus("con");
-  say($("#qa"), `<b class="h">Question from the coordinator</b><br>1) #50 says removed playlists are archived, the spec<br>   says deleted. Which one do you want?<br><span class="p">❯ </span><b id="r"></b>`);
-  await sleep(1500); await typeInto($("#r"), "1 deleted", 12); await sleep(400);
+  say($("#qa"), `<b class="h">Question from the coordinator</b><br>1) #50 opens the archive from the status bar. The spec says only from the projects workspace. Which one?<br><span class="p">❯ </span><b id="r"></b>`);
+  await sleep(1500); await typeInto($("#r"), "1 projects workspace", 12); await sleep(400);
   focus("tk");
   for (const [ms, id, s] of RUN2) { await sleep(ms); set(id, s); }
-  say($("#qa"), `<span class="d">Answered: #50 deletes removed playlists.</span>`);
-  await sleep(500); focus("pr");
+  say($("#qa"), `<span class="d">Answered: the archive opens from the projects workspace.</span>`);
+  await sleep(500); focus("pr"); running = false;
   say($("#ok"), "✓ PR #53 ready to merge"); await sleep(250);
   say($("#ok2"), `closes 9 tickets · reviewed · checks green<span class="wide"> · up to date with main</span>`);
   if (still) break; await sleep(7000);
