@@ -11,6 +11,7 @@
     B · Full-bleed  no hardware: the product's own surface is the window
     C · Tiled       the scene split into gapped panes, like the desktop it sits in
   unmacos is the same in every take: it never had a device and it demos its own theme switching.
+  Also here: four terminal-style takes of the hobbies in the skills window (workspace 3), ?hobbies=A|B|C|D or key b.
   Keys: k share card (1200 × 630, paper) · m touch preview (390 wide) · t theme · e CRT · s spec panel · a archive.
   Wording comes from each repository (console text, key bindings, demo data, the site's own kickers).
   Run: cd prototype/compositions && bun run view  →  http://localhost:4521/compositions/
@@ -147,10 +148,10 @@ body.idle .tip::before{display:none}
 .dl em{margin-left:auto;font-style:normal;font-size:11.5px;opacity:.6}
 .dl .native i{background:var(--ac)}.dl .native em{color:var(--ac);opacity:1;font-weight:700}
 .dl .proficient i{background:linear-gradient(90deg,var(--ac) 50%,transparent 50%)}
-.wc{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:2px 14px;padding:6px 4px 0;line-height:1.25}
-.wc span{white-space:nowrap;font-weight:500;font-size:calc(16px - var(--r,0)*.7px);color:color-mix(in srgb,var(--fg) calc(92% - var(--r,0)*13%),var(--bg));transition:color .45s}
-.wc .hi{color:var(--ac);font-weight:700;font-size:20px}.wc .hi:nth-child(4n+1){font-size:23px}.wc .hi:nth-child(odd){font-size:18px}
-.wc span:nth-child(3n+1){transform:translateY(-3px)}.wc span:nth-child(3n){transform:translateY(3px)}
+.hob{font:400 12.5px/1.7 var(--mono);white-space:pre-wrap}
+.hls{display:grid;grid-template-columns:repeat(3,max-content);column-gap:3ch}
+.hm{display:grid;grid-template-columns:13ch 1fr;white-space:nowrap;line-height:1.5}
+.ht{display:grid;grid-template-columns:10ch 2ch 1fr}
 .dl .rudimentary{opacity:.6}.dl .rudimentary i{border-color:var(--line)} .sk-more b{font-weight:500;opacity:.55;display:inline-block;width:10ch}
 .b-tl{position:absolute;inset:0;overflow:auto;padding:38px 24px 8px 5cqw;scrollbar-width:thin}
 .b-il,.b-sk{position:absolute;inset:0;overflow:auto;padding:38px 22px 16px;scrollbar-width:thin}
@@ -259,7 +260,7 @@ body.crt .screen::after{content:"";position:absolute;inset:0;border-radius:inher
 <body>
 <div id="root"></div>
 <div id="sw"><button id="vp">←</button><span id="lab"></span><button id="vn">→</button><i></i>
-  <button id="kb" title="share card (k)">share card</button><button id="mb" title="touch preview (m)">touch</button><i></i>
+  <button id="kb" title="share card (k)">share card</button><button id="mb" title="touch preview (m)">touch</button><button id="hb" title="hobbies take (b)"></button><i></i>
   <select id="ts" title="theme (t)"></select><button id="cb" title="CRT (c)"></button>
   <button id="sb" title="spec (s)">spec</button><button id="hide" title="collapse">–</button></div>
 <div id="spec"></div>
@@ -328,9 +329,24 @@ const IL=[
 ];
 const SKILLS=[['Python',.92],['React + TypeScript',.86],['Kubernetes + Helm',.8],['Go',.7],['Comedic Talent',1]];
 const LANGS=[['English','native'],['Telugu','native'],['Hindi','proficient'],['Japanese','conversational'],['French','rudimentary']];
-/* hobbies as a word cloud: [word, highlighted?, rank]. The four from the resume are highlighted; the rest fade in the founder's order, football strongest */
-const HOBBIES=[['reading',1],['photography',1],['hiking',1],['watchmaking',1],['football',0,0],['cooking',0,1],['pub quizzes',0,2],['chess',0,3],['guitar',0,4]];
-const CLOUD=[2,4,0,7,1,5,3,6,8]; /* the order the words sit in, so strong and faint ones mix */
+/* hobbies: [word, on the resume?]. The four from the resume are highlighted; the rest fade in the founder's order, football strongest.
+   Four terminal-style takes, switched with ?hobbies=A|B|C|D, the switcher's hobbies button, or b. */
+const HOB=[['reading',1],['photography',1],['hiking',1],['watchmaking',1],['football',0],['cooking',0],['pub quizzes',0],['chess',0],['guitar',0]];
+const hcol=i=>i<4?'class="ac" style="font-weight:700"':`style="color:color-mix(in srgb,var(--fg) ${92-(i-4)*13}%,var(--bg))"`;
+const hw=(i,q)=>`<span ${hcol(i)}>${q?'"':''}${HOB[i][0]}${q?'"':''}</span>`;
+const prompt=c=>`<div><span class="p">❯ </span>${c}</div>`;
+const HV={
+ A:{name:'ls',note:'a directory listing: three columns, the four from the resume starred like executables',
+  html:()=>prompt('ls ~/hobbies')+`<div class="hls">${HOB.map(([w,r],i)=>`<span ${hcol(i)}>${w.replace(' ','-')}${r?'*':''}</span>`).join('')}</div>`},
+ B:{name:'meters',note:'a btop-style meter per hobby, drawn in block characters; the four from the resume are full, the rest shorten in order',
+  html:()=>prompt('hobbies --top')+HOB.map(([w],i)=>{const n=i<4?12:12-(i-3)*1.6|0;return `<div class="hm"><span ${hcol(i)}>${w}</span><span ${hcol(i)}>${'█'.repeat(n)}<span style="opacity:.25">${'░'.repeat(12-n)}</span></span></div>`}).join('')},
+ C:{name:'tree',note:'a tree, grouped into three folders (the grouping is the assistant\'s)',
+  html:()=>{const G=[['outdoors',[2,4]],['making',[1,3,5,8]],['thinking',[0,6,7]]];
+   return prompt('tree ~/hobbies')+G.map(([g,ix],gi)=>{const last=gi===G.length-1;return `<div><span class="dimt">${last?'└──':'├──'}</span> ${g}/</div>`+ix.map((i,k)=>`<div><span class="dimt">${last?'    ':'│   '}${k===ix.length-1?'└──':'├──'}</span> ${hw(i)}</div>`).join('')}).join('')}},
+ D:{name:'config',note:'a config file: three keys by how often (the split into often and sometimes is the assistant\'s)',
+  html:()=>prompt('cat hobbies.toml')+`<div class="dimt">[hobbies]</div>`+[['always',[0,1,2,3]],['often',[4,5]],['sometimes',[6,7,8]]].map(([k,ix])=>`<div class="ht"><span>${k}</span><span class="dimt">=</span><span>[${ix.map(i=>hw(i,1)).join(', ')}]</span></div>`).join('')},
+};
+let hob=HV[new URLSearchParams(location.search).get('hobbies')]?new URLSearchParams(location.search).get('hobbies'):'A';
 const SAB={when:'Nov 2025 → Now',lines:['travelling the world','time with family','helping friends launch their products'],joke:'10/10 would recommend to a friend.'};
 const CONTACT=['Feel free to get in touch. I always love hearing what people are building, and whether I can help.',' ',
   '<span class="k">email</span><a href="mailto:shrujancheruku@gmail.com">shrujancheruku@gmail.com</a>  <button data-act="copy">[copy]</button>',
@@ -346,7 +362,7 @@ const entry=e=>`<div class="te${e.now?' now':''}">${e.roles.map(([d,t])=>`<div c
 const ilHead=`<div class="il-h"><div class="deg">${ILH.deg}</div><div class="uni">${ILH.uni} · ${ILH.yrs}</div><div class="sub">${ILH.sub}</div></div>`;
 const cue=`<button class="cue" data-act="il"><span class="chev">▸</span><span class="cl">4 earlier roles</span><span class="dimt d" style="color:inherit">· teaching, internships</span></button>`;
 const skills=`<div class="sk">${SKILLS.map(([n,v])=>`<span>${n}</span><i style="width:${v*100}%"></i>`).join('')}</div>
-  <div class="sk-more"><div><b>languages</b></div><div class="dl">${LANGS.map(([n,l])=>`<div class="${l}"><i></i><span>${n}</span><em>${l}</em></div>`).join('')}</div><div style="margin-top:12px"><b>hobbies</b></div><div class="wc">${CLOUD.map((i,k)=>{const [w,hi,r]=HOBBIES[i];return `<span class="${hi?'hi':''}" style="--k:${k};${hi?'':`--r:${r}`}">${w}</span>`}).join('')}</div></div>`;
+  <div class="sk-more"><div><b>languages</b></div><div class="dl">${LANGS.map(([n,l])=>`<div class="${l}"><i></i><span>${n}</span><em>${l}</em></div>`).join('')}</div><div style="margin-top:12px"><b>hobbies</b></div><div class="hob" id="hob"></div></div>`;
 const photo=i=>`<div class="photo"><span class="pi">photo ${i} · placeholder</span><div class="cap"><span>somewhere · 2026</span><span>${i}</span></div></div>`;
 const copy=p=>`<div class="b-copy"><div class="kick">featured ${p.n} / ${NFEAT}</div><h2>${p.slug}</h2><p class="pitch">${p.pitch}</p>
   <ul>${p.proof.map(x=>`<li>${x}</li>`).join('')}</ul><div class="meta">${p.meta}</div><div class="links">${p.links.map(l=>`<a href="#">${l} ↗</a>`).join('')}</div>
@@ -442,7 +458,7 @@ const RT=vk==='B'||vk==='E';
 /* ---------------- state ---------------- */
 let picked=!!THEMES[Q.get('theme')], theme=picked?Q.get('theme'):'paper'; /* paper by default, whatever the system preference */
 let crt=Q.get('crt')==='0'?0:1, ilOpen=false, archOpen=false, opener=null, openedBy='-';
-const save=()=>{const u=new URL(location.href);u.searchParams.set('take',take);u.searchParams.delete('variant');if(picked)u.searchParams.set('theme',theme);else u.searchParams.delete('theme');
+const save=()=>{const u=new URL(location.href);u.searchParams.set('take',take);u.searchParams.set('hobbies',hob);u.searchParams.delete('variant');if(picked)u.searchParams.set('theme',theme);else u.searchParams.delete('theme');
   u.searchParams.set('crt',crt);if(BIG)u.searchParams.set('n',9);else u.searchParams.delete('n');
   if(archOpen)u.searchParams.set('archive',1);else u.searchParams.delete('archive');history.replaceState(null,'',u)};
 
@@ -593,7 +609,7 @@ document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');
 $$('.ae').forEach(p=>p.addEventListener('mouseenter',()=>{$$('.ae').forEach(q=>q.classList.toggle('focus',q===p))}));
 addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select,[contenteditable]')||e.metaKey||e.ctrlKey||e.altKey)return;
   if(e.key==='ArrowLeft')sw(-1);if(e.key==='ArrowRight')sw(1);
-  if(e.key==='a')archToggle();if(e.key==='k')overlay('card');if(e.key==='m')overlay('touch');
+  if(e.key==='a')archToggle();if(e.key==='b')setHob(1);if(e.key==='k')overlay('card');if(e.key==='m')overlay('touch');
   if(e.key==='t')cycle();if(e.key==='e')setCrt(1-crt);if(e.key==='i')toggleIl();
   if(e.key==='s')$('#spec').classList.toggle('on');
   if(/^[1-9]$/.test(e.key)&&+e.key<=WS.length){if(archOpen)archClose();go(WS_FIRST[e.key-1])}
@@ -661,6 +677,8 @@ function overlay(kind){const o=$('#ov');if(o.classList.contains('on')&&o.dataset
     o.innerHTML=`<figure><div class="fit" style="width:${390*z}px;height:${800*z}px;border-radius:24px"><iframe width="390" height="800" style="transform:scale(${z});transform-origin:0 0" src="${u}"></iframe></div><figcaption>touch · 390 × 800 · m or esc closes</figcaption></figure>`}}
 $('#ov').onclick=e=>{if(e.target.id==='ov'){$('#ov').classList.remove('on');$('#ov').innerHTML=''}};
 $('#vp').onclick=()=>sw(-1);$('#vn').onclick=()=>sw(1);
+function setHob(d){const ks=Object.keys(HV);if(d)hob=ks[(ks.indexOf(hob)+d)%ks.length];$('#hob').innerHTML=HV[hob].html();$('#hb').textContent=`hobbies: ${hob} · ${HV[hob].name}`;if(d){save();label()}}
+$('#hb').onclick=()=>setHob(1);
 $('#kb').onclick=()=>overlay('card');$('#mb').onclick=()=>overlay('touch');
 $('#ts').innerHTML=TK.map(k=>`<option value="${k}">${k}</option>`).join('');
 $('#ts').onchange=e=>{picked=true;theme=e.target.value;applyTheme()};
@@ -673,13 +691,14 @@ function label(){
   $('#cb').textContent='CRT: '+['off','on'][crt];$('#cb').classList.toggle('on',crt>0);
   const k=step>=0&&S[step].k,p=k&&PROJ[k],sp=p&&SPEC[p.slug];
   $('#spec').innerHTML=`<b>take ${take} · ${TAKES[take]}</b>${p?`<h4>${p.slug}</h4><table>${Object.entries(sp).map(([a,x])=>`<tr><td>${a}</td><td>${x}</td></tr>`).join('')}</table>`:'<p>Go to a featured project (workspace 2) to see its composition\'s spec.</p>'}
+    <h4>hobbies · take ${hob} · ${HV[hob].name}</h4>${HV[hob].note}. Nine hobbies: the four from the resume in the accent, then football, cooking, pub quizzes, chess, guitar fading in that order.
     <h4>every composition</h4>IBM Plex Mono 400 / 500 / 700 · text about 13px in a desktop window, about 11px on touch · fills its window with no label · starts from its beginning each time its step is entered · with reduced motion it shows its share-card frame in the visitor\'s theme · the share card is always paper
     <h4>state</h4><table><tr><td>step</td><td>${step+1} / ${STEPS} · ${step<0?'-':WS[S[step].ws]}${p?' · '+p.slug:''}</td></tr><tr><td>theme</td><td>${theme}</td></tr><tr><td>layout</td><td>${mq.matches?'touch (one column)':'desktop'} · ${innerWidth}×${innerHeight}</td></tr></table>
-    <h4>keys</h4>1–5 workspace · ← → take · k share card · m touch preview · t theme · e CRT · a archive · s this panel`}
+    <h4>keys</h4>1–5 workspace · b hobbies take · ← → take · k share card · m touch preview · t theme · e CRT · a archive · s this panel`}
 
 /* ---------------- boot ---------------- */
 history.scrollRestoration='manual';
-applyTheme();setCrt(crt);
+setHob(0);applyTheme();setCrt(crt);
 const startWs=+(location.hash.match(/ws(\d)/)||[])[1]||0, startStep=(location.hash.match(/-(\d+)$/)||[])[1];
 /* E: /archive/ boots on the last featured project with the archive open */
 scrollTo(0,(Q.get('archive')==='1'?WS_FIRST[1]+NFEAT-1:startStep!=null?+startStep:WS_FIRST[startWs])*innerHeight);onScroll();
