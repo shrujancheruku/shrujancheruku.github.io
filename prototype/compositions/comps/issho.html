@@ -2,7 +2,7 @@
 <!-- PROTOTYPE composition · issho: the marketing site and the app, both drawn by hand from text and shapes in the
      site's type and theme colours (no captures, no screenshots). The six steps are one cycle: the site scrolls
      through them while the app pane shows the step half a cycle away, so the two never show the same step.
-     Takes: A laptop and phone · B the site is the window, phone in front · C three tiled panes (site, app, steps). -->
+     Takes: A laptop and phone · B the site is the window, phone in front · C three tiled panes (site, app, launch cities). -->
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="kit.css">
 <style>
 #sv{container-type:inline-size;background:var(--bg)}
@@ -21,11 +21,17 @@
 .c h4{font-size:1.15em;line-height:1.25;letter-spacing:-.02em}.c .s{opacity:.6;font-size:.88em}
 .c .btn{display:block;text-align:center;background:var(--ac);color:var(--bg);font-weight:700;border-radius:.6em;padding:.45em;margin-top:.9em}
 .c .ghost{display:block;text-align:center;font-size:.88em;opacity:.6;margin-top:.5em;text-decoration:underline}
-.map{display:block;width:100%;border-radius:.7em;margin:.8em 0;background:var(--dim)}
-.map .st{stroke:var(--bg);stroke-width:2.5;fill:none}.map .pond{fill:color-mix(in srgb,var(--ac) 30%,var(--dim))}
-.map .rt{stroke:var(--ac);stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:520;stroke-dashoffset:0}
-.stops{list-style:none;border-left:.14em solid var(--ac);margin-left:.3em;padding-left:1em}.stops li{position:relative;margin-bottom:.45em}
-.stops li::before{content:"";position:absolute;left:-1.42em;top:.4em;width:.55em;height:.55em;border-radius:50%;background:var(--bg);border:.14em solid var(--ac)}
+.map{display:block;width:100%;border-radius:.7em;margin:.8em 0;background:color-mix(in srgb,var(--fg) 7%,var(--bg));overflow:hidden}
+.map .st path{stroke:var(--bg);stroke-width:2.2;fill:none}.map .mj{stroke:var(--bg);stroke-width:5.5;fill:none;stroke-linecap:round}
+.map .park{fill:color-mix(in srgb,var(--fg) 13%,var(--bg))}.map .pond{fill:color-mix(in srgb,var(--fg) 30%,var(--bg))}
+.map .rail{stroke:color-mix(in srgb,var(--fg) 45%,var(--bg));stroke-width:3.4;fill:none}.map .ties{stroke:var(--bg);stroke-width:1.6;stroke-dasharray:3 3;fill:none}
+.map .sta{fill:var(--fg)}
+.map .rt{stroke:var(--hot);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:0}
+.map text{font:500 6.5px 'IBM Plex Mono',monospace;fill:var(--fg)}.map .pl{font-style:italic;text-anchor:middle;opacity:.7}.map .lb{opacity:.8}
+.map .pin circle{fill:var(--bg);stroke:var(--hot);stroke-width:2}.map .pin text{font-weight:700;font-size:7px;text-anchor:middle}
+.stops{list-style:none;counter-reset:n}.stops li{counter-increment:n;display:flex;gap:.7em;align-items:baseline;margin-bottom:.35em}
+.stops li::before{content:counter(n);flex:none;width:1.5em;height:1.5em;border-radius:50%;border:.14em solid var(--hot);display:grid;place-items:center;font-size:.78em;font-weight:700}
+.stops li .s{display:block}
 .dash{display:inline-flex;gap:.35em;margin-left:.8em;vertical-align:middle}.dash i{width:1.1em;height:.3em;border-radius:9px;background:var(--ac)}.dash i:last-child{background:var(--dim)}
 .grid{display:grid;grid-template-columns:2.6em repeat(3,1fr);gap:.35em;margin:.9em 0;font-size:.85em;align-items:center}
 .grid span{opacity:.6;text-align:center}.grid b{font-weight:400;opacity:.6}
@@ -37,7 +43,8 @@
 .chat div{max-width:82%;border-radius:.8em;padding:.4em .8em;background:var(--dim)}.chat .me{align-self:flex-end;background:var(--ac);color:var(--bg)}
 .row2{display:flex;gap:.6em}.row2 .btn{flex:none;padding:.45em 1em;margin:0}.row2 .out{border:.12em solid var(--line);border-radius:.6em;padding:.4em .8em;font-size:.9em;flex:1;text-align:center}
 .pk{display:flex;justify-content:space-between;align-items:center;border-top:.1em solid var(--dim);padding:.5em 0}
-.pk i{width:1.2em;height:1.2em;border-radius:.25em;border:.12em solid var(--line);display:grid;place-items:center;font-style:normal;font-size:.8em;color:transparent}.pk i.y{background:var(--ac);border-color:var(--ac);color:var(--bg)}
+.pk i{width:1.15em;height:1.15em;border-radius:.25em;border:.12em solid var(--line);display:grid;place-items:center}.pk i.y{background:var(--ac);border-color:var(--ac)}
+.pk i.y::after{content:"";width:.28em;height:.56em;border:solid var(--bg);border-width:0 .14em .14em 0;transform:translateY(-.05em) rotate(45deg)}
 .crew{background:var(--ac);color:var(--bg);border-radius:.8em;padding:1em;margin:-.2em -.3em .9em}.crew .ln{display:flex;justify-content:space-between;margin-top:.9em;position:relative}
 .crew .ln::before{content:"";position:absolute;left:1em;right:1em;top:50%;height:.12em;background:var(--bg);opacity:.5}
 .crew .ln b{position:relative;width:2.6em;height:2.6em;border-radius:50%;background:var(--bg);color:var(--ac);display:grid;place-items:center;font-size:.85em}
@@ -45,7 +52,7 @@
 #pv{container-type:size;background:var(--bg)}
 .scrn{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:5cqw;font-size:min(4.1cqw,3.3cqh);opacity:0;transition:opacity .6s}
 .scrn.on{opacity:1}
-.scrn.on .rt{animation:draw 2.2s .3s both ease-in-out}@keyframes draw{from{stroke-dashoffset:520}}
+.scrn.on .rt{animation:draw 2.4s .3s both ease-in-out}.scrn.on .pin circle,.scrn.on .pin text{animation:pop .35s both;transform-box:fill-box;transform-origin:center}.scrn.on .pin :nth-child(n+3){animation-delay:1.4s}.scrn.on .pin :nth-child(n+5){animation-delay:2.5s}@keyframes draw{from{stroke-dashoffset:1}}
 .scrn.on .y{animation:pop .4s both}.scrn.on .pk:nth-of-type(3) .y{animation-delay:.9s}.scrn.on .pk:nth-of-type(5) .y{animation-delay:1.6s}
 .scrn.on .chat div:nth-of-type(1){animation:up .4s .8s both}.scrn.on .chat div:nth-of-type(2){animation:up .4s 1.7s both}
 .scrn.on .arc{animation:arc 1.4s .4s both}@keyframes arc{from{stroke-dashoffset:239}}
@@ -71,10 +78,14 @@
 .tC #ph{position:relative;border:calc(.2*var(--u)) solid var(--dim);border-radius:calc(1.3*var(--u));background:var(--bg);box-shadow:none;padding:0;min-height:0;overflow:hidden;background:var(--bg)!important}
 .tC #pv{aspect-ratio:auto;height:100%;border-radius:0}
 .tC #steps{display:block;padding:calc(1.4*var(--u)) calc(1.8*var(--u));font-size:calc(1.25*var(--u));line-height:1.75}
-#steps div{display:flex;gap:1.2ch;opacity:.5;transition:opacity .3s,color .3s}#steps div.on{opacity:1;color:var(--ac);font-weight:700}
-#steps div::before{content:attr(data-n)}
-#steps div::after{margin-left:auto;font-weight:400;font-size:calc(1.05*var(--u));opacity:.7}
-#steps div.at{opacity:.9}#steps div.at::after{content:"site"}#steps div.on::after{content:"app"}
+#steps .lbl{display:block;margin-bottom:.3em}
+#steps div{display:flex;align-items:center;gap:1ch}#steps div b{font-weight:500}
+#steps div span{margin-left:auto;display:flex;align-items:center;gap:.9ch;font-size:calc(1.1*var(--u))}
+#steps div span::before{content:"";width:.75em;height:.75em;border-radius:50%;border:.16em solid var(--line)}
+#steps .live span{color:var(--ac);font-weight:700}#steps .live span::before{background:var(--ac);border-color:var(--ac)}
+#steps .next span::before{border-color:var(--hot);animation:ping 1.6s ease-in-out infinite}
+#steps .plan{opacity:.55}
+@keyframes ping{50%{box-shadow:0 0 0 .35em color-mix(in srgb,var(--hot) 30%,transparent)}}
 /* touch: every take reads as the site with the phone in front */
 @media (max-width:520px){body{display:block!important;padding:0!important}.backdrop,#steps,#base{display:none!important}
   #lap{position:absolute!important;inset:0!important;width:auto!important;border:0!important;border-radius:0!important}#lid{height:100%;border:0!important;padding:0!important;background:none!important}#sv{height:100%;aspect-ratio:auto!important;border-radius:0!important}
@@ -92,9 +103,17 @@ const dots = n => `<span class="dash">${"<i></i>".repeat(n)}</span>`;
 // one drawing per step, used small on the site and large in the app
 const CARDS = [
   `<h4>Photo walk from Kichijoji station, ending at a café</h4><div class="s">Kichijoji · about 2.5 hours</div>
-   <svg class="map" viewBox="0 0 200 110"><path class="st" d="M0 22H200M0 58H200M0 92H200M38 0V110M92 0V110M150 0V110M0 0L200 70"/><ellipse class="pond" cx="78" cy="70" rx="46" ry="17" transform="rotate(-12 78 70)"/>
-   <path class="rt" d="M158 14L172 40L168 78L120 96L60 92L30 74L44 56L96 48L128 60L112 76"/><circle cx="158" cy="14" r="4" fill="var(--bg)" stroke="var(--ac)" stroke-width="2"/></svg>
-   <ul class="stops"><li>Kichijoji Station, park exit <span class="s">· meet here</span></li><li>Inokashira Park <span class="s">· 90 minutes of photos</span></li><li>A café on Nanaibashi-dori</li></ul><b>4 of 5 going</b>${dots(5)}`,
+   <svg class="map" viewBox="0 0 240 132">
+    <g class="st" transform="rotate(-7 120 66)"><path d="M-30 14H270M-30 40H270M-30 70H270M-30 98H270M-30 124H270M18 -30V170M54 -30V170M92 -30V170M132 -30V170M170 -30V170M210 -30V170"/></g>
+    <path class="mj" d="M-10 118C50 108 120 126 250 98M222 -10C214 40 226 90 218 142"/>
+    <path class="park" d="M30 50C58 36 122 40 154 52C174 60 176 92 154 104C118 120 58 118 36 102C18 88 16 60 30 50Z"/>
+    <path class="pond" d="M50 72C64 60 96 66 120 64C140 62 152 72 146 84C140 96 112 92 92 96C72 100 54 98 46 88C42 82 44 76 50 72Z"/>
+    <path class="rail" d="M-10 30L250 6"/><path class="ties" d="M-10 30L250 6"/>
+    <path class="rt" pathLength="1" d="M188 13C190 30 180 44 162 52C138 60 96 50 58 60C36 66 30 86 44 98C60 110 112 110 142 102C162 96 180 100 204 92"/>
+    <rect class="sta" x="174" y="6" width="28" height="11" rx="3" transform="rotate(-5 188 12)"/>
+    <text class="pl" x="100" y="82">Inokashira Park</text><text class="lb" x="170" y="28" text-anchor="end">Kichijoji Sta.</text>
+    <g class="pin"><circle cx="188" cy="13" r="6.5"/><text x="188" y="15.6">1</text><circle cx="36" cy="80" r="6.5"/><text x="36" y="82.6">2</text><circle cx="204" cy="92" r="6.5"/><text x="204" y="94.6">3</text></g></svg>
+   <ol class="stops"><li><div>Kichijoji Station, park exit<span class="s">Meet here</span></div></li><li><div>Inokashira Park<span class="s">About 90 minutes of photos</span></div></li><li><div>A café on Nanaibashi-dori<span class="s">Coffee and comparing shots</span></div></li></ol><b>4 of 5 going</b>${dots(5)}`,
   `<h4>When people can go</h4><div class="s">The darker the slot, the more people are free.</div>
    <div class="grid"><b></b><span>Morning</span><span>Afternoon</span><span>Evening</span><b>Fri</b><i></i><i></i><i class="m"></i><b>Sat</b><i class="m"></i><i class="pick">2 PM</i><i class="m"></i><b>Sun</b><i class="m"></i><i></i><i></i></div><b>Sat, Nov 15, 2:00 PM</b>`,
   `<h4>Can you go?</h4><div class="s">Please answer by Thu, Nov 13 · Sat, Nov 15, 2:00 PM</div>
@@ -105,7 +124,7 @@ const CARDS = [
    <div class="chat"><span class="s">Group chat · Aoi, Kenji, Maya, Sam and you</span><div>Maya: I'm by the ticket gates, green jacket.</div><div class="me">Two stops away, excited to meet you all!</div></div>
    <div class="row2"><span class="btn">I'm here</span><span class="out">Share with someone you trust</span></div>`,
   `<h4>Who would you meet again?</h4><div class="s" style="margin-bottom:.8em">Private: nobody sees who you pick.</div>
-   <div class="pk">Aoi<i class="y">✓</i></div><div class="pk">Kenji<i>✓</i></div><div class="pk">Maya<i class="y">✓</i></div><div class="pk">Sam<i>✓</i></div>`,
+   <div class="pk">Aoi<i class="y"></i></div><div class="pk">Kenji<i></i></div><div class="pk">Maya<i class="y"></i></div><div class="pk">Sam<i></i></div>`,
   `<div class="crew"><div class="s" style="opacity:.85">A crew for you</div><h4>Photo walk crew</h4><div class="ln"><b>A</b><b>M</b><b>S</b><b>You</b></div></div>
    <b>You got on well. Keep meeting as a crew?</b><div class="s">Something you all love: photo walks.</div><span class="btn">Yes, join the crew</span><span class="ghost">No, thanks</span>`,
 ];
@@ -123,7 +142,9 @@ pg.innerHTML = `<div class="logo"><i></i>ISSHO</div><div class="hero"><h1>Find y
   <p>Tell us what you love. We'll find a few people nearby who love it too, and a time and place to do it together.</p><span class="cta">Join the waitlist</span></div>` +
   STEPS.map(([k, h, p], i) => `<div class="sec"><div><small>${k}</small><h2>${h}</h2><p>${p}</p></div><div class="c">${CARDS[i]}</div></div>`).join("");
 pv.innerHTML = CARDS.map(c => `<div class="scrn"><div class="c">${c}</div></div>`).join("");
-$("#steps").innerHTML = STEPS.map(([k], i) => `<div data-n="${i + 1}">${k}</div>`).join("");
+// launch cities: [city, status]
+const CITIES = [["Tokyo", "live", "launched"], ["Da Nang / Hoi An", "live", "launched"], ["London", "next", "up next"], ["Mumbai", "plan", "planned"]];
+$("#steps").innerHTML = `<span class="lbl">launch cities</span>` + CITIES.map(([c, k, t]) => `<div class="${k}"><b>${c}</b><span>${t}</span></div>`).join("");
 // The six steps are one cycle. The site and the app are half a cycle apart, so they never show the same step:
 // while the site is on step k (with the next steps in view below it), the app shows step k+3.
 const OFFSET = 3, secs = [...pg.querySelectorAll(".sec")];
@@ -133,8 +154,7 @@ const show = i => { at = i; const [sec, k] = STOPS[i], ak = (k + OFFSET) % 6, ma
   const top = sec < 0 ? 0 : secs[sec].offsetTop - .03 * $("#sv").offsetWidth;
   pg.style.transform = `translateY(${-Math.min(top, max)}px)`;
   secs.forEach((s, j) => s.classList.toggle("at", j === k && sec >= 0));
-  [...pv.children].forEach((s, j) => s.classList.toggle("on", j === ak));
-  [...$("#steps").children].forEach((d, j) => { d.classList.toggle("on", j === ak); d.classList.toggle("at", j === k); }); };
+  [...pv.children].forEach((s, j) => s.classList.toggle("on", j === ak)); };
 addEventListener("resize", () => show(at));
 await document.fonts.ready;
 show(0);
