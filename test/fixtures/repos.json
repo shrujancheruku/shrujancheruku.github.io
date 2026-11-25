@@ -1,0 +1,102 @@
+[
+  {
+    "has_pages": true,
+    "name": "aidan-landing-page"
+  },
+  {
+    "has_pages": false,
+    "name": "claude-orchestrate"
+  },
+  {
+    "has_pages": true,
+    "name": "GameResume"
+  },
+  {
+    "has_pages": false,
+    "name": "gatsby-starter-dimension"
+  },
+  {
+    "has_pages": false,
+    "name": "github-action-readme-generator"
+  },
+  {
+    "has_pages": false,
+    "name": "Hollywood-Data-Visualization"
+  },
+  {
+    "has_pages": false,
+    "name": "homebrew-mac"
+  },
+  {
+    "has_pages": true,
+    "name": "Interactive-Graphics"
+  },
+  {
+    "has_pages": true,
+    "name": "ISB_TEP-LMS_Portal"
+  },
+  {
+    "has_pages": true,
+    "name": "issho"
+  },
+  {
+    "has_pages": false,
+    "name": "look-together"
+  },
+  {
+    "has_pages": false,
+    "name": "Music-picker"
+  },
+  {
+    "has_pages": false,
+    "name": "orca-flow"
+  },
+  {
+    "has_pages": false,
+    "name": "pokedexcli"
+  },
+  {
+    "has_pages": true,
+    "name": "Portfolio"
+  },
+  {
+    "has_pages": false,
+    "name": "Programming-Studio"
+  },
+  {
+    "has_pages": true,
+    "name": "rapid-radiology"
+  },
+  {
+    "has_pages": true,
+    "name": "shrujancheruku.github.io"
+  },
+  {
+    "has_pages": true,
+    "name": "Sineflex-Website"
+  },
+  {
+    "has_pages": false,
+    "name": "spotify-player"
+  },
+  {
+    "has_pages": false,
+    "name": "StrainSaver"
+  },
+  {
+    "has_pages": false,
+    "name": "svaka-website"
+  },
+  {
+    "has_pages": false,
+    "name": "TrueCrypt-Steganography"
+  },
+  {
+    "has_pages": true,
+    "name": "unmacos"
+  },
+  {
+    "has_pages": false,
+    "name": "wavelength-xi"
+  }
+]
