@@ -62,7 +62,13 @@ body.idle .halo{animation:halo 2s ease-in-out 1s infinite}
 .tip b{font-weight:700;color:color-mix(in srgb,var(--ac) 55%,var(--bg))}
 .tip kbd{font:700 11px var(--mono);border:1px solid color-mix(in srgb,var(--bg) 45%,transparent);border-radius:5px;padding:1px 5px}
 .ib:hover .tip,.ib:focus-visible .tip{opacity:1;transform:none;transition-delay:.25s}
-@media (hover:none){.tip{display:none}}
+@media (hover:none){.tip{display:none}.tip kbd{display:none}}
+.tg .ib:nth-child(1){--i:0}.tg .ib:nth-child(2){--i:1}.tg .ib:nth-child(3){--i:2}.tg .ib:nth-child(4){--i:3}
+.tip::after{content:"";position:absolute;bottom:100%;right:16.5px;width:1px;height:calc(10px + var(--i)*34px);background:var(--fg);opacity:0;transition:opacity .3s}
+body.idle .tip{display:flex;top:calc(100% + 10px + var(--i)*34px);opacity:1;transform:none;transition:none;animation:tipin .5s cubic-bezier(.2,.9,.2,1) both;animation-delay:calc(.5s + var(--i)*.12s)}
+body.idle .tip::after{opacity:.5}
+body.idle .tip::before{display:none}
+@keyframes tipin{from{opacity:0;transform:translateY(-6px)}}
 #themes{position:absolute;z-index:45;visibility:hidden;opacity:0;right:10px;top:54px;transform:translateY(-8px);width:min(460px,calc(100% - 20px));background:var(--dim);border:1px solid var(--line);border-radius:16px;padding:12px;
   display:grid;grid-template-columns:repeat(4,1fr);gap:8px;box-shadow:0 20px 60px #0008;font:12px var(--mono);transition:opacity .2s,transform .3s cubic-bezier(.2,.9,.2,1),visibility 0s .3s}
 #themes.on{visibility:visible;opacity:1;transform:none;transition:opacity .2s,transform .3s cubic-bezier(.2,.9,.2,1)}
@@ -205,9 +211,10 @@ body.idle .halo{animation:halo 2s ease-in-out 1s infinite}
 
 /* CRT (approved): bezel + one WebGL 2 overlay canvas, no curvature */
 #crtc{position:absolute;inset:0;width:100%;height:100%;z-index:50;pointer-events:none;mix-blend-mode:multiply;display:none}
-body.crt{background:radial-gradient(120% 120% at 50% 40%,#2a2a2d,#0c0c0e 70%);--bz:26px;--br:26px}
+body{background:radial-gradient(120% 120% at 50% 40%,#2a2a2d,#0c0c0e 70%);--bz:26px;--br:26px} /* bezel always on: toggling CRT never moves the screen */
+.screen{box-shadow:0 0 0 2px #000,0 0 0 6px #1d1d20}
 body.crt #crtc{display:block}
-@media (max-width:760px){body.crt{--bz:8px;--br:16px}}
+@media (max-width:760px){body{--bz:8px;--br:16px}}
 body.crt .screen{text-shadow:0 0 .45em color-mix(in srgb,currentColor 40%,transparent);box-shadow:0 0 0 2px #000,0 0 0 6px #1d1d20,0 0 40px 6px color-mix(in srgb,var(--ac) 14%,transparent)}
 body.crt .screen::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:55;box-shadow:inset 0 0 28px 0 #0004,inset 0 0 0 2px #0007;background:linear-gradient(160deg,#ffffff0d,transparent 38%)}
 
