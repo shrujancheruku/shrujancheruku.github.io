@@ -5,6 +5,7 @@
   orca-flow, rapid-radiology) to final: type, timing, wording and how each frame sits in its window; each one's
   final state, the moment frozen for its share card, and how it reads at touch width.
   Host: the approved desktop (prototype/archive-window, take E), now with all four featured projects in order.
+  Approved: take D (the default), which is C · Tiled for every composition except rapid-radiology, which is B · Full-bleed.
   Three takes of how a composition sits in its window, switchable via ?take=A|B|C, the switcher, or ← →:
     A · Devices     drawn hardware in theme colours (laptop and phone, a monitor, a browser frame)
     B · Full-bleed  no hardware: the product's own surface is the window
@@ -88,6 +89,7 @@ body.idle .tip::before{display:none}
 .tt{position:absolute;top:10px;left:16px;right:16px;z-index:2;font:11px var(--mono);opacity:.4;pointer-events:none;display:flex;justify-content:space-between}
 .win:has(.comp) .tt,.win:has(.b-copy) .tt,.win:has(.photo) .tt,.win:has(.lB) .tt{display:none}
 .vD #scrim{backdrop-filter:none}
+.win:has(.b-tl,.b-il,.b-sk) .tt{top:0;left:0;right:0;padding:10px 16px 8px;opacity:1;color:color-mix(in srgb,var(--fg) 40%,var(--bg));background:var(--bg);box-shadow:0 4px 6px var(--bg);transition:color .45s,background .45s}
 .body{position:relative;flex:1;min-height:0;container-type:size}
 .comp iframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none;display:block}
 .dimt{opacity:.55}
@@ -291,9 +293,10 @@ const ARCH_MORE=[
   {n:'placeholder-nine',p:'The last placeholder pitch.',l:'Python',ph:1},
 ];
 const Q=new URLSearchParams(location.search);
-let take=['A','B','C'].includes(Q.get('take'))?Q.get('take'):'A';
-const TAKES={A:'Devices',B:'Full-bleed',C:'Tiled'};
-const compSrc=(p,x='')=>`comps/${p.slug}.html?take=${take}&theme=${theme}${x}`;
+let take=['A','B','C','D'].includes(Q.get('take'))?Q.get('take'):'D';
+const TAKES={A:'Devices',B:'Full-bleed',C:'Tiled',D:'Approved mix'};
+const takeOf=p=>take==='D'?(p.slug==='rapid-radiology'?'B':'C'):take;
+const compSrc=(p,x='')=>`comps/${p.slug}.html?take=${takeOf(p)}&theme=${theme}${x}`;
 const BIG=Q.get('n')==='9';
 const ARCH=BIG?[...ARCH_REAL.slice(0,2),ARCH_MORE[0],...ARCH_MORE.slice(1),ARCH_REAL[2]]:ARCH_REAL; /* aidan-landing-page always last */
 const NA=ARCH.length;
