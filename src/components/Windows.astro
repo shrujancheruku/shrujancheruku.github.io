@@ -1,0 +1,43 @@
+---
+// Every window of the desktop. Which are on show, and where, is decided by the
+// workspaces' tilings (src/lib/workspaces.ts); this file only holds them.
+// Windows other tickets build are placeholders until then.
+import NameWindow from "./NameWindow.astro";
+import Placeholder from "./Placeholder.astro";
+import Window from "./Window.astro";
+
+interface Props {
+  featured: number;
+}
+
+const { featured } = Astro.props;
+const projects = Array.from({ length: featured }, (_, i) => i + 1);
+---
+
+<!-- opening, and again on contact -->
+<NameWindow />
+<Window id="term" label="zsh"><Placeholder ticket={35} /></Window>
+<Window id="now" label="~/now"><Placeholder ticket={35} /></Window>
+
+<!-- projects: one step per featured project -->
+{
+  projects.map((n) => (
+    <>
+      <Window id={`copy-${n}`}><Placeholder ticket={37} /></Window>
+      <Window id={`comp-${n}`}><Placeholder ticket={39} /></Window>
+    </>
+  ))
+}
+<Window id="stack" label="featured"><Placeholder ticket={37} /></Window>
+
+<!-- timeline -->
+<Window id="timeline" label="timeline" scrolls><Placeholder ticket={43} /></Window>
+<Window id="education" label="education & internships" scrolls><Placeholder ticket={43} /></Window>
+<Window id="skills" label="skills" scrolls><Placeholder ticket={44} /></Window>
+
+<!-- sabbatical -->
+<Window id="sabbatical"><Placeholder ticket={45} /></Window>
+{[1, 2, 3, 4].map((n) => <Window id={`photo-${n}`}><Placeholder ticket={45} /></Window>)}
+
+<!-- contact -->
+<Window id="contact" label="contact — zsh"><Placeholder ticket={46} /></Window>

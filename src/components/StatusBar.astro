@@ -1,8 +1,27 @@
 ---
-// The status bar strip. Its workspace numbers, toggles and clock come later.
+// The status bar strip. Left: the workspace numbers with their names (numbers
+// only on touch). The toggles and the clock on the right come with #33.
+import type { Workspace } from "../lib/workspaces";
+
+interface Props {
+  workspaces: readonly Workspace[];
+}
+
+const { workspaces } = Astro.props;
 ---
 
-<header class="bar"></header>
+<header class="bar">
+  <nav class="ws" aria-label="workspaces">
+    {
+      workspaces.map((w, i) => (
+        <button type="button" data-workspace={i} aria-label={`${i + 1} ${w.name}`}>
+          {i + 1}
+          <span class="name"> {w.name}</span>
+        </button>
+      ))
+    }
+  </nav>
+</header>
 
 <style>
   .bar {
@@ -22,11 +41,49 @@
     font: 500 12.5px var(--mono);
   }
 
+  .ws {
+    display: flex;
+    gap: 2px;
+  }
+
+  .ws button {
+    height: 24px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 12px;
+    font: inherit;
+    color: inherit;
+    background: none;
+    cursor: pointer;
+    transition:
+      background 0.3s,
+      color 0.3s;
+  }
+
+  .ws button:hover {
+    background: var(--bg);
+  }
+
+  .ws button[aria-current="true"] {
+    background: var(--ac);
+    color: var(--bg);
+  }
+
   @media (max-width: 760px) {
     .bar {
       height: 40px;
       border-radius: 20px;
       margin: 8px 8px 6px;
+    }
+
+    .ws button {
+      height: 28px;
+      padding: 0 9px;
+      border-radius: 14px;
+    }
+
+    .name {
+      display: none;
     }
   }
 </style>
