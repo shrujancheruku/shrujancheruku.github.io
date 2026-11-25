@@ -1,0 +1,18 @@
+# Which projects appear, and in what order. Position in a list is its order.
+# Nothing on GitHub affects this. Each name is a repository and a folder in
+# projects/. Move a project between the lists by moving one line; a featured
+# project that moves to the archive keeps its folder.
+#
+# Featured: 3 to 6 projects. Archive: any number, `aidan-landing-page` last.
+- id: featured
+  projects:
+    - issho
+    - unmacos
+    - orca-flow
+    - rapid-radiology
+
+- id: archive
+  projects:
+    - claude-orchestrate
+    - TrueCrypt-Steganography
+    - aidan-landing-page

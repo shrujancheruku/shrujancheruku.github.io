@@ -6,6 +6,7 @@
       "name": "shrujancheruku-github-io",
       "dependencies": {
         "astro": "7.4.13",
+        "zod": "4.6.7",
       },
       "devDependencies": {
         "@astrojs/check": "0.9.12",

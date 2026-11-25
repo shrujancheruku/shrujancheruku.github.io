@@ -1,0 +1,380 @@
+{
+  "data": {
+    "r0": {
+      "name": "issho",
+      "url": "https://github.com/shrujancheruku/issho",
+      "isPrivate": false,
+      "primaryLanguage": {
+        "name": "Go"
+      },
+      "releases": {
+        "nodes": [
+          {
+            "tagName": "v1.0.0",
+            "url": "https://github.com/shrujancheruku/issho/releases/tag/v1.0.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v0.10.0",
+            "url": "https://github.com/shrujancheruku/issho/releases/tag/v0.10.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v0.9.0",
+            "url": "https://github.com/shrujancheruku/issho/releases/tag/v0.9.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v0.8.0",
+            "url": "https://github.com/shrujancheruku/issho/releases/tag/v0.8.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v0.7.0",
+            "url": "https://github.com/shrujancheruku/issho/releases/tag/v0.7.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v0.6.0",
+            "url": "https://github.com/shrujancheruku/issho/releases/tag/v0.6.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v0.5.0",
+            "url": "https://github.com/shrujancheruku/issho/releases/tag/v0.5.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v0.4.0",
+            "url": "https://github.com/shrujancheruku/issho/releases/tag/v0.4.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v0.3.0",
+            "url": "https://github.com/shrujancheruku/issho/releases/tag/v0.3.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v0.2.0",
+            "url": "https://github.com/shrujancheruku/issho/releases/tag/v0.2.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v0.1.0",
+            "url": "https://github.com/shrujancheruku/issho/releases/tag/v0.1.0",
+            "isPrerelease": false,
+            "isDraft": false
+          }
+        ]
+      },
+      "refs": {
+        "nodes": [
+          {
+            "name": "v0.1.0"
+          },
+          {
+            "name": "v0.2.0"
+          },
+          {
+            "name": "v0.3.0"
+          },
+          {
+            "name": "v0.4.0"
+          },
+          {
+            "name": "v0.5.0"
+          },
+          {
+            "name": "v0.6.0"
+          },
+          {
+            "name": "v0.7.0"
+          },
+          {
+            "name": "v0.8.0"
+          },
+          {
+            "name": "v0.9.0"
+          },
+          {
+            "name": "v0.10.0"
+          },
+          {
+            "name": "v1-final"
+          },
+          {
+            "name": "v1.0.0"
+          }
+        ]
+      }
+    },
+    "r1": {
+      "name": "unmacos",
+      "url": "https://github.com/shrujancheruku/unmacos",
+      "isPrivate": false,
+      "primaryLanguage": {
+        "name": "Shell"
+      },
+      "releases": {
+        "nodes": [
+          {
+            "tagName": "v1.5.0",
+            "url": "https://github.com/shrujancheruku/unmacos/releases/tag/v1.5.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v1.4.0",
+            "url": "https://github.com/shrujancheruku/unmacos/releases/tag/v1.4.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v1.3.0",
+            "url": "https://github.com/shrujancheruku/unmacos/releases/tag/v1.3.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v1.2.0",
+            "url": "https://github.com/shrujancheruku/unmacos/releases/tag/v1.2.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v1.1.0",
+            "url": "https://github.com/shrujancheruku/unmacos/releases/tag/v1.1.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v1.0.0",
+            "url": "https://github.com/shrujancheruku/unmacos/releases/tag/v1.0.0",
+            "isPrerelease": false,
+            "isDraft": false
+          }
+        ]
+      },
+      "refs": {
+        "nodes": [
+          {
+            "name": "v1.0.0"
+          },
+          {
+            "name": "v1.1.0"
+          },
+          {
+            "name": "v1.2.0"
+          },
+          {
+            "name": "v1.3.0"
+          },
+          {
+            "name": "v1.4.0"
+          },
+          {
+            "name": "v1.5.0"
+          }
+        ]
+      }
+    },
+    "r2": {
+      "name": "orca-flow",
+      "url": "https://github.com/shrujancheruku/orca-flow",
+      "isPrivate": false,
+      "primaryLanguage": {
+        "name": "Python"
+      },
+      "releases": {
+        "nodes": []
+      },
+      "refs": {
+        "nodes": [
+          {
+            "name": "v0.1.0"
+          },
+          {
+            "name": "v0.1.1"
+          },
+          {
+            "name": "v0.2.0"
+          },
+          {
+            "name": "v0.2.1"
+          },
+          {
+            "name": "v0.3.0"
+          },
+          {
+            "name": "v0.4.0"
+          },
+          {
+            "name": "v0.5.0"
+          },
+          {
+            "name": "v0.6.0"
+          },
+          {
+            "name": "v0.7.0"
+          },
+          {
+            "name": "v0.8.0"
+          },
+          {
+            "name": "v0.9.0"
+          },
+          {
+            "name": "v0.9.1"
+          }
+        ]
+      }
+    },
+    "r3": {
+      "name": "rapid-radiology",
+      "url": "https://github.com/shrujancheruku/rapid-radiology",
+      "isPrivate": false,
+      "primaryLanguage": {
+        "name": "TypeScript"
+      },
+      "releases": {
+        "nodes": []
+      },
+      "refs": {
+        "nodes": []
+      }
+    },
+    "r4": {
+      "name": "claude-orchestrate",
+      "url": "https://github.com/shrujancheruku/claude-orchestrate",
+      "isPrivate": false,
+      "primaryLanguage": {
+        "name": "Python"
+      },
+      "releases": {
+        "nodes": [
+          {
+            "tagName": "v0.8.0",
+            "url": "https://github.com/shrujancheruku/claude-orchestrate/releases/tag/v0.8.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v0.7.0",
+            "url": "https://github.com/shrujancheruku/claude-orchestrate/releases/tag/v0.7.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v0.6.0",
+            "url": "https://github.com/shrujancheruku/claude-orchestrate/releases/tag/v0.6.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v0.5.0",
+            "url": "https://github.com/shrujancheruku/claude-orchestrate/releases/tag/v0.5.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v0.4.1",
+            "url": "https://github.com/shrujancheruku/claude-orchestrate/releases/tag/v0.4.1",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v0.4.0",
+            "url": "https://github.com/shrujancheruku/claude-orchestrate/releases/tag/v0.4.0",
+            "isPrerelease": false,
+            "isDraft": false
+          },
+          {
+            "tagName": "v0.2.0",
+            "url": "https://github.com/shrujancheruku/claude-orchestrate/releases/tag/v0.2.0",
+            "isPrerelease": false,
+            "isDraft": false
+          }
+        ]
+      },
+      "refs": {
+        "nodes": [
+          {
+            "name": "v0.2.0"
+          },
+          {
+            "name": "v0.4.0"
+          },
+          {
+            "name": "v0.4.1"
+          },
+          {
+            "name": "v0.5.0"
+          },
+          {
+            "name": "v0.6.0"
+          },
+          {
+            "name": "v0.7.0"
+          },
+          {
+            "name": "v0.8.0"
+          }
+        ]
+      }
+    },
+    "r5": {
+      "name": "TrueCrypt-Steganography",
+      "url": "https://github.com/shrujancheruku/TrueCrypt-Steganography",
+      "isPrivate": false,
+      "primaryLanguage": {
+        "name": "Python"
+      },
+      "releases": {
+        "nodes": []
+      },
+      "refs": {
+        "nodes": []
+      }
+    },
+    "r6": {
+      "name": "aidan-landing-page",
+      "url": "https://github.com/shrujancheruku/aidan-landing-page",
+      "isPrivate": false,
+      "primaryLanguage": {
+        "name": "TypeScript"
+      },
+      "releases": {
+        "nodes": []
+      },
+      "refs": {
+        "nodes": []
+      }
+    },
+    "r7": null
+  },
+  "errors": [
+    {
+      "type": "NOT_FOUND",
+      "path": [
+        "r7"
+      ],
+      "locations": [
+        {
+          "line": 51,
+          "column": 1
+        }
+      ],
+      "message": "Could not resolve to a Repository with the name 'shrujancheruku/deleted-example'."
+    }
+  ]
+}
