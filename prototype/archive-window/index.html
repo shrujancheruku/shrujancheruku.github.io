@@ -48,6 +48,21 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .chip i{width:14px;height:14px;border-radius:50%;background:conic-gradient(var(--bg) 0 50%,var(--hot) 0);box-shadow:0 0 0 1.5px var(--bg)}
 body.idle .halo{animation:halo 2s ease-in-out 1s infinite}
 @keyframes halo{50%{box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 55%,transparent),0 0 24px 7px color-mix(in srgb,var(--ac) 60%,transparent)}}
+/* status bar toggles: icon buttons with tooltips naming the action and its shortcut */
+.tg{display:flex;align-items:center;gap:4px}
+.ib{position:relative;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:var(--fg);transition:background .2s,color .2s}
+.ib svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ib:hover,.ib:focus-visible{background:var(--bg);color:var(--ac);outline:none}
+.ib.on{color:var(--ac)}
+.ib.th i{width:16px;height:16px;border-radius:50%;background:conic-gradient(var(--fg) 0 50%,var(--ac) 0);box-shadow:0 0 0 1.5px var(--fg)}
+.ib.th{box-shadow:0 0 0 2px color-mix(in srgb,var(--ac) 35%,transparent)}
+.tip{position:absolute;top:calc(100% + 10px);right:-4px;white-space:nowrap;pointer-events:none;background:var(--fg);color:var(--bg);font:500 12px var(--mono);
+  padding:5px 6px 5px 9px;border-radius:8px;display:flex;align-items:center;gap:7px;opacity:0;transform:translateY(-4px);transition:opacity .15s,transform .2s;z-index:46}
+.tip::before{content:"";position:absolute;top:-4px;right:13px;width:8px;height:8px;background:inherit;transform:rotate(45deg)}
+.tip b{font-weight:700;color:color-mix(in srgb,var(--ac) 55%,var(--bg))}
+.tip kbd{font:700 11px var(--mono);border:1px solid color-mix(in srgb,var(--bg) 45%,transparent);border-radius:5px;padding:1px 5px}
+.ib:hover .tip,.ib:focus-visible .tip{opacity:1;transform:none;transition-delay:.25s}
+@media (hover:none){.tip{display:none}}
 #themes{position:absolute;z-index:45;visibility:hidden;opacity:0;right:10px;top:54px;transform:translateY(-8px);width:min(460px,calc(100% - 20px));background:var(--dim);border:1px solid var(--line);border-radius:16px;padding:12px;
   display:grid;grid-template-columns:repeat(4,1fr);gap:8px;box-shadow:0 20px 60px #0008;font:12px var(--mono);transition:opacity .2s,transform .3s cubic-bezier(.2,.9,.2,1),visibility 0s .3s}
 #themes.on{visibility:visible;opacity:1;transform:none;transition:opacity .2s,transform .3s cubic-bezier(.2,.9,.2,1)}
@@ -387,8 +402,7 @@ const vk=V[Q.get('variant')]?Q.get('variant'):'E', v=V[vk];
 const RT=vk==='B'||vk==='E';
 
 /* ---------------- state ---------------- */
-let picked=!!THEMES[Q.get('theme')], theme=picked?Q.get('theme'):sysTheme();
-lightMQ.addEventListener('change',()=>{if(!picked){theme=sysTheme();applyTheme()}});
+let picked=!!THEMES[Q.get('theme')], theme=picked?Q.get('theme'):'paper'; /* paper by default, whatever the system preference */
 let crt=Q.get('crt')==='0'?0:1, ilOpen=false, archOpen=false, opener=null, openedBy='-';
 const save=()=>{const u=new URL(location.href);u.searchParams.set('variant',vk);if(picked)u.searchParams.set('theme',theme);else u.searchParams.delete('theme');
   u.searchParams.set('crt',crt);if(BIG)u.searchParams.set('n',9);else u.searchParams.delete('n');
@@ -401,8 +415,12 @@ const woke=()=>{document.body.classList.remove('idle');['pointerdown','keydown',
 ['pointerdown','keydown','wheel','touchstart'].forEach(e=>addEventListener(e,woke,true));
 $('#root').innerHTML=`<div class="screen">
   <div class="bar"><div class="ws">${WS.map((n,i)=>`<b data-act="ws" data-w="${i}" title="${n}">${i+1}<span class="d"> ${n}</span></b>`).join('')}</div>
-    <div class="rt">${vk==='E'?'':`<span data-act="archive" id="barArch"><span class="d">archive</span><span class="m">▤</span></span>`}<span data-act="ws" data-w="4"><span class="d">contact</span><span class="m">@</span></span>
-    <span class="chip halo" data-act="theme-ui"><i></i><span data-theme-name></span></span><span class="clock d"></span></div></div>
+    <div class="rt">${vk==='E'?'':`<span data-act="archive" id="barArch"><span class="d">archive</span><span class="m">▤</span></span>`}<div class="tg">
+      <button class="ib" data-act="ws" data-w="0" aria-label="home"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 9.2 10 3.8l6.5 5.4v7.3h-13z"/><path d="M8.2 16.5v-4.2h3.6v4.2"/></svg><span class="tip">home <kbd>H</kbd></span></button>
+      <button class="ib" data-act="ws" data-w="4" aria-label="contact"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.8" y="4.8" width="14.4" height="10.4" rx="2"/><path d="m3.4 6 6.6 5 6.6-5"/></svg><span class="tip">contact <kbd>M</kbd></span></button>
+      <button class="ib" data-act="crt" id="crtB" aria-label="crt"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.6" y="3.4" width="14.8" height="10.4" rx="2"/><path d="M5.4 6.8h9.2M5.4 9.6h9.2M7.4 16.8h5.2M10 13.8v3"/></svg><span class="tip">crt <b data-crt-state></b> <kbd>C</kbd></span></button>
+      <button class="ib th halo" data-act="theme-ui" aria-label="theme"><i></i><span class="tip">theme <b data-theme-name></b> <kbd>T</kbd></span></button>
+    </div><span class="clock d"></span></div></div>
   <div class="area">${BASE_W()}${v.html()}</div>
   <div id="themes">${TK.map(k=>`<button data-act="theme-set" data-t="${k}"><i style="background:linear-gradient(135deg,${THEMES[k].bg} 50%,${THEMES[k].ac} 50%)"></i>${k}</button>`).join('')}</div>
   <canvas id="crtc"></canvas>
@@ -529,6 +547,7 @@ document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');
   const act=a.dataset.act;
   if(act==='ws'){if(archOpen&&S[step].ws===+a.dataset.w)archClose();go(WS_FIRST[+a.dataset.w])}
   if(act==='go')go(+a.dataset.s);
+  if(act==='crt')setCrt(1-crt);
   if(act==='archive')archToggle(a);
   if(act==='arch-close')archClose();
   if(act==='theme-ui'){e.stopPropagation();$('#themes').classList.toggle('on')}
@@ -537,11 +556,12 @@ document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');
   if(act==='copy'){navigator.clipboard?.writeText('shrujancheruku@gmail.com');ctype('',['copied to clipboard'],true)}
 });
 $$('.ae').forEach(p=>p.addEventListener('mouseenter',()=>{$$('.ae').forEach(q=>q.classList.toggle('focus',q===p))}));
-addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select,[contenteditable]'))return;
+addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select,[contenteditable]')||e.metaKey||e.ctrlKey||e.altKey)return;
   if(e.key==='ArrowLeft')sw(-1);if(e.key==='ArrowRight')sw(1);
   if(e.key==='a')archToggle();if(e.key==='n')toggleN();
   if(e.key==='t')cycle();if(e.key==='c')setCrt(1-crt);if(e.key==='i')toggleIl();
   if(e.key==='s')$('#spec').classList.toggle('on');
+  if(e.key==='h')go(WS_FIRST[0]);if(e.key==='m')go(WS_FIRST[4]);
   if(e.key==='Escape'){archClose();$('#themes').classList.remove('on')}});
 const clock=()=>$$('.clock').forEach(c=>c.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));clock();setInterval(clock,10000);
 
@@ -562,7 +582,7 @@ if(gl){const sh=(t,s)=>{const o=gl.createShader(t);gl.shaderSource(o,s);gl.compi
       o=vec4(m*scan*v*band*fl,1.);}`));
   gl.linkProgram(prog);gl.useProgram(prog);uR=gl.getUniformLocation(prog,'R');uT=gl.getUniformLocation(prog,'T');uD=gl.getUniformLocation(prog,'D')}
 function crtResize(){if(!gl)return;const d=devicePixelRatio||1;cv.width=cv.clientWidth*d|0;cv.height=cv.clientHeight*d|0;gl.viewport(0,0,cv.width,cv.height)}
-function setCrt(n){crt=n;document.body.classList.toggle('crt',crt>0);requestAnimationFrame(()=>{crtResize();place(step,0);if(archOpen)floatPlace(0)});save();label()}
+function setCrt(n){crt=n;document.body.classList.toggle('crt',crt>0);$('#crtB')?.classList.toggle('on',crt>0);$$('[data-crt-state]').forEach(e=>e.textContent=crt?'on':'off');requestAnimationFrame(()=>{crtResize();place(step,0);if(archOpen)floatPlace(0)});save();label()}
 (function loop(t){if(gl&&crt>0){gl.uniform2f(uR,cv.width,cv.height);gl.uniform1f(uT,t/1000);gl.uniform1f(uD,devicePixelRatio||1);gl.drawArrays(gl.TRIANGLES,0,3)}requestAnimationFrame(loop)})(performance.now());
 
 /* ---------------- switcher + spec ---------------- */
