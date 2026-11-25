@@ -14,11 +14,13 @@ import { windowChanges } from "../lib/signals";
 import { createWheelGate } from "../lib/wheel-gate";
 import {
   firstStepOf,
+  focusOf,
   type Layout,
   locate,
   stepAfter,
   stepAt,
   stepCount,
+  tilingOf,
   type Workspace,
 } from "../lib/workspaces";
 
@@ -52,13 +54,13 @@ const touch = matchMedia("(max-width: 760px)");
 let step = 0;
 /** The layout on show, to tell the windows that come and go. */
 let shown: Layout | null = null;
+/** The current step's disclosure (Education & Internships) is open. */
+let open = false;
 /** An unknown path booted the desktop: the not-found terminal is on show. */
 let notFound = area.dataset.notFound === "true";
 
-const layoutOf = (n: number): Layout => {
-  const s = stepAt(workspaces, n);
-  return touch.matches ? s.touch : s.desktop;
-};
+const layoutOf = (n: number): Layout =>
+  tilingOf(stepAt(workspaces, n), touch.matches ? "touch" : "desktop", open);
 
 /** The not-found terminal floats over the opening until the first jump. */
 function showNotFound(): void {
@@ -122,7 +124,7 @@ function markStack(index: number): void {
 /** Put the windows of a step in place; animate from where they are if asked. */
 function place(n: number, animate: boolean): void {
   const layout = layoutOf(n);
-  const focus = stepAt(workspaces, n).focus;
+  const focus = focusOf(stepAt(workspaces, n), open);
   const state = animate ? Flip.getState(panes) : null;
 
   let z = 1;
@@ -182,6 +184,31 @@ function place(n: number, animate: boolean): void {
   }
 }
 
+/** Open or close the step's disclosure; the windows re-tile and listen for the event. */
+function setOpen(next: boolean, animate = true): void {
+  if (next === open) return;
+  if (next && !stepAt(workspaces, step).open) return;
+  open = next;
+  area.dataset.open = String(open);
+  place(step, animate);
+  document.dispatchEvent(new CustomEvent("desktop:open", { detail: { open } }));
+}
+
+/** Leaving a step closes its disclosure. */
+function leave(): void {
+  if (!open) return;
+  open = false;
+  area.dataset.open = "false";
+  document.dispatchEvent(
+    new CustomEvent("desktop:open", { detail: { open: false } }),
+  );
+}
+
+document.addEventListener("click", (e) => {
+  const cue = (e.target as Element | null)?.closest("[data-disclosure]");
+  if (cue) setOpen(!open);
+});
+
 /** Move to a step: re-tile on a wide screen, scroll the page on touch. */
 function goTo(n: number): void {
   const next = Math.max(0, Math.min(steps - 1, n));
@@ -191,6 +218,7 @@ function goTo(n: number): void {
     return;
   }
   if (next === step) return;
+  leave();
   step = next;
   place(step, true);
   follow(step);
@@ -221,6 +249,7 @@ function restore(): void {
   const next = n ?? 0;
   const address = book.forPath(location.pathname);
   document.title = address?.title ?? NOT_FOUND_TITLE;
+  leave();
   step = next;
   place(step, true);
   if (touch.matches)
@@ -292,6 +321,7 @@ addEventListener(
       Math.min(steps - 1, Math.round(scrollY / innerHeight)),
     );
     if (n === step) return;
+    leave();
     step = n;
     place(step, true);
     follow(step);
@@ -391,4 +421,5 @@ if (touch.matches) {
   wheel.disable();
 }
 place(step, false);
+area.dataset.open = "false";
 area.dataset.ready = "true";

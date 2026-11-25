@@ -1,0 +1,105 @@
+---
+// One career entry: dates | title, organisation, description, technology tags.
+// A title progression (Unsupervised) stacks its titles, each with its own dates.
+import type { Entry } from "../lib/timeline";
+
+interface Props {
+  entry: Entry;
+  /** Marks the current role: its title takes the accent colour. */
+  now?: boolean;
+}
+
+const { entry, now = false } = Astro.props;
+---
+
+<article class:list={["te", { now }]}>
+  {
+    entry.roles.map((role) => (
+      <div class="row">
+        <div class="when">{role.dates}</div>
+        <h3 class="title">{role.title}</h3>
+      </div>
+    ))
+  }
+  {entry.organisation && <p class="org">{entry.organisation}</p>}
+  <p class="desc">{entry.description}</p>
+  {
+    (entry.tag || entry.technologies.length > 0) && (
+      <ul class="tech">
+        {entry.tag && <li class="tag k">{entry.tag}</li>}
+        {entry.technologies.map((t) => <li class="tag">{t}</li>)}
+      </ul>
+    )
+  }
+</article>
+
+<style>
+  .te {
+    display: grid;
+    grid-template-columns: var(--when, 19ch) 1fr;
+    column-gap: 2ch;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--dim);
+  }
+  .te:last-child {
+    border-bottom: 0;
+  }
+  .row {
+    display: contents;
+  }
+  .when {
+    grid-column: 1;
+    font: 400 12px/1.6 var(--mono);
+    opacity: 0.6;
+  }
+  .title {
+    grid-column: 2;
+    font: 700 15px/1.6 var(--mono);
+  }
+  .now .title {
+    color: var(--ac);
+  }
+  .org {
+    grid-column: 2;
+    color: var(--ac);
+    font: 500 13px/1.6 var(--mono);
+  }
+  .desc {
+    grid-column: 2;
+    font: 400 13px/1.6 var(--mono);
+    opacity: 0.85;
+    margin: 0.3em 0 0.5em;
+    max-width: 68ch;
+  }
+  .tech {
+    grid-column: 2;
+    list-style: none;
+  }
+  .tag {
+    display: inline-block;
+    font: 400 11px/1 var(--mono);
+    padding: 3px 7px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    margin: 0 4px 4px 0;
+    opacity: 0.85;
+  }
+  .tag.k {
+    border-color: var(--ac);
+    color: var(--ac);
+  }
+
+  /* a narrow window (touch): the dates sit above the title */
+  @container (max-width: 460px) {
+    .te {
+      grid-template-columns: 1fr;
+    }
+    .when,
+    .title,
+    .org,
+    .desc,
+    .tech {
+      grid-column: 1;
+    }
+  }
+</style>

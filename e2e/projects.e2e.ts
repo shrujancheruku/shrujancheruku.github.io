@@ -1,4 +1,4 @@
-import { devices, expect, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 const SLUGS = ["issho", "unmacos", "orca-flow", "rapid-radiology"];
 const area = (page: Page) => page.locator("main.area");

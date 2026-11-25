@@ -10,13 +10,34 @@ export type Rect = readonly [number, number, number, number];
 /** The windows on show and where they sit, by window id. */
 export type Layout = Readonly<Record<string, Rect>>;
 
+/** A step's tiling while its disclosure is open (Education & Internships). */
+export interface Variant {
+  /** Focus while open, if it differs from the step's. */
+  focus?: string;
+  desktop: Layout;
+  touch: Layout;
+}
+
 export interface Step {
   /** The window that has focus (the gradient border). */
   focus: string;
   /** One tiling for a wide screen and one column for touch. */
   desktop: Layout;
   touch: Layout;
+  /** The tiling while the step's disclosure is open; absent if it has none. */
+  open?: Variant;
 }
+
+/** The tiling to show: the open variant if the step has one and it is open. */
+export const tilingOf = (
+  step: Step,
+  kind: "desktop" | "touch",
+  open: boolean,
+): Layout => (open && step.open ? step.open[kind] : step[kind]);
+
+/** The focused window, given whether the step's disclosure is open. */
+export const focusOf = (step: Step, open: boolean): string =>
+  (open && step.open?.focus) || step.focus;
 
 export interface Workspace {
   id: string;
@@ -29,10 +50,16 @@ export interface WorkspaceOptions {
   featured: number;
 }
 
-const stepOf = (focus: string, desktop: Layout, touch: Layout): Step => ({
+const stepOf = (
+  focus: string,
+  desktop: Layout,
+  touch: Layout,
+  open?: Variant,
+): Step => ({
   focus,
   desktop,
   touch,
+  ...(open && { open }),
 });
 
 /** A 2 × 2 grid of rect ids in a region. */
@@ -98,6 +125,13 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
           timeline: [0, 0, 100, 60],
           education: [0, 60, 100, 20],
           skills: [0, 80, 100, 20],
+        },
+        {
+          // Education & Internships open: it takes the right column and the
+          // skills window leaves; on touch it takes the whole workspace.
+          focus: "education",
+          desktop: { timeline: [0, 0, 46, 100], education: [46, 0, 54, 100] },
+          touch: { education: [0, 0, 100, 100] },
         },
       ),
     ],
