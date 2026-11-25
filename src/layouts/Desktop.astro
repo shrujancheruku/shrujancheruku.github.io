@@ -1,10 +1,12 @@
 ---
 import "../styles/global.css";
 import NotFoundWindow from "../components/NotFoundWindow.astro";
+import ShareHead from "../components/ShareHead.astro";
 import StatusBar from "../components/StatusBar.astro";
 import Windows from "../components/Windows.astro";
 import type { AddressData } from "../lib/addresses";
 import { getArchive, getFeatured } from "../lib/projects";
+import { cardPathFor } from "../lib/share";
 import {
   CRT_KEY,
   DEFAULT_THEME,
@@ -23,6 +25,8 @@ interface Props {
   step?: number;
   /** An unknown path: boot with the not-found terminal. */
   notFound?: boolean;
+  /** The address this page is served at, for its share tags. */
+  path?: string;
 }
 
 const {
@@ -31,9 +35,14 @@ const {
   addresses,
   step = 0,
   notFound = false,
+  path = "/",
 } = Astro.props;
 const featured = await getFeatured();
 const archive = await getArchive();
+const card = cardPathFor(
+  path,
+  featured.map((p) => p.repository),
+);
 const workspaces = createWorkspaces({ featured: featured.length });
 const steps = stepCount(workspaces);
 const themeCss = THEME_NAMES.map(
@@ -67,6 +76,7 @@ const workspacePaths = workspaces.map(
     </script>
     <title>{title}</title>
     <meta name="description" content={description} />
+    <ShareHead path={path} title={title} description={description} card={card} />
     <link
       rel="preload"
       href="/fonts/ibm-plex-mono-latin-400.woff2"

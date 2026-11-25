@@ -115,3 +115,28 @@ export function chunkOf(
   const own = new RegExp(`^${name.replace(/[^\w-]/g, "\\$&")}\\.[\\w-]+\\.js$`);
   return files.find((f) => own.test(f));
 }
+
+export interface FrameAsk {
+  /** `data-frame` on the slot: a frame's name, or `card` for the share card's. */
+  asked: string | undefined;
+  /** The names of the composition's frames. */
+  frames: readonly string[];
+  /** The frame its share card shows. */
+  card: string;
+  flashes: boolean;
+  reduced: boolean;
+}
+
+/** The still frame to show instead of playing, if any (null: play). */
+export function frameToShow({
+  asked,
+  frames,
+  card,
+  flashes,
+  reduced,
+}: FrameAsk): string | null {
+  const name = asked === "card" ? card : asked;
+  if (name && frames.includes(name)) return name;
+  if (flashes && reduced) return card;
+  return null;
+}
