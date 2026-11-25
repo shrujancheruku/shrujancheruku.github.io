@@ -31,5 +31,19 @@ export const contentSchema = z
   })
   .strict();
 
+/**
+ * One photo window of the sabbatical workspace (`src/content/sabbatical/photos.yaml`).
+ * `file` names an image in src/assets/sabbatical/; without it the window shows
+ * its placeholder. The id is the grid slot, 1 (top left) to 4 (bottom right).
+ */
+export const photoSchema = z
+  .object({
+    id: z.enum(["1", "2", "3", "4"]),
+    place: z.string().trim().min(1),
+    date: z.string().trim().min(1),
+    file: z.string().trim().min(1).optional(),
+  })
+  .strict();
+
 export type OrderingEntry = z.infer<typeof orderingSchema>;
 export type ContentFrontmatter = z.infer<typeof contentSchema>;

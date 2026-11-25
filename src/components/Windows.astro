@@ -6,6 +6,8 @@ import EducationWindow from "./EducationWindow.astro";
 import NameWindow from "./NameWindow.astro";
 import NowWindow from "./NowWindow.astro";
 import Placeholder from "./Placeholder.astro";
+import SabbaticalPhotos from "./SabbaticalPhotos.astro";
+import SabbaticalWindow from "./SabbaticalWindow.astro";
 import TerminalWindow from "./TerminalWindow.astro";
 import TimelineWindow from "./TimelineWindow.astro";
 import Window from "./Window.astro";
@@ -48,8 +50,8 @@ const projects = Array.from({ length: featured }, (_, i) => i + 1);
 <Window id="skills" label="skills" scrolls><Placeholder ticket={44} /></Window>
 
 <!-- sabbatical -->
-<Window id="sabbatical"><Placeholder ticket={45} /></Window>
-{[1, 2, 3, 4].map((n) => <Window id={`photo-${n}`}><Placeholder ticket={45} /></Window>)}
+<SabbaticalWindow />
+<SabbaticalPhotos />
 
 <!-- contact -->
 <Window id="contact" label="contact — zsh"><Placeholder ticket={46} /></Window>
