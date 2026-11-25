@@ -65,12 +65,11 @@ describe("resume-only descriptions", () => {
   });
 
   test("an entry with no organisation is named by its newest title", () => {
-    const e = entry({
-      organisation: undefined,
+    const { organisation: _, ...bare } = entry({
       description: "Built things, fast.",
       resume: { description: "Built.", from: "a564a53125b9" },
     });
-    expect(driftIn([e])[0]?.entry).toBe("Engineer");
+    expect(driftIn([bare])[0]?.entry).toBe("Engineer");
   });
 });
 
