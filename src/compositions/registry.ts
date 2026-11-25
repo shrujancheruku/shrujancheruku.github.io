@@ -10,6 +10,7 @@ type Loader = () => Promise<{ default: Composition }>;
 
 export const compositions: Record<string, Loader> = {
   "orca-flow": () => import("./orca-flow"),
+  "rapid-radiology": () => import("./rapid-radiology"),
 };
 
 /**
@@ -20,5 +21,4 @@ export const compositions: Record<string, Loader> = {
 export const PENDING: readonly string[] = [
   "issho", // #40
   "unmacos", // #41
-  "rapid-radiology", // #42
 ];
