@@ -1,0 +1,63 @@
+---
+// A typed terminal in a window: each exchange types a command at the prompt,
+// then prints its replies in the accent. Reused wherever a window types
+// (the opening's zsh, the contact's zsh). The typing is played by
+// src/scripts/terminal.ts when the page loads.
+import type { Exchange } from "../lib/terminal";
+import Window from "./Window.astro";
+
+interface Props {
+  id: string;
+  label: string;
+  exchanges: readonly Exchange[];
+}
+
+const { id, label, exchanges } = Astro.props;
+---
+
+<Window id={id} label={label}>
+  <div class="term" data-terminal={JSON.stringify(exchanges)}>
+    <div class="log"></div>
+    <div class="line">
+      <span class="p">❯ </span><span class="typed"></span><span class="cur"> </span>
+    </div>
+  </div>
+</Window>
+
+<script>
+  import "../scripts/terminal";
+</script>
+
+<style>
+  .term {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+    white-space: pre-wrap;
+    padding: 34px 18px 16px;
+    font: 400 14px / 1.6 var(--mono);
+  }
+
+  /* the log lines are made by the script, so these two are global, scoped under .term */
+  .term :global(.p) {
+    color: var(--hot);
+  }
+
+  .term :global(.reply) {
+    color: var(--ac);
+  }
+
+  .cur {
+    background: var(--fg);
+    animation: blink 1s steps(1) infinite;
+  }
+
+  @keyframes blink {
+    50% {
+      background: transparent;
+    }
+  }
+</style>

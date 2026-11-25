@@ -190,6 +190,14 @@ for (const b of numbers) {
   );
 }
 
+// a link inside a window jumps to its workspace: a deliberate jump, so it adds a history entry
+for (const el of area.querySelectorAll<HTMLElement>("[data-jump]")) {
+  el.addEventListener("click", () => {
+    goTo(firstStepOf(workspaces, Number(el.dataset.jump)));
+    if (el.dataset.address) history.pushState(null, "", el.dataset.address);
+  });
+}
+
 // ---- layout changes between wide and touch
 function onLayoutChange(): void {
   if (touch.matches) {
