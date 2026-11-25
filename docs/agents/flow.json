@@ -1,0 +1,12 @@
+{
+  "tracker": "github",
+  "github_repo": "shrujancheruku/shrujancheruku.github.io",
+  "labels": {
+    "size": { "S": "size:S", "M": "size:M", "L": "size:L" },
+    "risk": "risk",
+    "integrated": "integrated"
+  },
+  "risk_paths": [],
+  "slack_prefix": "portfolio-site",
+  "models": { "haiku": "haiku", "sonnet": "sonnet", "opus": "opus" }
+}
