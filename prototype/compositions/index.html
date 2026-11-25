@@ -85,6 +85,8 @@ body.idle .tip::before{display:none}
 #themes.on{visibility:visible;opacity:1;transform:none;transition:opacity .2s,transform .3s cubic-bezier(.2,.9,.2,1)}
 #themes button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;border-radius:10px}
 #themes button.on{background:var(--bg);color:var(--ac)}
+/* the two issho themes stack in the rightmost column, light over dark */
+#themes [data-t="issho-light"]{grid-column:4;grid-row:1} #themes [data-t="issho-dark"]{grid-column:4;grid-row:2}
 #themes button i{width:32px;height:32px;border-radius:50%;box-shadow:0 0 0 1px var(--line)}
 .area{position:relative;flex:1;min-height:0;margin:0 7px 7px}
 .pane{position:absolute;padding:calc(var(--gap)/2);visibility:hidden}
