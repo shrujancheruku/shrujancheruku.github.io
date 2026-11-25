@@ -2,7 +2,15 @@
 // site wording, and the one-page rule. The resume reads src/lib/timeline.ts;
 // it never copies it.
 import { createHash } from "node:crypto";
-import type { Entry } from "./timeline";
+import {
+  type Entry,
+  education,
+  hobbies,
+  languages,
+  skillBars,
+  skills,
+  timeline,
+} from "./timeline";
 
 /** A short fingerprint of the site wording; line breaks and runs of spaces do not count. */
 export const fingerprint = (wording: string): string =>
@@ -46,4 +54,61 @@ export function assertOnePage(pages: number): void {
     throw new Error(
       `the resume prints ${pages} pages; it must fit on one (shorten a description with \`resume\` in src/lib/timeline.ts)`,
     );
+}
+
+export const RESUME_PATH = "/resume/";
+export const PDF_PATH = "/shrujan-cheruku-resume.pdf";
+export const PDF_TITLE = "Shrujan Cheruku – Resume";
+export const PDF_AUTHOR = "Shrujan Cheruku";
+
+export interface Contact {
+  label: "Email" | "LinkedIn" | "GitHub" | "Site";
+  text: string;
+  href: string;
+}
+
+const CONTACTS: readonly Contact[] = [
+  {
+    label: "Email",
+    text: "shrujancheruku@gmail.com",
+    href: "mailto:shrujancheruku@gmail.com",
+  },
+  {
+    label: "LinkedIn",
+    text: "linkedin.com/in/shrujancheruku",
+    href: "https://www.linkedin.com/in/shrujancheruku",
+  },
+  {
+    label: "GitHub",
+    text: "github.com/shrujancheruku",
+    href: "https://github.com/shrujancheruku",
+  },
+  {
+    label: "Site",
+    text: "shrujancheruku.github.io",
+    href: "https://shrujancheruku.github.io/",
+  },
+];
+
+/** An entry as the resume shows it: its description already chosen. */
+const asResumeEntry = (entry: Entry): Entry => ({
+  ...entry,
+  description: descriptionFor(entry),
+});
+
+/** Everything the resume page shows, read from the shared content. */
+export function buildResume() {
+  return {
+    name: "Shrujan Cheruku",
+    title: "Product Engineer",
+    contacts: CONTACTS,
+    entries: timeline.map(asResumeEntry),
+    education: {
+      ...education,
+      roles: education.roles.map(asResumeEntry),
+    },
+    bars: skillBars(skills),
+    languages,
+    hobbies: hobbies.flatMap((folder) => folder.items.map((h) => h.name)),
+  };
 }

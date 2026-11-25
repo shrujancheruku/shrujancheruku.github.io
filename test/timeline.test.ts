@@ -69,7 +69,6 @@ describe("the timeline content", () => {
       "10/10 would recommend to a friend.",
     );
   });
-
 });
 
 describe("Education & Internships content", () => {

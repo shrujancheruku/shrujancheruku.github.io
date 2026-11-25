@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
   assertOnePage,
+  buildResume,
   descriptionFor,
   driftIn,
   fingerprint,
 } from "../src/lib/resume";
-import type { Entry } from "../src/lib/timeline";
+import { type Entry, timeline } from "../src/lib/timeline";
 
 const entry = (over: Partial<Entry> = {}): Entry => ({
   roles: [{ dates: "Jan 2020 – Dec 2020", title: "Engineer" }],
@@ -23,7 +24,9 @@ describe("the site-wording fingerprint", () => {
   });
 
   test("ignores line breaks and runs of spaces, not words", () => {
-    expect(fingerprint("  Built\n  things.  ")).toBe(fingerprint("Built things."));
+    expect(fingerprint("  Built\n  things.  ")).toBe(
+      fingerprint("Built things."),
+    );
     expect(fingerprint("Built thing.")).not.toBe(fingerprint("Built things."));
   });
 });
@@ -78,5 +81,63 @@ describe("the one-page rule", () => {
 
   test("a second page fails the build, saying how many", () => {
     expect(() => assertOnePage(2)).toThrow(/2 pages/);
+  });
+});
+
+describe("the resume's content", () => {
+  const r = buildResume();
+
+  test("the header is the name, the title and four ways to reach Shrujan", () => {
+    expect(r.name).toBe("Shrujan Cheruku");
+    expect(r.title).toBe("Product Engineer");
+    expect(r.contacts.map((c) => [c.label, c.text])).toEqual([
+      ["Email", "shrujancheruku@gmail.com"],
+      ["LinkedIn", "linkedin.com/in/shrujancheruku"],
+      ["GitHub", "github.com/shrujancheruku"],
+      ["Site", "shrujancheruku.github.io"],
+    ]);
+  });
+
+  test("states no phone, location, nationality or summary", () => {
+    const text = JSON.stringify(r);
+    expect(text).not.toMatch(/\+?\d[\d\s().-]{8,}\d/);
+    expect(text).not.toMatch(/Dallas|Remote|American|Who am I/i);
+  });
+
+  test("the five timeline entries come from the shared content, newest first", () => {
+    expect(r.entries.map((e) => e.organisation ?? e.roles[0]?.title)).toEqual([
+      "Sabbatical",
+      "OpenBench",
+      "Unsupervised",
+      "Ibotta",
+      "Orderly Health",
+    ]);
+    expect(r.entries[2]?.roles.map((x) => x.title)).toEqual([
+      "Senior Software Engineer",
+      "Full Stack Engineer",
+    ]);
+    expect(r.entries[1]?.description).toBe(timeline[1]?.description);
+  });
+
+  test("Education & Internships is fully expanded: degree, teaching post, four internships' worth of roles", () => {
+    expect(r.education.degree).toBe("B.Sc Computer Science");
+    expect(r.education.roles.map((e) => e.organisation)).toEqual([
+      "Sandia National Laboratories",
+      "University of Illinois Urbana-Champaign",
+      "Indian School of Business",
+      "EiQ Networks",
+    ]);
+  });
+
+  test("five skill bars with Comedic Talent last, languages and all nine hobbies", () => {
+    expect(r.bars.map((b) => b.name)).toEqual([
+      "Python",
+      "React + TypeScript",
+      "Kubernetes + Helm",
+      "Go",
+      "Comedic Talent",
+    ]);
+    expect(r.languages).toHaveLength(5);
+    expect(r.hobbies).toHaveLength(9);
   });
 });
