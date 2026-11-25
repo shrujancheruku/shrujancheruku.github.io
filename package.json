@@ -5,7 +5,7 @@
   "packageManager": "bun@1.4.5",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && bun scripts/check-collisions.ts",
+    "build": "astro build && bun scripts/check-collisions.ts && bun scripts/check-photos.ts",
     "preview": "astro preview",
     "check": "astro check",
     "lint": "biome ci .",
