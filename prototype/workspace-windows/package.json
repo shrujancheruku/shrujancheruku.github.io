@@ -1,0 +1,2 @@
+{ "name": "prototype-workspace-windows", "private": true,
+  "scripts": { "view": "python3 -m http.server 4519 -d .." } }

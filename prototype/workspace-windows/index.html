@@ -1,0 +1,623 @@
+<!doctype html>
+<!--
+  PROTOTYPE — throwaway. Not the site, not the stack.
+  Question (ticket "Windows of the sabbatical, stance, timeline and contact workspaces"): which windows each of
+  the four remaining workspaces holds and how they tile on desktop and touch, in the approved desktop style
+  (take D of prototype/desktop-layout). Sabbatical: photo slots, their shape, whether a photo is its own window.
+  Stance: how much room the text gets (measured live, in words). Timeline: the five entries, the Illinois
+  section's cue and opening animation, the skills window. Contact: how the one terminal sits.
+  Three takes, switchable via ?variant=A|B|C, the switcher, or ← →. Opening and projects are copied from take D unchanged.
+  Photos and the stance text are placeholders. Keys: t theme · c CRT · s spec panel · i open/close Illinois.
+  Run: cd prototype/workspace-windows && bun run view  →  http://localhost:4519/workspace-windows/
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PROTOTYPE · workspace windows</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link id="fontcss" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-snap-type:y mandatory}
+body{-webkit-font-smoothing:antialiased;background:var(--bg);color:var(--fg);transition:background .45s;--gap:14px;--mono:'IBM Plex Mono',monospace;font-family:var(--mono)}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.snap{height:100vh;height:100svh;scroll-snap-align:start;scroll-snap-stop:always}
+[data-act]{cursor:pointer}
+.m{display:none}
+@media (max-width:760px){.d{display:none!important}.m{display:inline}body{--gap:10px}}
+
+/* ---------- desktop skeleton (take D) ---------- */
+.screen{position:fixed;inset:var(--bz,0px);border-radius:var(--br,0px);overflow:hidden;display:flex;flex-direction:column;background:var(--bg);color:var(--fg);transition:background .45s,color .45s}
+.bar{margin:14px 14px 7px;height:36px;flex:none;border:1px solid var(--line);border-radius:18px;background:var(--dim);padding:0 6px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:500 12.5px var(--mono);transition:background .45s,border-color .45s}
+.ws{display:flex;gap:2px}
+.ws b{height:24px;line-height:24px;padding:0 10px;border-radius:12px;font-weight:500;transition:background .3s,color .3s}
+.ws b:hover{background:var(--bg)} .ws b.on{background:var(--ac);color:var(--bg)}
+.rt{display:flex;align-items:center;gap:14px;padding-right:2px}
+.rt [data-act]:hover{color:var(--ac)}
+.chip{white-space:nowrap;display:flex;align-items:center;gap:7px;background:var(--ac);border-radius:13px;height:26px;padding:0 11px 0 6px;color:var(--bg);font-weight:700;
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--ac) 35%,transparent),0 0 14px 2px color-mix(in srgb,var(--ac) 45%,transparent);transition:box-shadow .2s,transform .2s}
+.chip:hover{transform:scale(1.04)} .rt .chip:hover{color:var(--bg)}
+.chip i{width:14px;height:14px;border-radius:50%;background:conic-gradient(var(--bg) 0 50%,var(--hot) 0);box-shadow:0 0 0 1.5px var(--bg)}
+body.idle .halo{animation:halo 2s ease-in-out 1s infinite}
+@keyframes halo{50%{box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 55%,transparent),0 0 24px 7px color-mix(in srgb,var(--ac) 60%,transparent)}}
+#themes{position:absolute;z-index:30;visibility:hidden;opacity:0;right:10px;top:54px;transform:translateY(-8px);width:min(460px,calc(100% - 20px));background:var(--dim);border:1px solid var(--line);border-radius:16px;padding:12px;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;box-shadow:0 20px 60px #0008;font:12px var(--mono);transition:opacity .2s,transform .3s cubic-bezier(.2,.9,.2,1),visibility 0s .3s}
+#themes.on{visibility:visible;opacity:1;transform:none;transition:opacity .2s,transform .3s cubic-bezier(.2,.9,.2,1)}
+#themes button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;border-radius:10px}
+#themes button.on{background:var(--bg);color:var(--ac)}
+#themes button i{width:32px;height:32px;border-radius:50%;box-shadow:0 0 0 1px var(--line)}
+.area{position:relative;flex:1;min-height:0;margin:0 7px 7px}
+.pane{position:absolute;padding:calc(var(--gap)/2);visibility:hidden}
+.win{position:relative;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);border:2px solid var(--dim);border-radius:14px;transition:border-color .3s,background .45s}
+.pane.focus .win{border-color:transparent;background:linear-gradient(var(--bg),var(--bg)) padding-box,linear-gradient(135deg,var(--ac),var(--hot)) border-box}
+.tt{position:absolute;top:10px;left:16px;right:16px;z-index:2;font:11px var(--mono);opacity:.4;pointer-events:none;display:flex;justify-content:space-between}
+.win:has(.comp) .tt,.win:has(.b-copy) .tt,.win:has(.photo) .tt{display:none}
+.body{position:relative;flex:1;min-height:0;container-type:size}
+.comp iframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none;display:block}
+.dimt{opacity:.55}
+.ac{color:var(--ac)}
+/* opening */
+.b-name{position:absolute;inset:0;padding:0 4cqw 0 5cqw;display:flex;flex-direction:column;justify-content:center}
+.b-name h1{font:700 min(15cqw,30cqh)/.95 var(--mono);letter-spacing:-.045em}
+.b-name h1 span{display:block}
+.b-name .lab{margin-top:3cqh;font:400 14px var(--mono);color:var(--ac)} .b-name .lab::before{content:"// "}
+.b-term{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;white-space:pre-wrap;padding:34px 18px 16px;font:400 14px/1.6 var(--mono)}
+.b-term .p{color:var(--hot)} .cur{background:var(--fg);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.b-term a{color:var(--ac)} .b-term a:hover{text-decoration:underline}
+.b-term .k{display:inline-block;width:10ch;opacity:.55}
+.b-term button{color:var(--ac);opacity:.8}
+.b-now{position:absolute;inset:0;padding:16px 18px;display:flex;flex-direction:column;justify-content:flex-end;font:400 14px/1.6 var(--mono)}
+.b-now b{color:var(--ac);font-weight:500}
+/* project copy + stack */
+.b-copy{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;padding:28px 24px 22px 5cqw;gap:12px}
+.b-copy .kick{font:400 12px var(--mono);opacity:.55}
+.b-copy h2{font:700 clamp(28px,13cqw,52px)/1 var(--mono);letter-spacing:-.05em}
+.b-copy .pitch{font:500 16px/1.45 var(--mono)}
+.b-copy ul{list-style:none;font:400 13px/1.6 var(--mono)} .b-copy ul li::before{content:"+ ";color:var(--ac)}
+.b-copy .meta{font:400 12px var(--mono);opacity:.55;margin-top:auto}
+.b-copy .links{display:flex;gap:1.4em;flex-wrap:wrap;font:500 13px var(--mono)} .b-copy .links a{color:var(--ac)} .b-copy .links a::before{content:"→ "}
+.b-copy .more{color:var(--ac)}
+.b-stack{position:absolute;inset:32px 0 0;border-top:1px solid var(--dim);font:400 13px/1 var(--mono);display:flex;flex-direction:column}
+.b-stack > *{padding:0 14px;flex:1;max-height:34px;display:flex;align-items:center;border-bottom:1px solid var(--dim);gap:1ch;white-space:nowrap;overflow:hidden}
+.b-stack > :last-child{border-bottom:0}
+.b-stack .on{background:var(--dim);color:var(--ac)} .b-stack .on::before{content:"▸"} .b-stack > :not(.on)::before{content:" ";white-space:pre}
+.b-stack .more{opacity:.6}
+/* archive */
+#arch{position:absolute;z-index:20;left:50%;top:50%;width:min(720px,calc(100% - 24px));height:min(560px,calc(100% - 24px));padding:0;
+  transform:translate(-50%,-50%) scale(.94);opacity:0;visibility:hidden;transition:opacity .25s,transform .35s cubic-bezier(.2,.9,.2,1),visibility 0s .35s}
+#arch.on{opacity:1;visibility:visible;transform:translate(-50%,-50%);transition:opacity .25s,transform .35s cubic-bezier(.2,.9,.2,1)}
+#arch .win{box-shadow:0 30px 90px #000b;border-color:var(--ac)}
+.b-arch{overflow:auto;padding:34px 16px 16px;font:13px/1.5 var(--mono)}
+.b-arch .e{display:grid;grid-template-columns:1fr auto;gap:.25em 1em;padding:1em 0;border-bottom:1px solid var(--dim)}
+.b-arch .e .n{color:var(--ac);font-weight:700} .b-arch .e .mt{opacity:.55;text-align:right;font-size:12px} .b-arch .e p{grid-column:1/-1}
+
+/* ---------- the four workspaces (new) ---------- */
+.wh{font:700 clamp(28px,7cqw,52px)/1 var(--mono);letter-spacing:-.05em}
+.tag{display:inline-block;font:400 11px/1 var(--mono);padding:3px 7px;border:1px solid var(--line);border-radius:9px;margin:0 4px 4px 0;opacity:.85}
+.tag.k{border-color:var(--ac);color:var(--ac)}
+/* photos: placeholders until supplied */
+.photo{position:absolute;inset:0;overflow:hidden;background:
+  radial-gradient(60% 50% at 70% 30%,color-mix(in srgb,var(--ac) 45%,transparent),transparent 70%),
+  linear-gradient(170deg,color-mix(in srgb,var(--hot) 22%,var(--dim)),var(--dim) 55%,color-mix(in srgb,var(--fg) 12%,var(--dim)))}
+.photo::before{content:"";position:absolute;left:-10%;right:-10%;bottom:0;height:46%;background:color-mix(in srgb,var(--bg) 70%,var(--dim));clip-path:polygon(0 60%,18% 25%,32% 50%,52% 8%,70% 44%,84% 22%,100% 52%,100% 100%,0 100%)}
+.photo .pi{position:absolute;top:12px;left:14px;font:11px var(--mono);opacity:.6}
+.photo .cap{position:absolute;left:14px;right:14px;bottom:12px;font:500 12px var(--mono);color:var(--fg);display:flex;justify-content:space-between;gap:1em}
+.photo .cap span:last-child{opacity:.6}
+/* timeline entries */
+.te{display:grid;grid-template-columns:19ch 1fr;column-gap:2ch;padding:14px 0;border-bottom:1px solid var(--dim);position:relative}
+.te:last-child{border-bottom:0}
+.te .when{font:400 12px/1.6 var(--mono);opacity:.6;grid-column:1} .te .title{font:700 15px/1.6 var(--mono);grid-column:2}
+.te .org{grid-column:2;color:var(--ac);font:500 13px/1.6 var(--mono)}
+.te p{grid-column:2;font:400 13px/1.6 var(--mono);opacity:.85;margin:.3em 0 .5em;max-width:68ch}
+.te .tech{grid-column:2}
+.te .row{display:contents}
+.te.now .title{color:var(--ac)}
+/* Illinois */
+.il-h .deg{font:700 15px/1.4 var(--mono)} .il-h .uni{color:var(--ac);font:500 13px/1.5 var(--mono)} .il-h .sub{font:12px/1.6 var(--mono);opacity:.6}
+.cue{display:inline-flex;align-items:center;gap:1ch;margin-top:12px;font:500 13px var(--mono);color:var(--bg);background:var(--ac);padding:6px 12px;border-radius:14px;
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--ac) 30%,transparent)}
+.cue .chev{display:inline-block;transition:transform .35s}
+.il-open .cue .chev{transform:rotate(90deg)}
+.cue:hover{transform:translateX(2px)}
+.il-body{overflow:hidden}
+.il-body .te{grid-template-columns:16ch 1fr}
+/* skills */
+.sk{display:grid;grid-template-columns:auto 1fr;gap:6px 1.5ch;align-items:center;font:400 12.5px var(--mono)}
+.sk i{display:block;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--ac),var(--hot));transform-origin:left}
+.sk-more{font:400 12.5px/1.7 var(--mono);margin-top:14px} .sk-more b{font-weight:500;opacity:.55;display:inline-block;width:10ch}
+/* stance */
+.stance{position:absolute;inset:0;overflow:hidden;padding:38px 28px 24px}
+.stance .txt p{margin-bottom:.9em}
+.room{position:absolute;right:14px;bottom:10px;z-index:3;font:500 11px var(--mono);background:var(--ac);color:var(--bg);padding:3px 8px;border-radius:9px;opacity:.9}
+
+/* ===== A · Tiles: everything visible at once, one step per workspace ===== */
+.vA .sc .b-copy{justify-content:flex-end}
+.vA .sx .stance .txt{font:400 15px/1.65 var(--mono);max-width:72ch}
+.vA .sh{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:0 24px 24px 5cqw}
+.vA .sh h2{font:700 min(13cqw,16cqh)/.95 var(--mono);letter-spacing:-.05em}
+.vA .sh p{margin-top:14px;font:500 16px/1.45 var(--mono);max-width:30ch}
+.b-tl{position:absolute;inset:0;overflow:auto;padding:38px 24px 8px 5cqw;scrollbar-width:thin}
+.b-il{position:absolute;inset:0;overflow:auto;padding:38px 22px 16px;scrollbar-width:thin}
+.b-sk{position:absolute;inset:0;overflow:auto;padding:38px 22px 16px}
+.vA .ctpane .b-term{justify-content:center;padding:40px 36px;font-size:15px}
+
+/* ===== B · Steps: one subject per step, master + stack like the projects ===== */
+.ptrack{position:absolute;inset:0}
+.ptrack .photo{visibility:hidden}
+.vB .sx .stance{display:flex;flex-direction:column;justify-content:center;padding:40px max(28px,8cqw)}
+.vB .sx .stance .txt{font:500 clamp(17px,2.2cqw,22px)/1.5 var(--mono);max-width:52ch}
+.vB .sx .stance .wh{margin-bottom:.7em}
+.tk{position:absolute;inset:32px 0 0;border-top:1px solid var(--dim);overflow:auto;font:400 13px/1.3 var(--mono);scrollbar-width:thin}
+.tk .it{display:grid;grid-template-columns:2ch 1fr;padding:9px 14px;border-bottom:1px solid var(--dim);cursor:pointer}
+.tk .it .dt{opacity:.55;font-size:11.5px;grid-column:2} .tk .it .t{grid-column:2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tk .it.on{background:var(--dim);color:var(--ac)} .tk .it.on::before{content:"▸"}
+.tk .ilg{padding:10px 14px 12px;border-bottom:1px solid var(--dim)}
+.tk .ilg .cue{margin-top:8px}
+.tk .il-body .it{padding-left:28px}
+.td{position:absolute;inset:0;padding:38px 32px 28px 5cqw;display:flex;flex-direction:column;justify-content:flex-end;gap:14px;overflow:hidden}
+.td .dd{font:400 13px/1.6 var(--mono);opacity:.6}
+.td h2{font:700 clamp(28px,7cqw,52px)/1 var(--mono);letter-spacing:-.05em}
+.td h2 small{display:block;font-size:.5em;letter-spacing:-.02em;opacity:.6;margin-top:.2em}
+.td .og{color:var(--ac);font:500 16px var(--mono)}
+.td p{font:500 16px/1.45 var(--mono);max-width:56ch}
+.td .kicker{font:400 12px var(--mono);opacity:.55;margin-bottom:auto}
+.vB .b-sk{padding-top:34px}
+.vB .ctpane .b-term{justify-content:flex-start;padding:40px 28px;font-size:15px}
+
+/* ===== C · Scratchpad: floating, draggable photos, a pager, a horizontal axis that rewinds ===== */
+.vC .pphoto .win{box-shadow:0 18px 50px #0007}
+.vC .pphoto{cursor:grab} .vC .pphoto:active{cursor:grabbing}
+.pager{position:absolute;inset:0;overflow:auto;padding:38px 28px 40px;scrollbar-width:thin}
+.pager .txt{font:400 14px/1.7 var(--mono);max-width:68ch}.pager .txt p{margin-bottom:.9em}
+.pager .wh{margin-bottom:.6em}
+.pager-end{opacity:.5;font:12px var(--mono);margin-top:1em}
+.axis{position:absolute;inset:0;padding:36px 22px 14px}
+.ax{position:relative;height:100%}
+.ax .yr{position:absolute;top:0;bottom:0;border-left:1px dashed var(--dim);font:11px var(--mono);opacity:.7;padding-left:4px}
+.ax .yr span{position:absolute;bottom:0}
+.ax .lane{position:absolute;left:0;right:0;height:30%}
+.ax .lab2{position:absolute;left:0;font:11px var(--mono);opacity:.5;transform:translateY(-120%)}
+.ax .blk{position:absolute;top:0;bottom:0;border-radius:8px;background:var(--dim);border:1.5px solid var(--line);padding:6px 8px;font:500 12px/1.2 var(--mono);overflow:hidden;white-space:nowrap;cursor:pointer;transition:background .2s,border-color .2s}
+.ax .blk:hover{border-color:var(--ac)}
+.ax .blk.on{background:var(--ac);color:var(--bg);border-color:var(--ac)}
+.ax .blk.deg{background:none;border-style:dashed;opacity:.8}
+.ax .blk.now{background:repeating-linear-gradient(135deg,var(--dim) 0 6px,transparent 6px 12px)}
+.ax .blk.now.on{background:var(--ac)}
+.rewind{position:absolute;left:0;bottom:0;transform:translateY(0)}
+.vC .ctpane .b-term{justify-content:flex-start;padding:40px 28px;font-size:15px}
+
+@media (max-width:760px){
+  .bar{height:40px;border-radius:20px;margin:8px 8px 6px}
+  .ws b{padding:0 9px;height:28px;line-height:28px;border-radius:14px}
+  .area{margin:0 5px 5px}
+  .b-copy{padding:18px 16px 14px;gap:8px} .b-copy ul{display:none}
+  .b-term{padding:30px 14px 12px;font-size:12.5px} .b-now{font-size:12.5px;padding:10px 12px}
+  .b-stack > *{max-height:none}
+  #themes{left:8px;right:8px;width:auto;top:56px}
+  .te{grid-template-columns:1fr;padding:12px 0} .te .when,.te .title,.te .org,.te p,.te .tech{grid-column:1}
+  .te .row{display:block}
+  .il-body .te{grid-template-columns:1fr}
+  .b-tl,.b-il,.b-sk{padding:32px 14px 10px}
+  .stance{padding:32px 16px 16px}
+  .vA .sx .stance .txt{font-size:13.5px}
+  .vB .sx .stance{padding:32px 18px}
+  .vB .sx .stance .txt{font-size:15px}
+  .td{padding:30px 16px 16px;gap:8px} .td p{font-size:14px}
+  .pager{padding:32px 16px 30px} .pager .txt{font-size:13px}
+  .axis{padding:30px 10px 10px}
+  .vA .ctpane .b-term,.vB .ctpane .b-term,.vC .ctpane .b-term{padding:30px 14px;font-size:12.5px}
+  .vA .sh{padding:0 16px 16px} .vA .sh p{font-size:14px}
+}
+
+/* CRT (take D): bezel + one WebGL 2 overlay canvas, no curvature */
+#crtc{position:absolute;inset:0;width:100%;height:100%;z-index:50;pointer-events:none;mix-blend-mode:multiply;display:none}
+body.crt{background:radial-gradient(120% 120% at 50% 40%,#2a2a2d,#0c0c0e 70%);--bz:26px;--br:26px}
+body.crt #crtc{display:block}
+@media (max-width:760px){body.crt{--bz:8px;--br:16px}}
+body.crt .screen{text-shadow:0 0 .45em color-mix(in srgb,currentColor 40%,transparent);box-shadow:0 0 0 2px #000,0 0 0 6px #1d1d20,0 0 40px 6px color-mix(in srgb,var(--ac) 14%,transparent)}
+body.crt .screen::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:55;box-shadow:inset 0 0 50px 6px #000a,inset 0 0 0 2px #0007;background:linear-gradient(160deg,#ffffff0d,transparent 38%)}
+
+/* ---------- switcher + spec (not part of any design) ---------- */
+#sw{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:6px;background:#111;color:#fff;border:1px solid #555;border-radius:999px;padding:5px 7px;
+  font:500 12px/1 system-ui,sans-serif;box-shadow:0 8px 30px #0008;text-shadow:none;white-space:nowrap;max-width:calc(100vw - 16px);overflow-x:auto}
+#sw button,#sw select{all:unset;cursor:pointer;height:26px;min-width:26px;padding:0 8px;border-radius:13px;text-align:center;line-height:26px;background:#2a2a2a}
+#sw button:hover,#sw button.on{background:#ffd400;color:#000}
+#sw #lab{padding:0 6px} #sw i{width:1px;height:18px;background:#555}
+#sw.min > :not(#hide){display:none}
+@media (max-width:760px){#sw{flex-wrap:wrap;justify-content:center;border-radius:16px;font-size:11px;width:calc(100vw - 16px);bottom:8px}#sw i{display:none}}
+#spec{position:fixed;z-index:9998;right:14px;bottom:60px;width:min(400px,calc(100vw - 28px));max-height:calc(100vh - 120px);overflow:auto;background:#111e;color:#eee;border:1px solid #555;border-radius:12px;
+  padding:14px 16px;font:12px/1.55 system-ui,sans-serif;display:none;text-shadow:none}
+#spec.on{display:block}
+#spec h4{font-size:12px;color:#ffd400;margin:10px 0 4px;text-transform:uppercase;letter-spacing:.06em}
+#spec td{padding:1px 10px 1px 0;vertical-align:top} #spec td:first-child{opacity:.6;white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="sw"><button id="vp">←</button><span id="lab"></span><button id="vn">→</button><i></i>
+  <select id="ts" title="theme (t)"></select><button id="cb" title="CRT (c)"></button><button id="ib" title="Illinois (i)">illinois</button>
+  <button id="sb" title="spec (s)">spec</button><button id="hide" title="collapse">–</button></div>
+<div id="spec"></div>
+
+<script>
+/* ---------------- data ---------------- */
+const THEMES={
+  'tokyo-night':{bg:'#1a1b26',fg:'#c0caf5',ac:'#7aa2f7',dim:'#24283b',line:'#3b4261',hot:'#f7768e'},
+  'gruvbox':    {bg:'#282828',fg:'#d4be98',ac:'#7daea3',dim:'#3c3836',line:'#665c54',hot:'#ea6962'},
+  'paper':      {bg:'#f2eede',fg:'#222222',ac:'#cc3e28',dim:'#d8d3c0',line:'#b9b29b',hot:'#216609'},
+  'everforest': {bg:'#2d353b',fg:'#d3c6aa',ac:'#7fbbb3',dim:'#343f44',line:'#475258',hot:'#e67e80'},
+  'nord':       {bg:'#2e3440',fg:'#d8dee9',ac:'#81a1c1',dim:'#3b4252',line:'#4c566a',hot:'#bf616a'},
+  'rose-pine':  {bg:'#faf4ed',fg:'#575279',ac:'#56949f',dim:'#f2e9e1',line:'#cecacd',hot:'#b4637a'},
+  'starship':   {bg:'#1c1c1e',fg:'#f5f5f7',ac:'#ff9f0a',dim:'#2c2c2e',line:'#8e8e93',hot:'#ff5f4a'},
+};
+const TK=Object.keys(THEMES);
+const lightMQ=matchMedia('(prefers-color-scheme: light)'), sysTheme=()=>lightMQ.matches?'paper':'starship';
+const WS=['opening','projects','sabbatical','stance','timeline','contact'];
+const PROJ={
+  u:{slug:'unmacos',n:1,pitch:'A keyboard-first desktop for macOS, installed with one command.',proof:['tiling windows and fuzzy menus','23 themes, switched live','one install command'],meta:'Shell · v1.5.0',links:['repository','live site'],comp:'../hero-images/compositions/unmacos.html'},
+  o:{slug:'orca-flow',n:2,pitch:'Turn a backlog of issues into reviewed, merged pull requests.',proof:["this portfolio's spec and build ran through it",'successor to claude-orchestrate'],meta:'Python · v0.9.1',links:['repository'],comp:'../hero-images/compositions/orca-flow.html'},
+};
+const NFEAT=2;
+const ARCHIVE=[['claude-orchestrate','Turn a backlog of GitHub issues into reviewed, merged pull requests, several at a time, from one Claude Code session. Predecessor to orca-flow.','Python'],
+  ['TrueCrypt-Steganography','Hide an encrypted TrueCrypt volume inside a video that still plays.','Python'],['aidan-landing-page','A marketing site for a coach, built in Astro.','TypeScript']];
+
+/* timeline content: final wording from the "Timeline content" decision. s/e are decimal years for take C's axis. */
+const TL=[
+  {roles:[['Nov 2025 – Now','Sabbatical']],org:'',now:1,desc:'Travelling, time with family, and helping friends launch their products. 10/10 would recommend to a friend.',tech:[],s:2025.83,e:2026.95},
+  {roles:[['Jan 2023 – Nov 2025','Lead Engineer']],org:'OpenBench',desc:'First engineering hire at a computational chemistry startup. I built the workflows that ran cutting-edge AI models across trillions of compounds to find new drug candidates.',tech:['Machine Learning','Kubernetes','Airflow','AWS','Python','React + TypeScript'],s:2023.0,e:2025.83},
+  {roles:[['May – Oct 2022','Senior Software Engineer'],['Nov 2020 – Apr 2022','Full Stack Engineer']],org:'Unsupervised',desc:'Helped design and build a new cloud-native microservice platform for unsupervised machine learning on unstructured customer data. I mentored other engineers and set up the tooling we used for documentation and architecture decisions.',tech:['AWS','Go','Docker','Kubernetes + Helm','gRPC','React + TypeScript'],s:2020.83,e:2022.8},
+  {roles:[['Nov 2019 – Oct 2020','Platform Engineer']],org:'Ibotta',desc:"Built high-throughput microservices for critical transaction data at Denver's first unicorn, an app with over 23m downloads, and kept them within their uptime SLAs.",tech:['Kotlin + Spring','Microservices','AWS','TypeScript','GraphQL'],s:2019.83,e:2020.8},
+  {roles:[['Aug 2018 – Aug 2019','Software Engineer']],org:'Orderly Health',desc:'Joined a two-person engineering team at a health-tech startup and was the solo lead within six months. I delivered an NLP chatbot pilot to clients, then built the APIs, visualisations, demos and scrapers behind the pivot to a data science product.',tech:['React + Redux','Django + MySQL','Data Visualisation','Google Cloud','Docker'],s:2018.58,e:2019.67},
+];
+const ILH={deg:'B.Sc Computer Science',uni:'University of Illinois Urbana-Champaign',yrs:'2014 – 2018',sub:'College of Engineering · Human & Social Impact / Computational Media',s:2014.6,e:2018.4};
+const IL=[
+  {roles:[['May – Aug 2018','Software Engineering Intern']],org:'Sandia National Laboratories',tag:'Internship',desc:'Built web applications and data visualisations over large datasets for the US Department of Defense, through a programme with the UIUC Applied Research Institute.',tech:['Flask','React','Data Visualisation','Jenkins','Docker'],s:2018.37,e:2018.62},
+  {roles:[['Aug 2017 – May 2018','Teaching Assistant']],org:'University of Illinois Urbana-Champaign',tag:'Teaching',desc:'Led discussion sections for CS 242: Programming Studio, where students build web and mobile apps and learn to write code that holds up to review.',tech:[],s:2017.58,e:2018.37},
+  {roles:[['Jun – Aug 2016','Front-end Developer Intern']],org:'Indian School of Business',tag:'Internship',desc:"Redesigned the online course experience for the Centre for Innovation and Entrepreneurship's distance learning programmes: user research, wireframes, and a final report on ease of use.",tech:['Design Thinking','Wireframing','Balsamiq'],s:2016.42,e:2016.67},
+  {roles:[['Mar – May 2013','Web Design Intern']],org:'EiQ Networks',tag:'Internship',desc:'Helped redesign the company website, front end and back end.',tech:['HTML','CSS','PHP','MySQL','Git','SVN'],s:2013.17,e:2013.42},
+];
+/* bar lengths are placeholders: the founder is revisiting the skill set */
+const SKILLS=[['Python',.92],['React + TypeScript',.86],['Kubernetes + Helm',.8],['Go',.7],['Comedic Talent',1]];
+const LANGS='English (native), Telugu (native), Hindi (proficient), Japanese (conversational), French (rudimentary)';
+const HOBBIES='reading, photography, hiking, watchmaking';
+const SAB={when:'Nov 2025 → Now',lines:['travelling the world','time with family','helping friends launch their products'],joke:'10/10 would recommend to a friend.'};
+/* placeholder for the stance; its wording is a later ticket */
+const LOREM='lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum'.split(' ');
+const lorem=n=>{let out=[],p=[];for(let i=0;i<n;i++){let w=LOREM[i%LOREM.length];if(!p.length)w=w[0].toUpperCase()+w.slice(1);p.push(w);if(p.length>=46||i===n-1){out.push('<p>'+p.join(' ')+'.</p>');p=[]}else if(p.length%11===0)p[p.length-1]+='.';}
+  return out.join('').replace(/\. (\w)/g,(m,c)=>'. '+c.toUpperCase())};
+const CONTACT=['Feel free to get in touch. I always love hearing what people are building, and whether I can help.',' ',
+  '<span class="k">email</span><a href="mailto:shrujancheruku@gmail.com">shrujancheruku@gmail.com</a>  <button data-act="copy">[copy]</button>',
+  '<span class="k">linkedin</span><a href="https://www.linkedin.com/in/shrujancheruku/" target="_blank">linkedin.com/in/shrujancheruku</a>',
+  '<span class="k">github</span><a href="https://github.com/shrujancheruku" target="_blank">github.com/shrujancheruku</a>',
+  '<span class="k">resume</span><a href="#">shrujan-cheruku-resume.pdf</a>'];
+
+/* ---------------- shared bits ---------------- */
+const W=(id,title,body,cls='',pcls='')=>`<div class="pane ${pcls}" id="p-${id}"><div class="win"><div class="tt">${title}</div><div class="body ${cls}">${body}</div></div></div>`;
+const tags=(t,k)=>t.map(x=>`<span class="tag${k?' k':''}">${x}</span>`).join('');
+const entry=(e)=>`<div class="te${e.now?' now':''}">${e.roles.map(([d,t])=>`<div class="row"><div class="when">${d}</div><div class="title">${t}</div></div>`).join('')}
+  ${e.org?`<div class="org">${e.org}</div>`:''}<p>${e.desc}</p>${e.tag||e.tech.length?`<div class="tech">${e.tag?tags([e.tag],1):''}${tags(e.tech)}</div>`:''}</div>`;
+const ilHead=`<div class="il-h"><div class="deg">${ILH.deg}</div><div class="uni">${ILH.uni} · ${ILH.yrs}</div><div class="sub">${ILH.sub}</div></div>`;
+const cue=(open)=>`<button class="cue" data-act="il"><span class="chev">▸</span><span class="cl">${open?'hide':'4 earlier roles'}</span><span class="dimt d" style="color:inherit">· teaching, internships</span></button>`;
+const skills=`<div class="sk">${SKILLS.map(([n,v])=>`<span>${n}</span><i style="width:${v*100}%"></i>`).join('')}</div>
+  <div class="sk-more"><div><b>languages</b>${LANGS}</div><div><b>hobbies</b>${HOBBIES}</div></div>`;
+const photo=(i,shape,cap='somewhere · 2026')=>`<div class="photo"><span class="pi">photo ${i} · ${shape} · placeholder</span><div class="cap"><span>${cap}</span><span>${i}</span></div></div>`;
+const copy=p=>`<div class="b-copy"><div class="kick">featured ${p.n} / ${NFEAT}</div><h2>${p.slug}</h2><p class="pitch">${p.pitch}</p>
+  <ul>${p.proof.map(x=>`<li>${x}</li>`).join('')}</ul><div class="meta">${p.meta}</div><div class="links">${p.links.map(l=>`<a href="#">${l} ↗</a>`).join('')}</div>
+  ${p.n===NFEAT?`<div class="more" data-act="archive">+ ${ARCHIVE.length} more in the archive →</div>`:''}</div>`;
+const sabCopy=(kick)=>`<div class="b-copy"><div class="kick">${kick}</div><div class="dimt" style="font-size:13px">${SAB.when}</div><h2>sabbatical</h2>
+  <ul style="display:block">${SAB.lines.map(l=>`<li>${l}</li>`).join('')}</ul><p class="pitch" style="margin-top:auto">${SAB.joke}</p></div>`;
+
+/* the opening and projects steps, copied from take D */
+const BASE_W=()=>`
+  ${W('name','~ — shrujan',`<div class="b-name"><h1><span>Shrujan</span> <span>Cheruku</span></h1><div class="lab">product engineer</div></div>`)}
+  ${W('term','zsh',`<div class="b-term" id="term"></div>`)}
+  ${W('now','~/now',`<div class="b-now" data-act="ws" data-w="2"><b>Nov 2025 → now</b><div>sabbatical</div><div class="dimt" style="margin-top:.6em">10/10 would recommend to a friend.</div></div>`)}
+  ${W('uc','',copy(PROJ.u))}${W('um','',`<iframe data-comp data-own src="${PROJ.u.comp}" tabindex="-1"></iframe>`,'comp')}
+  ${W('oc','',copy(PROJ.o))}${W('om','',`<iframe data-comp src="${PROJ.o.comp}" tabindex="-1"></iframe>`,'comp')}
+  ${W('st','featured',`<div class="b-stack">${Object.values(PROJ).map(p=>`<div data-act="go" data-s="${p.n}" data-p="${p.n}">${p.slug}</div>`).join('')}<div class="more" data-act="archive">+${ARCHIVE.length} archive</div></div>`)}`;
+const BASE_S=[
+  {ws:0,f:'name',d:{name:[0,0,60,100],term:[60,0,40,58],now:[60,58,40,42]},m:{name:[0,0,100,40],term:[0,40,100,36],now:[0,76,100,24]}},
+  {ws:1,f:'um',d:{uc:[0,0,30,68],st:[0,68,30,32],um:[30,0,70,100]},m:{uc:[0,0,100,38],um:[0,38,100,48],st:[0,86,100,14]}},
+  {ws:1,f:'om',d:{oc:[0,0,30,68],st:[0,68,30,32],om:[30,0,70,100]},m:{oc:[0,0,100,38],om:[0,38,100,48],st:[0,86,100,14]}},
+];
+const ct=`<div class="b-term" id="cterm"></div>`;
+
+/* ---------------- variants ---------------- */
+const V={
+ A:{name:'Tiles',
+  windows:()=>`
+   ${W('sc','',sabCopy('~/sabbatical'))}
+   ${[1,2,3,4].map(i=>W('p'+i,'',photo(i,'tile')) ).join('')}
+   ${W('sh','',`<div class="sh"><div class="dimt" style="font-size:12px;margin-bottom:auto;padding-top:28px">~/stance</div><h2>My stance on AI</h2><p>One sentence that sums it up sits here, at pitch size.</p></div>`)}
+   ${W('sx','stance.md',`<div class="stance"><div class="txt"></div></div><span class="room"></span>`,'','sx')}
+   ${W('tl','timeline',`<div class="b-tl">${TL.map(entry).join('')}</div>`)}
+   ${W('il','illinois',`<div class="b-il" id="ilA">${ilHead}${cue(0)}<div class="il-body" style="height:0"><div style="padding-top:8px">${IL.map(entry).join('')}</div></div></div>`)}
+   ${W('sk','skills',`<div class="b-sk">${skills}</div>`)}
+   ${W('ct','contact — zsh',ct,'','ctpane')}`,
+  steps:[
+   {ws:2,f:'sc',d:{sc:[0,0,34,100],p1:[34,0,33,50],p2:[67,0,33,50],p3:[34,50,33,50],p4:[67,50,33,50]},
+                m:{sc:[0,0,100,36],p1:[0,36,50,32],p2:[50,36,50,32],p3:[0,68,50,32],p4:[50,68,50,32]}},
+   {ws:3,f:'sx',d:{sh:[0,0,36,100],sx:[36,0,64,100]},m:{sh:[0,0,100,26],sx:[0,26,100,74]},fit:'#p-sx .stance'},
+   {ws:4,f:'tl',d:{tl:[0,0,62,100],il:[62,0,38,40],sk:[62,40,38,60]},m:{tl:[0,0,100,60],il:[0,60,100,20],sk:[0,80,100,20]},
+                 dOpen:{tl:[0,0,46,100],il:[46,0,54,100]},mOpen:{il:[0,0,100,100]}},
+   {ws:5,f:'ct',d:{ct:[17,6,66,88]},m:{ct:[0,8,100,84]}},
+  ],
+  spec:{Idea:'every window of a workspace is on screen at once; one scroll step per workspace',
+   Sabbatical:'copy window on the left (34%), four photo slots in a 2×2 grid on the right; each photo is its own window, filled edge to edge, shape set by the tile (≈ 4:3 at 16:9; square-ish on touch). Touch: copy, then a 2×2 grid',
+   Stance:'a title window (left, 36%: heading + one-sentence summary) and the text window (right, 64%, 15px / 1.65, max 72ch). Room is measured live in the window (badge)',
+   Timeline:'timeline window (62%, scrolls inside if needed), Illinois window above skills on the right. Opening Illinois re-tiles: the timeline narrows to 46%, Illinois takes the whole right column, skills leave; then the four roles stagger in. Touch: Illinois takes the whole workspace',
+   Contact:'one centred floating window (66% × 88%), empty desktop around it; touch: near full'}},
+ B:{name:'Steps',
+  windows:()=>`
+   ${W('sc','',sabCopy('~/sabbatical'))}
+   ${W('pm','',`<div class="ptrack">${[1,2,3].map(i=>photo(i,'3:2',['somewhere','somewhere else','home'][i-1]+' · 2026')).join('')}</div>`)}
+   ${W('ps','photos',`<div class="b-stack" id="pstack">${[1,2,3].map(i=>`<div data-act="go" data-s="${2+i}" data-ph="${i-1}">photo ${i} · placeholder</div>`).join('')}</div>`)}
+   ${W('sx','stance.md',`<div class="stance"><h2 class="wh">My stance on AI</h2><div class="txt"></div></div><span class="room"></span>`,'','sx')}
+   ${W('tk','timeline',`<div class="tk">${TL.map((e,i)=>`<div class="it" data-act="sel" data-i="${i}"><span class="t">${e.roles[0][1]}${e.org?' · '+e.org:''}</span><span class="dt">${e.roles.at(-1)[0].split(' – ')[0]} – ${e.roles[0][0].split(' – ').at(-1)}</span></div>`).join('')}
+      <div class="ilg" id="ilB">${ilHead}${cue(0)}<div class="il-body" style="height:0">${IL.map((e,i)=>`<div class="it" data-act="sel" data-i="${'i'+i}"><span class="t">${e.roles[0][1]} · ${e.org}</span><span class="dt">${e.roles[0][0]}</span></div>`).join('')}</div></div></div>`)}
+   ${W('td','',`<div class="td" id="tdB"></div>`)}
+   ${W('sk','skills',`<div class="b-sk">${skills}</div>`)}
+   ${W('ct','contact — zsh',ct,'','ctpane')}`,
+  steps:[
+   ...[0,1,2].map(i=>({ws:2,f:'pm',ph:i,d:{sc:[0,0,30,64],ps:[0,64,30,36],pm:[30,0,70,100]},m:{sc:[0,0,100,34],pm:[0,34,100,52],ps:[0,86,100,14]}})),
+   {ws:3,f:'sx',d:{sx:[0,0,100,100]},m:{sx:[0,0,100,100]},fit:'#p-sx .stance'},
+   {ws:4,f:'td',d:{tk:[0,0,30,62],sk:[0,62,30,38],td:[30,0,70,100]},m:{td:[0,0,100,44],tk:[0,44,100,56]}},
+   {ws:5,f:'ct',d:{ct:[0,0,100,100]},m:{ct:[0,0,100,100]}},
+  ],
+  spec:{Idea:'like the featured projects: a master window (70%, right) and a stack (left); a workspace can be several scroll steps',
+   Sabbatical:'three scroll steps, one photo each. The photo is the master window (landscape 3:2, cover-cropped), the copy above a photo stack on the left. Three slots',
+   Stance:'one full-workspace window, 17–22px / 1.5 at 500, max 52ch, centred vertically: the text must be short. Room measured live (badge)',
+   Timeline:'one step. Stack of the five entries (left) with the Illinois heading at its foot and its cue; skills below. The selected entry fills the master window at project-name size. Opening Illinois: the nested roles slide open inside the stack and the master shows the degree. Touch: master on top, stack below, no skills window',
+   Contact:'the terminal fills the workspace, text top-left (as in take D)'}},
+ C:{name:'Scratchpad',
+  windows:()=>`
+   ${W('sc','',sabCopy('~/sabbatical · drag the photos'))}
+   ${[['3:2','somewhere'],['3:4','somewhere'],['3:2','somewhere'],['3:4','somewhere'],['3:2','somewhere']].map(([r,c],i)=>W('q'+(i+1),'',photo(i+1,r,c+' · 2026'),'','pphoto')).join('')}
+   ${W('sx','less stance.md',`<div class="pager"><h2 class="wh">My stance on AI</h2><div class="txt"></div><div class="pager-end">(END)</div></div><span class="room"></span>`,'','sx')}
+   ${W('ta','timeline · 2018 → now',`<div class="axis"><div class="ax" id="ax"></div></div>`)}
+   ${W('td','',`<div class="td" id="tdC"></div>`)}
+   ${W('sk','skills',`<div class="b-sk">${skills}</div>`)}
+   ${W('ct','contact — zsh',ct,'','ctpane')}`,
+  steps:[
+   {ws:2,f:'sc',d:{sc:[0,0,36,100],q1:[38,4,34,'3:2',-3,0],q2:[66,0,24,'3:4',4,.08],q3:[52,40,36,'3:2',2,.16],q4:[39,46,20,'3:4',-5,.24],q5:[70,58,28,'3:2',-2,.32]},
+                m:{sc:[0,0,100,38],q1:[2,38,60,'3:2',-3,0],q2:[56,36,40,'3:4',4,.08],q3:[30,58,66,'3:2',2,.16],q4:[0,62,38,'3:4',-5,.24],q5:[14,78,62,'3:2',-2,.32]}},
+   {ws:3,f:'sx',d:{sx:[16,0,68,100]},m:{sx:[0,0,100,100]},fit:'#p-sx .pager',scroll:1},
+   {ws:4,f:'ta',d:{ta:[0,0,100,42],td:[0,42,64,58],sk:[64,42,36,58]},m:{ta:[0,0,100,34],td:[0,34,100,66]}},
+   {ws:5,f:'ct',d:{ct:[0,0,58,100],name:[58,0,42,62],now:[58,62,42,38]},m:{ct:[0,0,100,74],now:[0,74,100,26]}},
+  ],
+  spec:{Idea:'floating windows over the tiles where it helps: photos overlap and can be dragged; text pages; the timeline is an axis',
+   Sabbatical:'copy (36%) on the left; five photo windows dealt onto the right half, overlapping and slightly rotated, two portrait (3:4) and three landscape (3:2), each its own window and draggable (desktop). They settle back when the workspace is re-entered',
+   Stance:'a centred pager window (68%, like less), 14px / 1.7, max 68ch; long text scrolls inside it and the label shows the position. Badge = words on the first screen',
+   Timeline:'a horizontal axis window across the top (2018 → now, block widths are durations; Unsupervised split into its two titles), the selected entry below, skills on the right. The Illinois cue is a tab at the axis\'s left end: opening it rewinds the axis to 2013 and the degree and four roles appear in a second lane',
+   Contact:'terminal on the left (58%); the name and ~/now windows return on the right, so the desktop ends where it began. Touch: terminal then ~/now'}},
+};
+
+/* ---------------- state ---------------- */
+const Q=new URLSearchParams(location.search);
+const vk=V[Q.get('variant')]?Q.get('variant'):'A', v=V[vk];
+let picked=!!THEMES[Q.get('theme')], theme=picked?Q.get('theme'):sysTheme();
+lightMQ.addEventListener('change',()=>{if(!picked){theme=sysTheme();applyTheme()}});
+let crt=Q.get('crt')==='0'?0:1, ilOpen=false, sel=1, phIdx=-1;
+const S=[...BASE_S,...v.steps], STEPS=S.length;
+const WS_FIRST=WS.map((_,w)=>S.findIndex(s=>s.ws===w));
+const save=()=>{const u=new URL(location.href);u.searchParams.set('variant',vk);if(picked)u.searchParams.set('theme',theme);else u.searchParams.delete('theme');u.searchParams.set('crt',crt);history.replaceState(null,'',u)};
+
+/* ---------------- DOM ---------------- */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+document.body.className='v'+vk+' idle';
+const woke=()=>{document.body.classList.remove('idle');['pointerdown','keydown','wheel','touchstart'].forEach(e=>removeEventListener(e,woke,true))};
+['pointerdown','keydown','wheel','touchstart'].forEach(e=>addEventListener(e,woke,true));
+$('#root').innerHTML=`<div class="screen">
+  <div class="bar"><div class="ws">${WS.map((n,i)=>`<b data-act="ws" data-w="${i}" title="${n}">${i+1}<span class="d"> ${n}</span></b>`).join('')}</div>
+    <div class="rt"><span data-act="archive"><span class="d">archive</span><span class="m">▤</span></span><span data-act="ws" data-w="5"><span class="d">contact</span><span class="m">@</span></span>
+    <span class="chip halo" data-act="theme-ui"><i></i><span data-theme-name></span></span><span class="clock d"></span></div></div>
+  <div class="area">${BASE_W()}${v.windows()}
+    <div id="arch" class="pane"><div class="win"><div class="tt">archive</div><div class="body b-arch">
+      ${ARCHIVE.map(([n,p,l])=>`<div class="e"><a class="n" href="#">${n} ↗</a><span class="mt">${l}</span><p>${p}</p></div>`).join('')}
+      <p class="dimt" style="margin-top:1em" data-act="arch-close">esc / tap here to close</p></div></div></div>
+  </div>
+  <div id="themes">${TK.map(k=>`<button data-act="theme-set" data-t="${k}"><i style="background:linear-gradient(135deg,${THEMES[k].bg} 50%,${THEMES[k].ac} 50%)"></i>${k}</button>`).join('')}</div>
+  <canvas id="crtc"></canvas>
+</div>${'<div class="snap"></div>'.repeat(STEPS)}`;
+const PANES=$$('.area > .pane:not(#arch)');
+
+/* ---------------- terminals ---------------- */
+function typer(el,max=9){let q=Promise.resolve();
+  return (cmd,outs=[],fast)=>q=q.then(()=>new Promise(res=>{
+    const line=document.createElement('div');line.innerHTML='<span class="p">❯ </span><span class="c"></span><span class="cur"> </span>';el.append(line);
+    const c=line.querySelector('.c');let i=0;
+    const done=()=>{line.querySelector('.cur')?.remove();outs.forEach(o=>{const d=document.createElement('div');d.innerHTML=o;el.append(d)});while(el.children.length>max)el.firstChild.remove();res()};
+    if(fast){c.textContent=cmd;return done()}
+    const iv=setInterval(()=>{c.textContent=cmd.slice(0,++i);if(i>=cmd.length){clearInterval(iv);setTimeout(done,240)}},42)}))}
+const type=typer($('#term'));
+type('whoami',['product engineer']);type('cat claim',['I design and build.']);type('cat ask',['Give me a problem, not a spec.']);
+const ctype=typer($('#cterm'),20);let contacted=false;
+
+/* ---------------- tiling ---------------- */
+const mq=matchMedia('(max-width:760px)');
+let step=-1;
+function layoutOf(s){const st=S[s],m=mq.matches;return (ilOpen&&(m?st.mOpen:st.dOpen))||(m?st.m:st.d)}
+function place(s,dur){
+  const L=layoutOf(s),area=$('.area').getBoundingClientRect(),gap=parseFloat(getComputedStyle(document.body).getPropertyValue('--gap'));
+  let z=1;
+  for(const el of PANES){const id=el.id.slice(2),r=L[id];
+    if(r){let h=r[3]+'%';
+      if(typeof r[3]==='string'){const [a,b]=r[3].split(':').map(Number);h=((r[2]/100*area.width-gap)*b/a+gap)+'px'}
+      const to={left:r[0]+'%',top:r[1]+'%',width:r[2]+'%',height:h,rotation:r[4]||0,x:0,y:0,zIndex:z++};
+      if(!el._vis)gsap.set(el,{...to,scale:.94,autoAlpha:0,y:typeof r[3]==='string'?40:0});
+      gsap.to(el,{...to,scale:1,autoAlpha:1,duration:dur,delay:dur?(r[5]||0):0,ease:'expo.out',overwrite:true});el._vis=true}
+    else{if(el._vis)gsap.to(el,{autoAlpha:0,scale:.94,duration:dur*.45,overwrite:true});else gsap.set(el,{autoAlpha:0});el._vis=false}
+    el.classList.toggle('focus',S[s].f===id)}
+  $$('.ws b').forEach((b,i)=>b.classList.toggle('on',i===S[s].ws));
+  $$('.b-stack [data-p]').forEach(d=>d.classList.toggle('on',+d.dataset.p===s));
+  if(S[s].fit)setTimeout(fit,dur*1000+60);
+}
+const go=s=>scrollTo({top:s*innerHeight,behavior:'smooth'});
+function onScroll(){const s=Math.max(0,Math.min(STEPS-1,Math.round(scrollY/innerHeight)));if(s===step)return;
+  const prev=step;step=s;
+  if(ilOpen&&S[s].ws!==4){ilOpen=false;ilRender(0)}
+  place(s,prev<0?0:.85);
+  if(s===1&&prev!==1)followComps();
+  if(prev>=0){if(s===1&&prev<1)type('open unmacos');if(s===2&&prev===1)type('open orca-flow');if(s===0&&prev>0)type('cd ~')}
+  if(S[s].ws===5&&!contacted){contacted=true;ctype('contact',CONTACT)}
+  if(S[s].ph!==undefined)setPhoto(S[s].ph);
+  if(S[s].ws===4)enterTimeline();
+  label()}
+addEventListener('scroll',onScroll,{passive:true});
+mq.addEventListener('change',()=>{place(step,.5);if(vk==='C')drawAxis()});
+addEventListener('resize',()=>{crtResize();clearTimeout(rz);rz=setTimeout(()=>{place(step,0);if(vk==='C')drawAxis()},120)});let rz;
+
+/* ---------------- stance: how many words fit, measured in the window ---------------- */
+let room=0;
+function fit(){const box=$(S[step]?.fit||'#none');if(!box)return;const t=box.querySelector('.txt'),badge=box.parentElement.querySelector('.room');
+  if(S[step].scroll){t.innerHTML=lorem(600);/* words on the first screen of the pager */
+    const words=[...t.querySelectorAll('p')];t.innerHTML=lorem(1);let lo=0,hi=600;
+    while(lo<hi){const mid=(lo+hi+1)>>1;t.innerHTML=lorem(mid);if(box.scrollHeight<=box.clientHeight+1)lo=mid;else hi=mid-1}
+    room=lo;t.innerHTML=lorem(Math.max(lo*2,320));badge.textContent=`≈ ${lo} words per screen · scrolls`;pagerLabel();return}
+  let lo=0,hi=900;while(lo<hi){const mid=(lo+hi+1)>>1;t.innerHTML=lorem(mid);if(box.scrollHeight<=box.clientHeight+1)lo=mid;else hi=mid-1}
+  room=lo;t.innerHTML=lorem(lo);badge.textContent=`room: ≈ ${lo} words at ${innerWidth}×${innerHeight}`;label()}
+function pagerLabel(){const p=$('.pager');if(!p)return;const pct=Math.round(100*p.scrollTop/Math.max(1,p.scrollHeight-p.clientHeight));
+  $('#p-sx .tt').textContent=`less stance.md — ${isFinite(pct)?pct:0}%`}
+$('.pager')?.addEventListener('scroll',pagerLabel,{passive:true});
+
+/* ---------------- sabbatical photos ---------------- */
+function setPhoto(i){if(i===phIdx)return;const ph=$$('.ptrack .photo'),dir=i>phIdx?1:-1;
+  ph.forEach((p,j)=>{if(j===i)gsap.fromTo(p,{autoAlpha:0,scale:1.08,xPercent:6*dir},{autoAlpha:1,scale:1,xPercent:0,duration:.9,ease:'expo.out'});
+    else if(j===phIdx)gsap.to(p,{autoAlpha:0,xPercent:-6*dir,duration:.5});else gsap.set(p,{autoAlpha:0})});
+  phIdx=i;$$('#pstack [data-ph]').forEach(d=>d.classList.toggle('on',+d.dataset.ph===i))}
+/* C: drag a photo (desktop only) */
+let drag=null,zTop=100;
+document.addEventListener('pointerdown',e=>{const p=e.target.closest('.pphoto');if(!p||mq.matches)return;
+  drag={el:p,x:e.clientX-gsap.getProperty(p,'x'),y:e.clientY-gsap.getProperty(p,'y')};p.style.zIndex=++zTop;gsap.to(p,{scale:1.03,duration:.2});e.preventDefault()});
+addEventListener('pointermove',e=>{if(drag)gsap.set(drag.el,{x:e.clientX-drag.x,y:e.clientY-drag.y})});
+addEventListener('pointerup',()=>{if(drag){gsap.to(drag.el,{scale:1,duration:.3});drag=null}});
+
+/* ---------------- timeline + Illinois ---------------- */
+const pick=k=>typeof k==='string'&&k[0]==='i'?IL[+k.slice(1)]:k==='deg'?null:TL[+k];
+function detail(k){const el=$('#tdB')||$('#tdC');if(!el)return;sel=k;
+  if(k==='deg'){el.innerHTML=`<div class="kicker">illinois · 2014 – 2018</div><div class="dd">${ILH.yrs}</div><h2>${ILH.deg}</h2><div class="og">${ILH.uni}</div><p>${ILH.sub}</p>`}
+  else{const e=pick(k);el.innerHTML=`<div class="kicker">${typeof k==='string'?'illinois · '+e.tag.toLowerCase():'timeline · '+(+k+1)+' / '+TL.length}</div>
+    <div class="dd">${e.roles.map(r=>r[0]).join('<br>')}</div><h2>${e.roles[0][1]}${e.roles[1]?`<small>then ${e.roles[1][1]}</small>`:''}</h2>${e.org?`<div class="og">${e.org}</div>`:''}<p>${e.desc}</p>
+    <div>${e.tag?tags([e.tag],1):''}${tags(e.tech)}</div>`}
+  gsap.from(el.children,{y:14,opacity:0,duration:.6,stagger:.05,ease:'expo.out'});
+  $$('[data-act="sel"]').forEach(d=>d.classList.toggle('on',d.dataset.i==String(k)));
+  $$('.blk').forEach(d=>d.classList.toggle('on',d.dataset.i==String(k)))}
+let tlEntered=false;
+function enterTimeline(){if(tlEntered)return;tlEntered=true;
+  if(vk!=='A')detail(sel);
+  gsap.fromTo('.sk i',{scaleX:0},{scaleX:1,duration:1.1,ease:'expo.out',stagger:.08,delay:.4});
+  if(vk==='A')gsap.from('#p-tl .te',{x:-18,opacity:0,duration:.7,stagger:.07,ease:'expo.out',delay:.25})}
+function ilRender(animate){
+  const host=$('#ilA')||$('#ilB');
+  if(host){host.classList.toggle('il-open',ilOpen);host.querySelector('.cl').textContent=ilOpen?'hide':'4 earlier roles';
+    const b=host.querySelector('.il-body'),kids=b.querySelectorAll('.te,.it');
+    if(!animate){gsap.set(b,{height:ilOpen?'auto':0});return}
+    if(ilOpen){gsap.fromTo(b,{height:0},{height:'auto',duration:.7,ease:'expo.out',delay:vk==='A'?.35:0});
+      gsap.fromTo(kids,{y:16,opacity:0,filter:'blur(4px)'},{y:0,opacity:1,filter:'blur(0px)',duration:.7,stagger:.08,ease:'expo.out',delay:vk==='A'?.5:.12})}
+    else gsap.to(b,{height:0,duration:.45,ease:'power3.inOut'})}
+  if(vk==='B'&&animate)detail(ilOpen?'deg':1);
+  if(vk==='C'){gsap.to(AX,{min:ilOpen?2013:2018.4,duration:animate?1.4:0,ease:'expo.inOut',onUpdate:drawAxis});
+    $('#p-ta .tt').textContent=ilOpen?'timeline · 2013 → now':'timeline · 2018 → now';if(animate)detail(ilOpen?'deg':1)}}
+function toggleIl(){if(S[step].ws!==4){go(WS_FIRST[4]);setTimeout(()=>{ilOpen=true;ilRender(1);place(step,.85)},900);return}
+  ilOpen=!ilOpen;place(step,.85);ilRender(1);label()}
+/* C: the axis */
+const AX={min:2018.4,max:2026.95};
+function drawAxis(){const ax=$('#ax');if(!ax)return;const X=t=>(t-AX.min)/(AX.max-AX.min)*100;
+  let h='';for(let y=Math.ceil(AX.min);y<=2026;y++){const x=X(y);if(x<0)continue;h+=`<div class="yr" style="left:${x}%"><span>${mq.matches?"'"+String(y).slice(2):y}</span></div>`}
+  const blk=(s,e,label,i,cls='')=>{const l=X(s),w=X(e)-l;return w<=0||l+w<0?'':`<div class="blk ${cls}" data-act="sel" data-i="${i}" style="left:${Math.max(l,0)}%;width:${w+Math.min(l,0)}%" title="${label}">${label}</div>`};
+  h+=`<div class="lane" style="top:${ilOpen?'10%':'22%'}"><span class="lab2">career</span>`;
+  TL.forEach((e,i)=>{if(e.roles.length>1){h+=blk(e.s,2022.33,e.org+' · '+e.roles[1][1],i)+blk(2022.33,e.e,e.roles[0][1],i)}else h+=blk(e.s,e.e,e.org||'sabbatical',i,e.now?'now':'')});
+  h+='</div>';
+  if(AX.min<2018.3){h+=`<div class="lane" style="top:48%"><span class="lab2">illinois</span>${blk(ILH.s,ILH.e,'B.Sc Computer Science','deg','deg')}${IL.map((e,i)=>blk(e.s,e.e,e.org,'i'+i)).join('')}</div>`}
+  h+=`<button class="cue rewind" data-act="il" style="${ilOpen?'':''}"><span class="chev">${ilOpen?'▸':'◂'}</span>${ilOpen?'back to 2018':'illinois · 2013 – 2018'}</button>`;
+  ax.innerHTML=h;$$('.blk').forEach(d=>d.classList.toggle('on',d.dataset.i==String(sel)))}
+if(vk==='C')drawAxis();
+
+/* ---------------- theme ---------------- */
+function applyTheme(){const t=THEMES[theme];for(const k in t)document.documentElement.style.setProperty('--'+k,t[k]);
+  $$('[data-theme-name]').forEach(e=>e.textContent=theme);$$('#themes [data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===theme));
+  $('#ts').value=theme;followComps();save();label()}
+const cycle=()=>{picked=true;theme=TK[(TK.indexOf(theme)+1)%TK.length];applyTheme()};
+function followComps(){const t=THEMES[theme];
+  $$('iframe[data-own]').forEach(f=>{try{f.contentWindow.startTheme?.(theme,[t.bg,t.fg,t.ac,t.dim])}catch{}});
+  $$('iframe[data-comp]:not([data-own])').forEach(f=>{const d=f.contentDocument;if(!d||!d.head)return;let s=d.getElementById('follow');
+    if(!s){s=d.createElement('style');s.id='follow';d.head.append(s);const l=d.createElement('link');l.rel='stylesheet';l.href=$('#fontcss').href;d.head.append(l)}
+    s.textContent=`body{--bg:${t.bg}!important;--fg:${t.fg}!important;--ac:${t.ac}!important;--dim:${t.dim}!important;background:var(--bg)!important;color:var(--fg)!important;font-family:'IBM Plex Mono',monospace!important}
+      .term,.tile,.menu,.sb,.keys{font-family:inherit!important}.desk{background:linear-gradient(var(--dim),var(--bg))!important}.monitor .screen{background:var(--bg)!important}`})}
+$$('iframe[data-comp]').forEach(f=>f.addEventListener('load',followComps));
+
+/* ---------------- interactions ---------------- */
+const arch=on=>$('#arch').classList.toggle('on',on??!$('#arch').classList.contains('on'));
+document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');
+  if(!a){if(!e.target.closest('#themes'))$('#themes').classList.remove('on');return}
+  const act=a.dataset.act;
+  if(act==='ws')go(WS_FIRST[+a.dataset.w]);
+  if(act==='go')go(+a.dataset.s);
+  if(act==='archive')arch();
+  if(act==='arch-close')arch(false);
+  if(act==='theme-ui'){e.stopPropagation();$('#themes').classList.toggle('on')}
+  if(act==='theme-set'){picked=true;theme=a.dataset.t;applyTheme()}
+  if(act==='il')toggleIl();
+  if(act==='sel'){const k=a.dataset.i;detail(/^\d$/.test(k)?+k:k)}
+  if(act==='copy'){navigator.clipboard?.writeText('shrujancheruku@gmail.com');ctype('',['copied to clipboard'],true)}
+});
+addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select,[contenteditable]'))return;
+  if(e.key==='ArrowLeft')sw(-1);if(e.key==='ArrowRight')sw(1);
+  if(e.key==='t')cycle();if(e.key==='c')setCrt(1-crt);if(e.key==='i')toggleIl();
+  if(e.key==='s')$('#spec').classList.toggle('on');
+  if(e.key==='Escape'){arch(false);$('#themes').classList.remove('on')}});
+const clock=()=>$$('.clock').forEach(c=>c.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));clock();setInterval(clock,10000);
+
+/* ---------------- CRT: WebGL 2 overlay (take D, no curvature) ---------------- */
+const cv=$('#crtc'),gl=cv.getContext('webgl2',{alpha:false,antialias:false,premultipliedAlpha:false});
+let uR,uT,uD;
+if(gl){const sh=(t,s)=>{const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);return o};const prog=gl.createProgram();
+  gl.attachShader(prog,sh(gl.VERTEX_SHADER,`#version 300 es
+    void main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);gl_Position=vec4(p*2.-1.,0.,1.);}`));
+  gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,`#version 300 es
+    precision highp float;uniform vec2 R;uniform float T,D;out vec4 o;
+    void main(){vec2 uv=gl_FragCoord.xy/R;vec2 p=gl_FragCoord.xy/D;
+      float s=.5+.5*cos(p.y*6.2831853/3.);float scan=1.-.24*(1.-s)*(1.-s);
+      float c=mod(floor(p.x),3.);vec3 m=c<1.?vec3(1.,.84,.84):c<2.?vec3(.84,1.,.84):vec3(.84,.84,1.);
+      float v=pow(16.*uv.x*uv.y*(1.-uv.x)*(1.-uv.y),.2);
+      float band=1.-.05*exp(-pow((fract(T*.07)*1.4-.2-(1.-uv.y))*9.,2.));
+      float fl=.988+.012*sin(T*97.)*sin(T*13.);
+      o=vec4(m*scan*v*band*fl,1.);}`));
+  gl.linkProgram(prog);gl.useProgram(prog);uR=gl.getUniformLocation(prog,'R');uT=gl.getUniformLocation(prog,'T');uD=gl.getUniformLocation(prog,'D')}
+function crtResize(){if(!gl)return;const d=devicePixelRatio||1;cv.width=cv.clientWidth*d|0;cv.height=cv.clientHeight*d|0;gl.viewport(0,0,cv.width,cv.height)}
+function setCrt(n){crt=n;document.body.classList.toggle('crt',crt>0);requestAnimationFrame(()=>{crtResize();place(step,0)});save();label()}
+(function loop(t){if(gl&&crt>0){gl.uniform2f(uR,cv.width,cv.height);gl.uniform1f(uT,t/1000);gl.uniform1f(uD,devicePixelRatio||1);gl.drawArrays(gl.TRIANGLES,0,3)}requestAnimationFrame(loop)})(performance.now());
+
+/* ---------------- switcher + spec ---------------- */
+const keys=Object.keys(V);
+function sw(d){const u=new URL(location.href);u.searchParams.set('variant',keys[(keys.indexOf(vk)+d+keys.length)%keys.length]);u.hash='ws'+(step<0?0:S[step].ws);location.href=u}
+$('#vp').onclick=()=>sw(-1);$('#vn').onclick=()=>sw(1);
+$('#ts').innerHTML=TK.map(k=>`<option value="${k}">${k}</option>`).join('');
+$('#ts').onchange=e=>{picked=true;theme=e.target.value;applyTheme()};
+$('#cb').onclick=()=>setCrt(1-crt);$('#ib').onclick=toggleIl;
+$('#sb').onclick=()=>$('#spec').classList.toggle('on');
+$('#hide').onclick=()=>{$('#sw').classList.toggle('min');$('#hide').textContent=$('#sw').classList.contains('min')?'+':'–'};
+function label(){
+  $('#lab').textContent=`${vk} · ${v.name}`;
+  $('#cb').textContent='CRT: '+['off','on'][crt];$('#cb').classList.toggle('on',crt>0);$('#ib').classList.toggle('on',ilOpen);
+  $('#spec').innerHTML=`<b>${vk} · ${v.name}</b><table>${Object.entries(v.spec).map(([k,x])=>`<tr><td>${k}</td><td>${x}</td></tr>`).join('')}</table>
+    <h4>state</h4><table><tr><td>workspace</td><td>${step<0?'-':S[step].ws+1+' · '+WS[S[step].ws]} (step ${step+1} / ${STEPS})</td></tr>
+    <tr><td>Illinois</td><td>${ilOpen?'open':'closed'}</td></tr><tr><td>stance room</td><td>${room?'≈ '+room+' words (last measured)':'enter the stance workspace'}</td></tr>
+    <tr><td>layout</td><td>${mq.matches?'touch (one column)':'desktop'} · ${innerWidth}×${innerHeight}</td></tr><tr><td>theme</td><td>${theme}</td></tr></table>
+    <h4>placeholders</h4>photos · stance text (lorem) · skill bar lengths
+    <h4>keys</h4>← → take · t theme · c CRT · i Illinois · s this panel · esc close`}
+
+/* ---------------- boot ---------------- */
+history.scrollRestoration='manual';
+applyTheme();setCrt(crt);
+const startWs=+(location.hash.match(/ws(\d)/)||[])[1]||0;
+scrollTo(0,WS_FIRST[startWs]*innerHeight);onScroll();
+gsap.from('.pane:not([style*="hidden"]) .win',{scale:.7,opacity:0,duration:.9,ease:'expo.out',stagger:.12});
+</script>
+</body>
+</html>
