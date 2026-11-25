@@ -69,11 +69,6 @@ describe("the timeline content", () => {
       "10/10 would recommend to a friend.",
     );
   });
-
-  test("leaves room for a resume-only description, empty for now", () => {
-    for (const e of [...timeline, ...education.roles])
-      expect(e.resumeDescription).toBeUndefined();
-  });
 });
 
 describe("Education & Internships content", () => {

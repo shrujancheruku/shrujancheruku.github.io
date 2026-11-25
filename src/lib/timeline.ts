@@ -1,8 +1,11 @@
 // The timeline's content: one source for the timeline window, Education &
 // Internships and (later) the resume. Wording is final, from the "Timeline
 // content" decision (#13): British/Indian spelling, month and full year.
-// An entry may carry `resumeDescription`, used by the resume instead of
-// `description` when the resume needs different words; the site ignores it.
+// An entry may carry `resume`, wording the resume uses instead of
+// `description` when it needs fewer words; the site ignores it. `resume.from`
+// is the fingerprint of the site wording it was written from (src/lib/resume.ts):
+// when `description` changes, `bun scripts/check-resume.ts` fails until the
+// resume wording is updated or re-confirmed by copying the new fingerprint.
 
 export interface Role {
   /** "Jan 2023 – Nov 2025"; "Now" for the sabbatical. */
@@ -19,7 +22,7 @@ export interface Entry {
   /** Education & Internships only. */
   tag?: "Internship" | "Teaching";
   /** Resume-only wording. Not shown on the site. */
-  resumeDescription?: string;
+  resume?: { description: string; from: string };
 }
 
 export interface Education {
