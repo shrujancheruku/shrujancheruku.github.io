@@ -1,0 +1,545 @@
+<!doctype html>
+<!--
+  PROTOTYPE — throwaway. Not the site, not the stack.
+  Question (ticket "Layout and typography of the tiled desktop"): what are the tiled desktop's actual
+  typefaces, type scale, window proportions, gaps, borders and status bar; how does it lay out on touch;
+  how is the theme offered on touch; which themes ship and which comes first; how does a composition
+  sit in its window; and does the CRT (bezel + WebGL 2 overlay, optional SVG curvature) hold up.
+  Three variants, switchable via ?variant=A|B|C, the switcher, or ← →.
+  Keys: t theme · c CRT (off / on / curved) · f compositions follow theme · s spec panel.
+  Workspaces 3–5 are placeholders on purpose: their windows are decided after this.
+  Run: cd prototype/desktop-layout && bun run view  →  http://localhost:4518/desktop-layout/
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PROTOTYPE · desktop layout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link id="fontcss" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Geist:wght@300..800&family=Geist+Mono:wght@400..700&family=IBM+Plex+Mono:wght@400;500;700&family=VT323&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-snap-type:y mandatory}
+body{-webkit-font-smoothing:antialiased;background:var(--bg);color:var(--fg);transition:background .45s}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.snap{height:100vh;height:100svh;scroll-snap-align:start;scroll-snap-stop:always}
+[data-act]{cursor:pointer}
+.m{display:none}
+@media (max-width:760px){.d{display:none!important}.m{display:inline}}
+
+/* ---------- shared desktop skeleton ---------- */
+.screen{position:fixed;inset:var(--bz,0px);border-radius:var(--br,0px);overflow:hidden;display:flex;flex-direction:column;
+  background:var(--bg);color:var(--fg);transition:background .45s,color .45s}
+.area{position:relative;flex:1;min-height:0}
+.pane{position:absolute;padding:calc(var(--gap)/2);visibility:hidden}
+.win{position:relative;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);transition:border-color .3s,background .45s}
+.body{position:relative;flex:1;min-height:0;container-type:size}
+.comp iframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none;display:block}
+.b-term{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;white-space:pre-wrap}
+.b-term .p{color:var(--hot)} .cur{background:var(--fg);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.b-term a{color:var(--ac)} .b-term a:hover{text-decoration:underline}
+.b-term .k{display:inline-block;width:10ch;opacity:.55}
+.b-term button{color:var(--ac);opacity:.8}
+.dimt{opacity:.55}
+.b-copy{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
+.b-copy .links{display:flex;gap:1.4em;flex-wrap:wrap}
+.b-copy .links a{color:var(--ac)}
+.b-copy .more{color:var(--ac);cursor:pointer}
+.b-copy ul{list-style:none}
+.b-ph{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:.6em;opacity:.6}
+/* archive: a scratchpad window that floats over the tiles */
+#arch{position:absolute;z-index:20;left:50%;top:50%;width:min(720px,calc(100% - 24px));height:min(560px,calc(100% - 24px));
+  transform:translate(-50%,-50%) scale(.94);opacity:0;visibility:hidden;transition:opacity .25s,transform .35s cubic-bezier(.2,.9,.2,1),visibility 0s .35s;padding:0}
+#arch.on{opacity:1;visibility:visible;transform:translate(-50%,-50%);transition:opacity .25s,transform .35s cubic-bezier(.2,.9,.2,1)}
+#arch .win{box-shadow:0 30px 90px #000b}
+.b-arch{overflow:auto}
+.b-arch .e{display:grid;grid-template-columns:1fr auto;gap:.25em 1em;padding:1em 0;border-bottom:1px solid var(--dim)}
+.b-arch .e .n{color:var(--ac)} .b-arch .e .mt{opacity:.55;text-align:right} .b-arch .e p{grid-column:1/-1}
+/* theme picker (A: bottom sheet · C: dialog window) and toast (B) */
+#themes{position:absolute;z-index:30;visibility:hidden;opacity:0;transition:opacity .2s,transform .3s cubic-bezier(.2,.9,.2,1),visibility 0s .3s}
+#themes.on{visibility:visible;opacity:1;transition:opacity .2s,transform .3s cubic-bezier(.2,.9,.2,1)}
+#toast{position:absolute;z-index:30;left:50%;bottom:44px;transform:translateX(-50%);padding:6px 12px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+#toast.on{opacity:1}
+/* CRT: bezel + one WebGL 2 overlay canvas, multiplied over the desktop */
+#crtc{position:absolute;inset:0;width:100%;height:100%;z-index:50;pointer-events:none;mix-blend-mode:multiply;display:none}
+body.crt{background:radial-gradient(120% 120% at 50% 40%,#2a2a2d,#0c0c0e 70%)}
+body.crt #crtc{display:block}
+body.crt{--bz:26px;--br:26px}
+@media (max-width:760px){body.crt{--bz:8px;--br:16px}}
+body.crt .screen{text-shadow:0 0 .45em color-mix(in srgb,currentColor 40%,transparent);box-shadow:0 0 0 2px #000,0 0 0 6px #1d1d20,0 0 40px 6px color-mix(in srgb,var(--ac) 14%,transparent)}
+body.crt .screen::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:55;
+  box-shadow:inset 0 0 50px 6px #000a,inset 0 0 0 2px #0007;background:linear-gradient(160deg,#ffffff0d,transparent 38%)}
+body.crt.curved .screen{filter:url(#curve)}
+
+/* ---------- switcher + spec (not part of any design) ---------- */
+#sw{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:6px;
+  background:#111;color:#fff;border:1px solid #555;border-radius:999px;padding:5px 7px;font:500 12px/1 system-ui,sans-serif;box-shadow:0 8px 30px #0008;text-shadow:none;white-space:nowrap;max-width:calc(100vw - 16px);overflow-x:auto}
+body.vB #sw,body.vC #sw{bottom:auto;top:14px}
+#sw button,#sw select{all:unset;cursor:pointer;height:26px;min-width:26px;padding:0 8px;border-radius:13px;text-align:center;line-height:26px;background:#2a2a2a}
+#sw button:hover,#sw button.on{background:#ffd400;color:#000}
+#sw #lab{padding:0 6px}
+#sw i{width:1px;height:18px;background:#555}
+#sw #fps{opacity:.7;min-width:44px;text-align:right}
+#sw.min > :not(#hide){display:none}
+@media (max-width:760px){#sw{flex-wrap:wrap;justify-content:center;border-radius:16px;font-size:11px;width:calc(100vw - 16px);bottom:8px}body.vB #sw,body.vC #sw{top:8px}#sw i{display:none}}
+#spec{position:fixed;z-index:9998;right:14px;top:56px;width:min(380px,calc(100vw - 28px));max-height:calc(100vh - 120px);overflow:auto;background:#111e;color:#eee;border:1px solid #555;border-radius:12px;
+  padding:14px 16px;font:12px/1.55 system-ui,sans-serif;display:none;text-shadow:none}
+#spec.on{display:block}
+#spec h4{font-size:12px;color:#ffd400;margin:10px 0 4px;text-transform:uppercase;letter-spacing:.06em}
+#spec td{padding:1px 10px 1px 0;vertical-align:top} #spec td:first-child{opacity:.6;white-space:nowrap}
+body.vA #spec{top:auto;bottom:60px}
+
+/* ======================= A · Gapped (soft, floating, two faces) ======================= */
+body.vA{--gap:14px;--mono:'Geist Mono',monospace;--sans:'Geist',sans-serif;--disp:'Bricolage Grotesque',sans-serif;font-family:var(--sans)}
+.vA .bar{margin:var(--gap) var(--gap) calc(var(--gap)/2);height:36px;border-radius:18px;background:var(--dim);padding:0 6px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:500 12.5px var(--mono);transition:background .45s}
+.vA .ws{display:flex;gap:4px}
+.vA .ws b{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:500;font-size:11px;transition:background .3s,color .3s}
+.vA .ws b.on{background:var(--ac);color:var(--bg)}
+.vA .ctr{opacity:.6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vA .rt{display:flex;align-items:center;gap:14px;padding-right:4px}
+.vA .rt [data-act]:hover{color:var(--ac)}
+.vA .chip{white-space:nowrap;display:flex;align-items:center;gap:7px;background:var(--bg);border-radius:13px;height:26px;padding:0 10px 0 6px;color:var(--ac)}
+.vA .chip i{width:14px;height:14px;border-radius:50%;background:conic-gradient(var(--ac) 0 33%,var(--hot) 0 66%,var(--fg) 0)}
+.vA .area{margin:0 calc(var(--gap)/2) calc(var(--gap)/2)}
+.vA .win{border:2px solid var(--dim);border-radius:14px}
+.vA .pane.focus .win{border-color:transparent;background:linear-gradient(var(--bg),var(--bg)) padding-box,linear-gradient(135deg,var(--ac),var(--hot)) border-box}
+.vA .tt{position:absolute;top:10px;left:16px;z-index:2;font:11px var(--mono);opacity:.4;pointer-events:none}
+.vA .comp + .tt,.vA .win:has(.comp) .tt{display:none}
+.vA .b-name{position:absolute;inset:0;padding:0 6cqw;display:flex;flex-direction:column;justify-content:center}
+.vA .b-name h1{font:800 min(21cqw,40cqh)/.86 var(--disp);font-stretch:75%;letter-spacing:-.025em}
+.vA .b-name h1 span{display:block}
+.vA .b-name .lab{margin-top:4cqh;font:500 13px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ac)}
+.vA .b-term{padding:20px 22px;font:400 15px/1.7 var(--mono)}
+.vA .b-now{position:absolute;inset:0;padding:20px 22px;display:flex;flex-direction:column;justify-content:flex-end;font:400 15px/1.6 var(--mono)}
+.vA .b-now b{color:var(--ac);font-weight:500}
+.vA .b-copy{padding:28px 28px 24px;justify-content:flex-end;gap:16px}
+.vA .b-copy .kick{font:500 12px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ac);margin-bottom:auto}
+.vA .b-copy h2{font:800 clamp(40px,15cqw,96px)/.9 var(--disp);font-stretch:75%;letter-spacing:-.03em}
+.vA .b-copy .pitch{font:400 clamp(18px,5.6cqw,24px)/1.3 var(--sans);max-width:26ch;letter-spacing:-.01em}
+.vA .b-copy ul{font:400 15px/1.6 var(--sans);opacity:.8}
+.vA .b-copy ul li::before{content:"— ";color:var(--ac)}
+.vA .b-copy .meta{font:12px var(--mono);opacity:.55}
+.vA .b-copy .links{font:500 14px var(--sans)}
+.vA .b-ph{font:15px var(--mono)} .vA .b-ph b{font:800 56px/1 var(--disp);font-stretch:75%}
+.vA .ctwrap .b-term{left:50%;right:auto;width:min(100%,760px);transform:translateX(-50%);justify-content:center;font-size:16px}
+.vA #arch .win{border-color:var(--ac)}
+.vA .b-arch{padding:24px 28px;font:15px/1.5 var(--sans)} .vA .b-arch h3{font:800 40px/1 var(--disp);font-stretch:75%;margin-bottom:.4em}
+.vA .b-arch .e .n{font:600 16px var(--mono)} .vA .b-arch .e .mt{font:12px var(--mono)}
+.vA #themes{left:50%;bottom:var(--gap);transform:translate(-50%,20px);width:min(560px,calc(100% - 2*var(--gap)));background:var(--dim);border-radius:20px;padding:16px;
+  display:grid;grid-template-columns:repeat(5,1fr);gap:10px;box-shadow:0 20px 60px #000a;font:11px var(--mono)}
+.vA #themes.on{transform:translate(-50%,0)}
+.vA #themes button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 0;border-radius:12px}
+.vA #themes button.on{background:var(--bg)}
+.vA #themes button i{width:34px;height:34px;border-radius:50%}
+@media (max-width:760px){
+  body.vA{--gap:10px}
+  .vA .bar{height:40px;border-radius:20px}
+  .vA .ws b{width:26px;height:26px}
+  .vA .b-term,.vA .b-now{padding:14px 16px;font-size:13px}
+  .vA .b-copy{padding:18px 18px 16px;gap:10px}
+  .vA .win:has(.b-copy) .tt{display:none}
+  .vA .b-copy h2{font-size:clamp(34px,13cqw,56px)}
+  .vA .b-copy .pitch{font-size:17px}
+  .vA .ws{gap:0}
+  .vA .b-copy ul{display:none}
+  .vA #themes{grid-template-columns:repeat(4,1fr)}
+}
+
+/* ======================= B · Dense (no gaps, title bars, one face) ======================= */
+body.vB{--gap:0px;--mono:'IBM Plex Mono',monospace;font-family:var(--mono)}
+.vB .bar{order:2;height:26px;display:flex;justify-content:space-between;align-items:stretch;font:500 13px/26px var(--mono);border-top:1px solid var(--dim);transition:border-color .45s}
+.vB .ws{display:flex;gap:1px}
+.vB .ws b{padding:0 10px;background:var(--dim);font-weight:500;transition:background .3s,color .3s}
+.vB .ws b.on{background:var(--ac);color:var(--bg)}
+.vB .rt{display:flex;gap:0;padding-right:10px} .vB .rt > *{padding:0 10px;border-left:1px solid var(--dim)}
+.vB .rt [data-act]:hover{background:var(--dim)}
+.vB .rt [data-act="theme-cycle"]{color:var(--ac)}
+.vB .win{border:1px solid var(--dim)}
+.vB .pane.focus .win{border-color:var(--ac)}
+.vB .tt{height:22px;line-height:22px;padding:0 8px;font:500 12px/22px var(--mono);background:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none;transition:background .3s,color .3s}
+.vB .pane.focus .tt{background:var(--ac);color:var(--bg)}
+.vB .b-name{position:absolute;inset:0;padding:0 4cqw;display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:6cqh}
+.vB .b-name h1{font:700 min(10.4cqw,52cqh)/1 var(--mono);letter-spacing:-.045em;white-space:nowrap}
+.vB .b-name .lab{margin-top:1.2cqh;font:400 14px var(--mono);color:var(--ac)}
+.vB .b-name .lab::before{content:"// "}
+.vB .b-term{padding:12px 14px;font:400 14px/1.6 var(--mono)}
+.vB .b-now{position:absolute;inset:0;padding:12px 14px;display:flex;flex-direction:column;justify-content:flex-end;font:400 14px/1.6 var(--mono)}
+.vB .b-now b{color:var(--ac);font-weight:500}
+.vB .b-copy{padding:16px;gap:12px}
+.vB .b-copy .kick{font:400 12px var(--mono);opacity:.55}
+.vB .b-copy h2{font:700 clamp(28px,13cqw,52px)/1 var(--mono);letter-spacing:-.05em}
+.vB .b-copy .pitch{font:500 16px/1.45 var(--mono)}
+.vB .b-copy ul{font:400 13px/1.6 var(--mono)} .vB .b-copy ul li::before{content:"+ ";color:var(--ac)}
+.vB .b-copy .meta{font:400 12px var(--mono);opacity:.55;margin-top:auto}
+.vB .b-copy .links{font:500 13px var(--mono)} .vB .b-copy .links a::before{content:"→ "}
+.vB .b-stack{position:absolute;inset:0;font:400 13px/1 var(--mono);display:flex;flex-direction:column}
+.vB .b-stack > *{padding:0 14px;flex:1;max-height:34px;display:flex;align-items:center;border-bottom:1px solid var(--dim);gap:1ch}
+.vB .b-stack .on{background:var(--dim);color:var(--ac)} .vB .b-stack .on::before{content:"▸"} .vB .b-stack > :not(.on)::before{content:" ";white-space:pre}
+.vB .b-stack .more{opacity:.6}
+.vB .b-ph{font:14px var(--mono)} .vB .b-ph b{font:700 34px var(--mono);letter-spacing:-.04em}
+.vB .ctwrap .b-term{padding:16px 20px;justify-content:flex-start;font-size:15px}
+.vB #arch .win{border-color:var(--ac)} .vB #arch .tt{background:var(--ac);color:var(--bg)}
+.vB .b-arch{padding:6px 16px;font:13px/1.5 var(--mono)} .vB .b-arch h3{display:none}
+.vB .b-arch .e .n{font-weight:700} .vB .b-arch .e .mt{font-size:12px}
+.vB #toast{background:var(--ac);color:var(--bg);font:500 13px var(--mono);bottom:36px}
+@media (max-width:760px){
+  .vB .bar{height:34px;line-height:34px}
+  .vB .ws b{padding:0 11px}
+  .vB .rt{padding-right:0}
+  .vB .b-name{padding-bottom:4cqh}
+  .vB .b-term,.vB .b-now{font-size:12.5px;padding:10px 12px}
+  .vB .b-copy{padding:12px;gap:8px} .vB .b-copy ul{display:none}
+  .vB .b-stack > *{max-height:none}
+}
+
+/* ======================= C · Workstation (bevelled chrome, bitmap type) ======================= */
+body.vC{--gap:8px;--mono:'VT323',monospace;--disp:'Pixelify Sans',sans-serif;font-family:var(--mono);
+  --lt:color-mix(in srgb,var(--fg) 38%,var(--dim));--dk:color-mix(in srgb,#000 62%,var(--dim))}
+.vC .area{margin:var(--gap) calc(var(--gap)/2) 0}
+.vC .bar{order:2;flex:none;height:66px;margin-top:calc(var(--gap)/2);background:var(--dim);border-top:3px solid var(--lt);display:flex;justify-content:center;align-items:center;gap:10px;font:20px/1 var(--mono);transition:background .45s}
+.vC .bev{border:3px solid;border-color:var(--lt) var(--dk) var(--dk) var(--lt)}
+.vC .sunk{border:3px solid;border-color:var(--dk) var(--lt) var(--lt) var(--dk)}
+.vC .ws{display:grid;grid-template-columns:repeat(3,auto);gap:3px}
+.vC .ws b{font-weight:400;font-size:18px;padding:1px 9px;line-height:20px;border:2px solid;border-color:var(--lt) var(--dk) var(--dk) var(--lt);background:var(--dim)}
+.vC .ws b.on{background:var(--ac);color:var(--bg);border-color:var(--dk) var(--lt) var(--lt) var(--dk)}
+.vC .btn{display:flex;flex-direction:column;align-items:center;justify-content:center;width:62px;height:52px;font-size:26px;line-height:1;background:var(--dim);font-weight:400}
+.vC .btn small{font-size:15px;margin-top:2px;max-width:58px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.vC .btn:active{border-color:var(--dk) var(--lt) var(--lt) var(--dk)}
+.vC .clockbox{padding:4px 10px;background:var(--bg);color:var(--ac);font-size:26px;min-width:76px;text-align:center}
+.vC .win{border:3px solid;border-color:var(--lt) var(--dk) var(--dk) var(--lt);transition:border-color .45s,background .45s}
+.vC .tt{flex:none;height:26px;display:flex;align-items:center;gap:6px;padding:0 4px;background:var(--dim);font:20px/1 var(--mono);border-bottom:2px solid var(--dk);transition:background .3s,color .3s}
+.vC .tt .t{flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vC .tt .bx{flex:none;width:16px;height:16px;border:2px solid;border-color:var(--lt) var(--dk) var(--dk) var(--lt);background:var(--dim)}
+.vC .pane.focus .tt{background:var(--ac);color:var(--bg)}
+.vC .pane.focus .tt .bx{background:var(--ac)}
+.vC .b-name{position:absolute;inset:0;padding:0 5cqw;display:flex;flex-direction:column;justify-content:center}
+.vC .b-name h1{font:700 min(15cqw,36cqh)/.95 var(--disp);letter-spacing:-.01em}
+.vC .b-name h1 span{display:block}
+.vC .b-name .lab{margin-top:3cqh;font:28px var(--mono);color:var(--ac)}
+.vC .b-name .lab::before{content:"> "}
+.vC .b-term{padding:10px 14px;font:22px/1.2 var(--mono)}
+.vC .b-now{position:absolute;inset:0;padding:12px 16px;display:flex;flex-direction:column;justify-content:center;font:24px/1.15 var(--mono)}
+.vC .b-now b{color:var(--ac);font-weight:400;font-size:30px}
+.vC .b-copy{padding:16px 18px;gap:14px;font-size:21px;line-height:1.2}
+.vC .b-copy .kick{font-size:20px;color:var(--ac)}
+.vC .b-copy h2{font:700 clamp(34px,14cqw,64px)/1 var(--disp)}
+.vC .b-copy .pitch{font-size:clamp(24px,8cqw,30px);line-height:1.05}
+.vC .b-copy ul li::before{content:"* ";color:var(--ac)}
+.vC .b-copy .meta{opacity:.6;margin-top:auto}
+.vC .b-copy .links a{text-decoration:underline}
+.vC .b-ph{font-size:24px} .vC .b-ph b{font:700 44px var(--disp)}
+.vC .ctwrap .b-term{justify-content:center;font-size:26px;padding:20px 8cqw}
+.vC #arch .win{box-shadow:8px 8px 0 #000a}
+.vC .b-arch{padding:12px 18px;font:21px/1.2 var(--mono)} .vC .b-arch h3{font:700 32px var(--disp)}
+.vC .b-arch .e .n{font-size:24px}
+.vC #themes{left:50%;top:50%;transform:translate(-50%,-50%) scale(.96);width:min(340px,calc(100% - 24px));background:var(--bg);border:3px solid;border-color:var(--lt) var(--dk) var(--dk) var(--lt);box-shadow:8px 8px 0 #000a;font:22px/1 var(--mono)}
+.vC #themes.on{transform:translate(-50%,-50%)}
+.vC #themes .tt{background:var(--ac);color:var(--bg)}
+.vC #themes .lst{padding:6px;display:flex;flex-direction:column;max-height:60vh;overflow:auto}
+.vC #themes button{display:flex;gap:10px;align-items:center;padding:5px 8px;text-align:left}
+.vC #themes button.on{background:var(--dim);color:var(--ac)}
+.vC #themes button i{width:18px;height:18px;border:2px solid var(--dk)}
+@media (max-width:760px){
+  body.vC{--gap:6px}
+  .vC .bar{height:58px;gap:6px}
+  .vC .ws b{font-size:15px;padding:0 5px;line-height:18px}
+  .vC .btn{width:44px;height:44px;font-size:22px} .vC .btn small{display:none}
+  .vC .clockbox{display:none}
+  .vC .b-term{font-size:18px;padding:8px 10px} .vC .b-now{font-size:19px} .vC .b-now b{font-size:22px}
+  .vC .b-copy{padding:10px 12px;gap:8px;font-size:19px} .vC .b-copy ul{display:none}
+  .vC .ctwrap .b-term{font-size:20px;padding:12px}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="curve" x="0" y="0" width="1" height="1" filterUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+    <feImage id="cmap" x="0" y="0" width="100" height="100" preserveAspectRatio="none" result="map"/>
+    <feDisplacementMap id="cdisp" in="SourceGraphic" in2="map" scale="300" xChannelSelector="R" yChannelSelector="G" result="d"/>
+    <feColorMatrix in="d" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r"/>
+    <feOffset in="r" dx="1.3" result="r2"/>
+    <feColorMatrix in="d" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g"/>
+    <feColorMatrix in="d" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b"/>
+    <feOffset in="b" dx="-1.3" result="b2"/>
+    <feBlend in="r2" in2="g" mode="screen" result="rg"/>
+    <feBlend in="rg" in2="b2" mode="screen"/>
+  </filter>
+</svg>
+<div id="root"></div>
+<div id="sw"><button id="vp">←</button><span id="lab"></span><button id="vn">→</button><i></i>
+  <select id="ts" title="theme (t)"></select><button id="cb" title="CRT (c)"></button><button id="fb" title="compositions follow theme (f)"></button>
+  <button id="sb" title="spec (s)">spec</button><span id="fps"></span><button id="hide" title="collapse">–</button></div>
+<div id="spec"></div>
+
+<script>
+/* ---------------- data ---------------- */
+const THEMES={
+  'tokyo-night':{bg:'#1a1b26',fg:'#c0caf5',ac:'#7aa2f7',dim:'#2f334d',hot:'#f7768e'},
+  'gruvbox':    {bg:'#282828',fg:'#ebdbb2',ac:'#fabd2f',dim:'#3c3836',hot:'#fb4934'},
+  'rose-pine':  {bg:'#191724',fg:'#e0def4',ac:'#ebbcba',dim:'#26233a',hot:'#eb6f92'},
+  'nord':       {bg:'#2e3440',fg:'#eceff4',ac:'#88c0d0',dim:'#3b4252',hot:'#bf616a'},
+  'catppuccin': {bg:'#1e1e2e',fg:'#cdd6f4',ac:'#cba6f7',dim:'#313244',hot:'#f38ba8'},
+  'everforest': {bg:'#272e33',fg:'#d3c6aa',ac:'#a7c080',dim:'#414b50',hot:'#e67e80'},
+  'kanagawa':   {bg:'#1f1f28',fg:'#dcd7ba',ac:'#7e9cd8',dim:'#2a2a37',hot:'#e46876'},
+  'amber':      {bg:'#130d02',fg:'#ffb000',ac:'#ffd060',dim:'#2e2006',hot:'#ff7a1a'},
+  'phosphor':   {bg:'#03120a',fg:'#3dff7a',ac:'#b6ffcc',dim:'#0c2c17',hot:'#00d65a'},
+  'paper':      {bg:'#f2eede',fg:'#222222',ac:'#cc3e28',dim:'#d8d3c0',hot:'#216609'},
+};
+const TK=Object.keys(THEMES);
+const WS=['opening','projects','sabbatical','stance','timeline','contact'];
+const WS_FIRST=[0,1,3,4,5,6], STEP_WS=[0,1,1,2,3,4,5], STEPS=7;
+const FOCUS=['name','um','om','ph','ph','ph','ct'];
+const ALL=['name','term','now','uc','um','oc','om','st','ph','ct'];
+const PROJ={
+  u:{slug:'unmacos',n:1,pitch:'A keyboard-first desktop for macOS, installed with one command.',proof:['tiling windows and fuzzy menus','23 themes, switched live','one install command'],meta:'Shell · v1.5.0',links:['repository','live site'],comp:'../hero-images/compositions/unmacos.html'},
+  o:{slug:'orca-flow',n:2,pitch:'Turn a backlog of issues into reviewed, merged pull requests.',proof:["this portfolio's spec and build ran through it",'successor to claude-orchestrate'],meta:'Python · v0.9.1',links:['repository'],comp:'../hero-images/compositions/orca-flow.html'},
+};
+const NFEAT=2;
+const ARCHIVE=[
+  ['claude-orchestrate','Turn a backlog of GitHub issues into reviewed, merged pull requests, several at a time, from one Claude Code session. Predecessor to orca-flow.','Python'],
+  ['TrueCrypt-Steganography','Hide an encrypted TrueCrypt volume inside a video that still plays.','Python'],
+  ['aidan-landing-page','A marketing site for a coach, built in Astro.','TypeScript'],
+];
+
+/* ---------------- variants ---------------- */
+const V={
+ A:{name:'Gapped',theme:'tokyo-night',touch:'sheet',
+  tt:t=>t,
+  bar:()=>`<div class="ws">${WS.map((n,i)=>`<b data-act="ws" data-w="${i}" title="${n}">${i+1}</b>`).join('')}</div>
+    <div class="ctr d" id="ftitle"></div>
+    <div class="rt"><span data-act="archive"><span class="d">archive</span><span class="m">▤</span></span><span data-act="contact"><span class="d">contact</span><span class="m">@</span></span>
+    <span class="chip" data-act="theme-ui"><i></i><span data-theme-name></span></span><span class="clock d"></span></div>`,
+  L:{d:[{name:[0,0,60,100],term:[60,0,40,58],now:[60,58,40,42]},{uc:[0,0,34,100],um:[34,0,66,100]},{oc:[0,0,34,100],om:[34,0,66,100]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ct:[0,0,100,100]}],
+     m:[{name:[0,0,100,44],term:[0,44,100,32],now:[0,76,100,24]},{um:[0,0,100,52],uc:[0,52,100,48]},{om:[0,0,100,52],oc:[0,52,100,48]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ct:[0,0,100,100]}]},
+  spec:{Faces:'Bricolage Grotesque 800 at 75% width (name, project names) · Geist (pitch, body) · Geist Mono (bar, terminals, labels)',
+   Scale:'name min(21cqw, 40cqh) / .86 · project name 40–96px / .9 · pitch 18–24px / 1.3 · body 15 / 1.6 · terminal 15 / 1.7 · label 13 caps +.14em · bar 12.5',
+   Windows:'14px gaps (10 on touch) · 2px border · 14px radius · focused border is an accent→hot gradient · no title bars',
+   Bar:'floating pill on top, 36px · workspace dots · focused window title · archive · contact · theme chip · clock',
+   Compositions:'bleed edge to edge in their own window; the copy is a separate window beside (desktop) or below (touch)',
+   'Touch theme':'the theme chip in the bar opens a bottom sheet of swatches',
+   'Many projects':'the copy window counts "featured 1 / N"; the previous project leaves',
+   Default:'tokyo-night'}},
+ B:{name:'Dense',theme:'gruvbox',touch:'cycle',
+  tt:t=>t,
+  bar:()=>`<div class="ws">${WS.map((n,i)=>`<b data-act="ws" data-w="${i}">${i+1}<span class="d">:${n}</span></b>`).join('')}</div>
+    <div class="rt"><span data-act="archive">archive</span><span data-act="contact" class="d">contact</span><span data-act="theme-cycle"><span class="d">theme: </span><span data-theme-name></span> <span class="m">▸</span></span><span class="clock d"></span></div>`,
+  L:{d:[{name:[0,0,100,56],term:[0,56,58,44],now:[58,56,42,44]},{um:[0,0,70,100],uc:[70,0,30,68],st:[70,68,30,32]},{om:[0,0,70,100],oc:[70,0,30,68],st:[70,68,30,32]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ct:[0,0,100,100]}],
+     m:[{name:[0,0,100,30],term:[0,30,100,45],now:[0,75,100,25]},{um:[0,0,100,46],uc:[0,46,100,38],st:[0,84,100,16]},{om:[0,0,100,46],oc:[0,46,100,38],st:[0,84,100,16]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ct:[0,0,100,100]}]},
+  spec:{Faces:'IBM Plex Mono only, weights 400 / 500 / 700',
+   Scale:'name 700 min(10.4cqw, 52cqh), one line, −.045em · project name 28–52px · pitch 500 16 / 1.45 · body 13 / 1.6 · terminal 14 / 1.6 · title bars 12 · bar 13',
+   Windows:'no gaps · 1px borders · square · every window has a 22px title bar; the focused one is filled with the accent',
+   Bar:'flush to the bottom, 26px (34 on touch) · "1:opening" segments · archive | contact | theme | clock',
+   Compositions:'master window (70%) under its own title bar; copy and a project stack share the right column',
+   'Touch theme':'tap "theme" in the bar: it cycles, and a toast names the theme and its position',
+   'Many projects':'the stack window lists every featured project with the current one marked; scales to 6',
+   Default:'gruvbox'}},
+ C:{name:'Workstation',theme:'amber',touch:'dialog',
+  tt:t=>`<span class="bx"></span><span class="t">${t}</span><span class="bx"></span><span class="bx"></span>`,
+  bar:()=>`<div class="ws">${WS.map((n,i)=>`<b data-act="ws" data-w="${i}">${n}</b>`).join('')}</div>
+    <div class="clockbox sunk clock"></div>
+    <b class="btn bev" data-act="archive">▤<small>archive</small></b><b class="btn bev" data-act="contact">@<small>contact</small></b><b class="btn bev" data-act="theme-ui">◐<small data-theme-name></small></b>`,
+  L:{d:[{term:[0,0,32,100],name:[32,0,68,64],now:[32,64,68,36]},{uc:[0,0,30,100],um:[30,0,70,100]},{oc:[0,0,30,100],om:[30,0,70,100]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ct:[0,0,100,100]}],
+     m:[{name:[0,0,100,38],term:[0,38,100,38],now:[0,76,100,24]},{um:[0,0,100,50],uc:[0,50,100,50]},{om:[0,0,100,50],oc:[0,50,100,50]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ct:[0,0,100,100]}]},
+  spec:{Faces:'Pixelify Sans 700 (name, project names) · VT323 (everything else: chrome, terminal, body)',
+   Scale:'name min(15cqw, 36cqh) / .95 · project name 34–64px · pitch 24–30 / 1.05 · body 21 / 1.2 · terminal 22 / 1.2 · title bars 20 · VT323 runs small, so every size is ~1.5× the others',
+   Windows:'8px gaps · 3px bevelled frames (light top-left, dark bottom-right) · title bars with a menu box and two buttons; focused is filled with the accent',
+   Bar:'a front panel on the bottom, 66px · named workspace buttons in a 3×2 grid · sunken clock · archive, contact and theme buttons',
+   Compositions:'sit in a titled "monitor" window, right; the copy is a narrow man-page window, left',
+   'Touch theme':'the ◐ button in the panel opens a theme dialog window listing every theme',
+   'Many projects':'the copy window counts "featured 1 / N"; the previous project leaves',
+   Default:'amber (phosphor)'}},
+};
+
+/* ---------------- state (all in the URL) ---------------- */
+const Q=new URLSearchParams(location.search);
+const vk=V[Q.get('variant')]?Q.get('variant'):'A', v=V[vk];
+let theme=THEMES[Q.get('theme')]?Q.get('theme'):v.theme;
+let crt=['0','1','2'].includes(Q.get('crt'))?+Q.get('crt'):1;
+let follow=Q.get('follow')==='1';
+const save=()=>{const u=new URL(location.href);u.searchParams.set('variant',vk);u.searchParams.set('theme',theme);u.searchParams.set('crt',crt);u.searchParams.set('follow',follow?1:0);history.replaceState(null,'',u)};
+
+/* ---------------- DOM ---------------- */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const W=(id,title,body,cls='')=>`<div class="pane" id="p-${id}"><div class="win"><div class="tt">${v.tt(title)}</div><div class="body ${cls}">${body}</div></div></div>`;
+const copy=p=>`<div class="b-copy"><div class="kick">featured ${p.n} / ${NFEAT}</div><h2>${p.slug}</h2><p class="pitch">${p.pitch}</p>
+  <ul>${p.proof.map(x=>`<li>${x}</li>`).join('')}</ul><div class="meta">${p.meta}</div>
+  <div class="links">${p.links.map(l=>`<a href="#">${l} ↗</a>`).join('')}</div>
+  ${p.n===NFEAT?`<div class="more" data-act="archive">+ ${ARCHIVE.length} more in the archive →</div>`:''}</div>`;
+const stack=`<div class="b-stack">${Object.values(PROJ).map(p=>`<div data-act="go" data-s="${p.n}" data-p="${p.n}">${p.slug}</div>`).join('')}<div class="more" data-act="archive">+${ARCHIVE.length} archive</div></div>`;
+const themeUI=v.touch==='sheet'?TK.map(k=>`<button data-act="theme-set" data-t="${k}"><i style="background:linear-gradient(135deg,${THEMES[k].bg} 50%,${THEMES[k].ac} 50%)"></i>${k}</button>`).join('')
+  :v.touch==='dialog'?`<div class="tt">${v.tt('themes')}</div><div class="lst">${TK.map(k=>`<button data-act="theme-set" data-t="${k}"><i style="background:${THEMES[k].ac}"></i>${k}</button>`).join('')}</div>`:'';
+document.body.className='v'+vk;
+$('#root').innerHTML=`<div class="screen">
+  <div class="bar">${v.bar()}</div>
+  <div class="area">
+    ${W('name','~ — shrujan',`<div class="b-name"><h1><span>Shrujan</span> <span>Cheruku</span></h1><div class="lab">product engineer</div></div>`)}
+    ${W('term','zsh',`<div class="b-term" id="term"></div>`)}
+    ${W('now','~/now',`<div class="b-now" data-act="go" data-s="3"><b>Nov 2025 → now</b><div>sabbatical</div><div class="dimt" style="margin-top:.6em">10/10 would recommend to a friend.</div></div>`)}
+    ${W('uc','unmacos — README',copy(PROJ.u))}
+    ${W('um','unmacos',`<iframe data-comp src="${PROJ.u.comp}" tabindex="-1"></iframe>`,'comp')}
+    ${W('oc','orca-flow — README',copy(PROJ.o))}
+    ${W('om','orca-flow',`<iframe data-comp src="${PROJ.o.comp}" tabindex="-1"></iframe>`,'comp')}
+    ${W('st','featured',stack)}
+    ${W('ph','',`<div class="b-ph"><b id="phn"></b><p>its windows are decided after this prototype</p></div>`)}
+    ${W('ct','contact — zsh',`<div class="b-term" id="cterm"></div>`,'ctwrap')}
+    <div id="arch" class="pane"><div class="win"><div class="tt">${v.tt('archive')}</div><div class="body b-arch"><h3>archive</h3>
+      ${ARCHIVE.map(([n,p,l])=>`<div class="e"><a class="n" href="#">${n} ↗</a><span class="mt">${l}</span><p>${p}</p></div>`).join('')}
+      <p class="dimt" style="margin-top:1em" data-act="arch-close">esc / tap here to close</p></div></div></div>
+  </div>
+  <div id="themes">${themeUI}</div><div id="toast"></div>
+  <canvas id="crtc"></canvas>
+</div>${'<div class="snap"></div>'.repeat(STEPS)}`;
+
+/* ---------------- terminals ---------------- */
+function typer(el,max=9){let q=Promise.resolve();
+  return (cmd,outs=[],fast)=>q=q.then(()=>new Promise(res=>{
+    const line=document.createElement('div');line.innerHTML='<span class="p">❯ </span><span class="c"></span><span class="cur"> </span>';el.append(line);
+    const c=line.querySelector('.c');let i=0;
+    const done=()=>{line.querySelector('.cur')?.remove();outs.forEach(o=>{const d=document.createElement('div');d.innerHTML=o;el.append(d)});
+      while(el.children.length>max)el.firstChild.remove();res()};
+    if(fast){c.textContent=cmd;return done()}
+    const iv=setInterval(()=>{c.textContent=cmd.slice(0,++i);if(i>=cmd.length){clearInterval(iv);setTimeout(done,240)}},42)}))}
+const type=typer($('#term'));
+type('whoami',['product engineer']);type('cat claim',['I design and build.']);type('cat ask',['Give me a problem, not a spec.']);
+const ctype=typer($('#cterm'),20);let contacted=false;
+const CONTACT=['Feel free to get in touch. I always love hearing what people are building, and whether I can help.',' ',
+  '<span class="k">email</span><a href="mailto:shrujancheruku@gmail.com">shrujancheruku@gmail.com</a>  <button data-act="copy">[copy]</button>',
+  '<span class="k">linkedin</span><a href="https://www.linkedin.com/in/shrujancheruku/" target="_blank">linkedin.com/in/shrujancheruku</a>',
+  '<span class="k">github</span><a href="https://github.com/shrujancheruku" target="_blank">github.com/shrujancheruku</a>',
+  '<span class="k">resume</span><a href="#">shrujan-cheruku-resume.pdf</a>'];
+
+/* ---------------- tiling ---------------- */
+const mq=matchMedia('(max-width:760px)');
+let step=-1;
+function place(s,dur){
+  const L=(mq.matches?v.L.m:v.L.d)[s];
+  for(const id of ALL){const el=$('#p-'+id),r=L[id];
+    if(r){const to={left:r[0]+'%',top:r[1]+'%',width:r[2]+'%',height:r[3]+'%'};
+      if(!el._vis)gsap.set(el,{...to,scale:.94,autoAlpha:0});
+      gsap.to(el,{...to,scale:1,autoAlpha:1,duration:dur,ease:'expo.out',overwrite:true});el._vis=true}
+    else{if(el._vis)gsap.to(el,{autoAlpha:0,scale:.94,duration:dur*.45,overwrite:true});else gsap.set(el,{autoAlpha:0});el._vis=false}
+    el.classList.toggle('focus',FOCUS[s]===id)}
+  $$('.ws b').forEach((b,i)=>b.classList.toggle('on',i===STEP_WS[s]));
+  $$('.b-stack [data-p]').forEach(d=>d.classList.toggle('on',+d.dataset.p===s));
+  const ft=$('#ftitle');if(ft)ft.textContent=[`${WS[0]} — shrujan`,'unmacos','orca-flow','sabbatical','stance','timeline','contact'][s];
+  $('#phn').textContent=`${STEP_WS[s]+1} · ${WS[STEP_WS[s]]}`;
+  $('#p-ph .tt').innerHTML=v.tt(WS[STEP_WS[s]]);
+}
+const go=s=>scrollTo({top:s*innerHeight,behavior:'smooth'});
+function onScroll(){const s=Math.max(0,Math.min(STEPS-1,Math.round(scrollY/innerHeight)));if(s===step)return;
+  const prev=step;step=s;place(s,prev<0?0:.85);
+  if(prev>=0){if(s===1&&prev<1)type('open unmacos');if(s===2&&prev===1)type('open orca-flow');if(s===0&&prev>0)type('cd ~')}
+  if(s===6&&!contacted){contacted=true;ctype('contact',CONTACT)}
+  label()}
+addEventListener('scroll',onScroll,{passive:true});
+mq.addEventListener('change',()=>place(step,.5));
+addEventListener('resize',()=>{crtResize();curveResize()});
+
+/* ---------------- theme ---------------- */
+function applyTheme(){const t=THEMES[theme];for(const k in t)document.documentElement.style.setProperty('--'+k,t[k]);
+  $$('[data-theme-name]').forEach(e=>e.textContent=theme);$$('#themes [data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===theme));
+  $('#ts').value=theme;followComps();save();label()}
+const cycle=()=>{theme=TK[(TK.indexOf(theme)+1)%TK.length];applyTheme()};
+let tt;function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),1400)}
+
+/* compositions: own palette, or follow the site theme (overrides the scene's CSS variables) */
+function followComps(){const t=THEMES[theme];
+  $$('iframe[data-comp]').forEach(f=>{const d=f.contentDocument;if(!d||!d.head)return;let s=d.getElementById('follow');
+    if(!follow){s?.remove();return}
+    if(!s){s=d.createElement('style');s.id='follow';d.head.append(s);const l=d.createElement('link');l.rel='stylesheet';l.href=$('#fontcss').href;d.head.append(l)}
+    const mono=getComputedStyle(document.body).getPropertyValue('--mono');
+    s.textContent=`body{--bg:${t.bg}!important;--fg:${t.fg}!important;--ac:${t.ac}!important;--dim:${t.dim}!important;background:var(--bg)!important;color:var(--fg)!important;font-family:${mono}!important}
+      .term,.tile,.menu,.sb,.keys{font-family:inherit!important}.desk{background:linear-gradient(var(--dim),var(--bg))!important}.monitor .screen{background:var(--bg)!important}`})}
+$$('iframe[data-comp]').forEach(f=>f.addEventListener('load',followComps));
+
+/* ---------------- interactions ---------------- */
+const arch=on=>$('#arch').classList.toggle('on',on??!$('#arch').classList.contains('on'));
+document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');
+  if(!a){if(!e.target.closest('#themes'))$('#themes').classList.remove('on');return}
+  const act=a.dataset.act;
+  if(act==='ws')go(WS_FIRST[+a.dataset.w]);
+  if(act==='go')go(+a.dataset.s);
+  if(act==='contact')go(6);
+  if(act==='archive')arch();
+  if(act==='arch-close')arch(false);
+  if(act==='theme-ui'){e.stopPropagation();$('#themes').classList.toggle('on')}
+  if(act==='theme-set'){theme=a.dataset.t;applyTheme()}
+  if(act==='theme-cycle'){cycle();toast(`theme: ${theme} · ${TK.indexOf(theme)+1}/${TK.length}`)}
+  if(act==='copy'){navigator.clipboard?.writeText('shrujancheruku@gmail.com');ctype('',['copied to clipboard'],true)}
+});
+addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select,[contenteditable]'))return;
+  if(e.key==='ArrowLeft')sw(-1);if(e.key==='ArrowRight')sw(1);
+  if(e.key==='t'){cycle();if(v.touch==='cycle')toast(`theme: ${theme} · ${TK.indexOf(theme)+1}/${TK.length}`)}
+  if(e.key==='c')setCrt((crt+1)%3);if(e.key==='f'){follow=!follow;followComps();save();label()}
+  if(e.key==='s')$('#spec').classList.toggle('on');
+  if(e.key==='Escape'){arch(false);$('#themes').classList.remove('on')}});
+const clock=()=>$$('.clock').forEach(c=>c.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));clock();setInterval(clock,10000);
+
+/* ---------------- CRT: WebGL 2 overlay (scanlines, aperture grille, vignette, flicker, rolling band) ---------------- */
+const cv=$('#crtc'),gl=cv.getContext('webgl2',{alpha:false,antialias:false,premultipliedAlpha:false});
+let prog,uR,uT,uD;
+if(gl){const sh=(t,s)=>{const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(o));return o};
+  prog=gl.createProgram();
+  gl.attachShader(prog,sh(gl.VERTEX_SHADER,`#version 300 es
+    void main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);gl_Position=vec4(p*2.-1.,0.,1.);}`));
+  gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,`#version 300 es
+    precision highp float;uniform vec2 R;uniform float T,D;out vec4 o;
+    void main(){vec2 uv=gl_FragCoord.xy/R;vec2 p=gl_FragCoord.xy/D;
+      float s=.5+.5*cos(p.y*6.2831853/3.);float scan=1.-.24*(1.-s)*(1.-s);
+      float c=mod(floor(p.x),3.);vec3 m=c<1.?vec3(1.,.84,.84):c<2.?vec3(.84,1.,.84):vec3(.84,.84,1.);
+      float v=pow(16.*uv.x*uv.y*(1.-uv.x)*(1.-uv.y),.2);
+      float band=1.-.05*exp(-pow((fract(T*.07)*1.4-.2-(1.-uv.y))*9.,2.));
+      float fl=.988+.012*sin(T*97.)*sin(T*13.);
+      o=vec4(m*scan*v*band*fl,1.);}`));
+  gl.linkProgram(prog);gl.useProgram(prog);uR=gl.getUniformLocation(prog,'R');uT=gl.getUniformLocation(prog,'T');uD=gl.getUniformLocation(prog,'D')}
+function crtResize(){if(!gl)return;const d=devicePixelRatio||1;cv.width=cv.clientWidth*d|0;cv.height=cv.clientHeight*d|0;gl.viewport(0,0,cv.width,cv.height)}
+/* curvature: a barrel displacement map baked once to a data URL, plus R/B fringe */
+const MAP=(()=>{const n=256,c=document.createElement('canvas');c.width=c.height=n;const x=c.getContext('2d'),im=x.createImageData(n,n);
+  for(let j=0;j<n;j++)for(let i=0;i<n;i++){const dx=i/(n-1)-.5,dy=j/(n-1)-.5,r2=dx*dx+dy*dy,k=1.1,o=(j*n+i)*4;
+    im.data[o]=Math.max(0,Math.min(255,128+dx*r2*k*255));im.data[o+1]=Math.max(0,Math.min(255,128+dy*r2*k*255));im.data[o+2]=128;im.data[o+3]=255}
+  x.putImageData(im,0,0);return c.toDataURL()})();
+$('#cmap').setAttribute('href',MAP);
+function curveResize(){const s=$('.screen').getBoundingClientRect();const m=$('#cmap');m.setAttribute('width',s.width);m.setAttribute('height',s.height);
+  $('#cdisp').setAttribute('scale',Math.round(Math.max(s.width,s.height)*.32))}
+function setCrt(n){crt=n;document.body.classList.toggle('crt',crt>0);document.body.classList.toggle('curved',crt===2);
+  requestAnimationFrame(()=>{crtResize();curveResize();place(step,0)});save();label()}
+
+/* ---------------- frame loop + fps ---------------- */
+let fr=0,last=performance.now(),fps=0;
+(function loop(t){fr++;if(t-last>=1000){fps=Math.round(fr*1000/(t-last));fr=0;last=t;$('#fps').textContent=fps+' fps'}
+  if(gl&&crt>0){gl.uniform2f(uR,cv.width,cv.height);gl.uniform1f(uT,t/1000);gl.uniform1f(uD,devicePixelRatio||1);gl.drawArrays(gl.TRIANGLES,0,3)}
+  requestAnimationFrame(loop)})(performance.now());
+
+/* ---------------- switcher + spec ---------------- */
+const keys=Object.keys(V);
+function sw(d){const u=new URL(location.href);const nk=keys[(keys.indexOf(vk)+d+keys.length)%keys.length];
+  u.searchParams.set('variant',nk);u.searchParams.delete('theme');location.href=u}
+$('#vp').onclick=()=>sw(-1);$('#vn').onclick=()=>sw(1);
+$('#ts').innerHTML=TK.map(k=>`<option value="${k}">${k}${k===v.theme?' (default)':''}</option>`).join('');
+$('#ts').onchange=e=>{theme=e.target.value;applyTheme()};
+$('#cb').onclick=()=>setCrt((crt+1)%3);
+$('#fb').onclick=()=>{follow=!follow;followComps();save();label()};
+$('#sb').onclick=()=>$('#spec').classList.toggle('on');
+$('#hide').onclick=()=>{$('#sw').classList.toggle('min');$('#hide').textContent=$('#sw').classList.contains('min')?'+':'–'};
+function label(){
+  $('#lab').textContent=`${vk} · ${v.name}`;
+  $('#cb').textContent='CRT: '+['off','on','curved'][crt];$('#cb').classList.toggle('on',crt>0);
+  $('#fb').textContent='comps: '+(follow?'follow theme':'own palette');$('#fb').classList.toggle('on',follow);
+  $('#spec').innerHTML=`<b>${vk} · ${v.name}</b><table>${Object.entries(v.spec).map(([k,x])=>`<tr><td>${k}</td><td>${x}</td></tr>`).join('')}</table>
+    <h4>state</h4><table><tr><td>workspace</td><td>${step<0?'-':STEP_WS[step]+1+' · '+WS[STEP_WS[step]]} (step ${step})</td></tr><tr><td>theme</td><td>${theme}</td></tr>
+    <tr><td>CRT</td><td>${['off','bezel + overlay','bezel + overlay + curvature/fringe'][crt]}</td></tr><tr><td>compositions</td><td>${follow?'follow site theme':'own palette'}</td></tr>
+    <tr><td>layout</td><td>${mq.matches?'touch (one column)':'desktop'} · ${innerWidth}×${innerHeight}</td></tr><tr><td>fps</td><td>${fps||'…'}</td></tr></table>
+    <h4>keys</h4>← → variant · t theme · c CRT · f compositions · s this panel · esc close`}
+setInterval(()=>{if($('#spec').classList.contains('on'))label()},1000);
+
+/* ---------------- boot ---------------- */
+history.scrollRestoration='manual';scrollTo(0,0);
+applyTheme();setCrt(crt);onScroll();
+gsap.from('.pane:not([style*="hidden"]) .win',{scale:.7,opacity:0,duration:.9,ease:'expo.out',stagger:.12});
+</script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+{ "name": "prototype-desktop-layout", "private": true,
+  "scripts": { "view": "python3 -m http.server 4518 -d .." } }
