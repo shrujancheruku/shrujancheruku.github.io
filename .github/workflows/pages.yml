@@ -38,6 +38,10 @@ jobs:
         run: bun run build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install the browser for the end-to-end tests
+        run: bunx playwright install --with-deps chromium
+      - name: End-to-end tests (against the production build)
+        run: bun run test:e2e
       - name: Upload the Pages artifact
         if: (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
         uses: actions/upload-pages-artifact@v5

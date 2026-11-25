@@ -1,13 +1,19 @@
 ---
 import "../styles/global.css";
 import StatusBar from "../components/StatusBar.astro";
+import Windows from "../components/Windows.astro";
+import { createWorkspaces, stepCount } from "../lib/workspaces";
 
 interface Props {
   title: string;
   description: string;
+  /** How many featured projects there are: one scroll step each. A placeholder until #37 reads the content. */
+  featured?: number;
 }
 
-const { title, description } = Astro.props;
+const { title, description, featured = 4 } = Astro.props;
+const workspaces = createWorkspaces({ featured });
+const steps = stepCount(workspaces);
 ---
 
 <!doctype html>
@@ -38,9 +44,20 @@ const { title, description } = Astro.props;
   <body>
     <!-- The bezel: a permanent frame around the screen, CRT effect or not. -->
     <div class="screen">
-      <StatusBar />
-      <main class="area"><slot /></main>
+      <StatusBar workspaces={workspaces} />
+      <main class="area" data-step="0" data-workspace="0">
+        <Windows featured={featured} />
+        <slot />
+      </main>
     </div>
+    <!-- On touch the page itself scrolls and snaps, one stop per step. -->
+    <div class="snaps" aria-hidden="true">
+      {Array.from({ length: steps }, () => <div class="snap" />)}
+    </div>
+    <script type="application/json" id="desktop-model" set:html={JSON.stringify(workspaces)} />
+    <script>
+      import "../scripts/desktop";
+    </script>
   </body>
 </html>
 
@@ -67,9 +84,29 @@ const { title, description } = Astro.props;
     margin: 0 7px 7px;
   }
 
+  /* Touch: the document scrolls natively, one snap per step; the screen stays fixed. */
+  .snaps {
+    display: none;
+  }
+
   @media (max-width: 760px) {
     .area {
       margin: 0 5px 5px;
+    }
+
+    .snaps {
+      display: block;
+    }
+
+    .snap {
+      height: 100vh;
+      height: 100svh;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+    }
+
+    :global(html) {
+      scroll-snap-type: y mandatory;
     }
   }
 </style>

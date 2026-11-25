@@ -1,0 +1,90 @@
+---
+// One window of the tiled desktop. The desktop script places it by `data-window`
+// and gives it focus; a window that is not in the current tiling is hidden.
+interface Props {
+  id: string;
+  /** The faint corner label. Left out on project copy, compositions and photos. */
+  label?: string;
+  /** The content scrolls inside the window: the label then sits on an opaque band. */
+  scrolls?: boolean;
+}
+
+const { id, label, scrolls = false } = Astro.props;
+---
+
+<section class="pane" data-window={id} aria-label={label ?? id}>
+  <div class:list={["win", { scrolls }]}>
+    {label && <span class="label">{label}</span>}
+    <div class="body"><slot /></div>
+  </div>
+</section>
+
+<style>
+  .pane {
+    position: absolute;
+    padding: calc(var(--gap) / 2);
+    /* the desktop script shows the windows of the current step */
+    display: none;
+  }
+
+  .win {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+    border: 2px solid var(--dim);
+    border-radius: 14px;
+    transition:
+      border-color 0.3s,
+      background 0.45s;
+  }
+
+  /* the focused window's border: accent to the second colour */
+  .pane:global(.focus) .win {
+    border-color: transparent;
+    background:
+      linear-gradient(var(--bg), var(--bg)) padding-box,
+      linear-gradient(135deg, var(--ac), var(--hot)) border-box;
+  }
+
+  .label {
+    position: absolute;
+    top: 10px;
+    left: 16px;
+    z-index: 2;
+    font: 11px var(--mono);
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .body {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    container-type: size;
+  }
+
+  /* A window whose content scrolls: the label sits on an opaque band of the
+     background colour, and the content scrolls under the band, not through
+     the label. */
+  .scrolls .label {
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 10px 16px 8px;
+    opacity: 1;
+    color: color-mix(in srgb, var(--fg) 40%, var(--bg));
+    background: var(--bg);
+    box-shadow: 0 4px 6px var(--bg);
+  }
+
+  .scrolls .body {
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    padding: 38px 24px 8px 24px;
+  }
+</style>

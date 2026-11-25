@@ -1,0 +1,24 @@
+---
+// What a window holds until its own ticket builds it.
+interface Props {
+  ticket: number;
+}
+const { ticket } = Astro.props;
+---
+
+<p class="ph">placeholder · built in #{ticket}</p>
+
+<style>
+  .ph {
+    position: absolute;
+    left: 16px;
+    bottom: 12px;
+    font: 11px var(--mono);
+    opacity: 0.45;
+    font-style: italic;
+  }
+  :global(.scrolls) .ph {
+    position: static;
+    padding: 6px 0;
+  }
+</style>
