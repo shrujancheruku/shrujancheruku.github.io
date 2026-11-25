@@ -6,7 +6,7 @@
   how is the theme offered on touch; which themes ship and which comes first; how does a composition
   sit in its window; and does the CRT (bezel + WebGL 2 overlay, optional SVG curvature) hold up.
   Three variants, switchable via ?variant=A|B|C, the switcher, or ← →.
-  Keys: t theme · c CRT (off / on / curved) · f compositions follow theme · s spec panel.
+  Keys: t theme · c CRT (off / on) · f compositions follow theme · s spec panel.
   Workspaces 3–5 are placeholders on purpose: their windows are decided after this.
   Run: cd prototype/desktop-layout && bun run view  →  http://localhost:4518/desktop-layout/
 -->
@@ -196,6 +196,45 @@ body.vB{--gap:0px;--mono:'IBM Plex Mono',monospace;font-family:var(--mono)}
   .vB .b-stack > *{max-height:none}
 }
 
+/* ======================= D · B + A (founder's pick): B's windows and type, A's order and bar ======================= */
+body.vD .win{border-color:var(--line)}
+body.vD .pane.focus .win{border-color:var(--ac)}
+.vD .bar{order:0;margin:10px 10px 8px;height:36px;line-height:normal;border:1px solid var(--line);border-radius:18px;background:var(--dim);padding:0 6px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;font:500 12.5px var(--mono);transition:background .45s,border-color .45s}
+.vD .ws{gap:2px}
+.vD .ws b{height:24px;line-height:24px;padding:0 10px;border-radius:12px;background:none}
+.vD .ws b:hover{background:var(--bg)}
+.vD .ws b.on{background:var(--ac);color:var(--bg)}
+.vD .rt{display:flex;align-items:center;gap:14px;padding-right:2px}
+.vD .rt > *{padding:0;border:0}
+.vD .rt [data-act]:hover{background:none;color:var(--ac)}
+.vD .area{margin:0 10px 10px}
+.vD .b-name{justify-content:center;padding-bottom:0}
+.vD .b-name h1{font-size:min(15cqw,30cqh);white-space:normal;line-height:.95}
+.vD .b-name h1 span{display:block}
+.vD .b-name .lab{margin-top:3cqh}
+/* the theme switch: a slight halo, pulsing until the visitor first interacts */
+.vD .chip{white-space:nowrap;display:flex;align-items:center;gap:7px;background:var(--bg);border-radius:13px;height:26px;padding:0 10px 0 6px;color:var(--ac);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 45%,transparent),0 0 10px 1px color-mix(in srgb,var(--ac) 30%,transparent)}
+.vD .chip i{width:14px;height:14px;border-radius:50%;background:conic-gradient(var(--ac) 0 33%,var(--hot) 0 66%,var(--fg) 0)}
+body.idle .halo{animation:halo 2.2s ease-in-out 1.2s infinite}
+@keyframes halo{50%{box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 70%,transparent),0 0 18px 4px color-mix(in srgb,var(--ac) 45%,transparent)}}
+.vD #themes{right:10px;top:54px;transform:translateY(-8px);width:min(460px,calc(100% - 20px));background:var(--dim);border:1px solid var(--line);border-radius:16px;padding:12px;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;box-shadow:0 20px 60px #0008;font:12px var(--mono)}
+.vD #themes.on{transform:none}
+.vD #themes button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;border-radius:10px}
+.vD #themes button.on{background:var(--bg);color:var(--ac)}
+.vD #themes button i{width:32px;height:32px;border-radius:50%;box-shadow:0 0 0 1px var(--line)}
+body.vD #sw{top:auto;bottom:14px}
+body.vD #spec{top:auto;bottom:60px}
+@media (max-width:760px){
+  .vD .bar{height:40px;border-radius:20px;margin:8px 8px 6px;line-height:normal}
+  .vD .ws b{padding:0 9px;height:28px;line-height:28px;border-radius:14px}
+  .vD .area{margin:0 8px 8px}
+  .vD #themes{left:8px;right:8px;width:auto;top:56px}
+  body.vD #sw{top:auto;bottom:8px}
+}
+
 /* ======================= C · Workstation (bevelled chrome, bitmap type) ======================= */
 body.vC{--gap:8px;--mono:'VT323',monospace;--disp:'Pixelify Sans',sans-serif;font-family:var(--mono);
   --lt:color-mix(in srgb,var(--fg) 38%,var(--dim));--dk:color-mix(in srgb,#000 62%,var(--dim))}
@@ -277,19 +316,21 @@ body.vC{--gap:8px;--mono:'VT323',monospace;--disp:'Pixelify Sans',sans-serif;fon
 
 <script>
 /* ---------------- data ---------------- */
+/* Shipped set, in the founder's order. Palettes are unmacos's colors.toml (home/dot_local/share/unmacos/themes/<name>):
+   bg=background fg=foreground ac=accent dim=lighter_background line=border_inactive hot=red.
+   paper is the site's own (no unmacos equivalent). rose-pine is Dawn (light), as in unmacos. */
 const THEMES={
-  'tokyo-night':{bg:'#1a1b26',fg:'#c0caf5',ac:'#7aa2f7',dim:'#2f334d',hot:'#f7768e'},
-  'gruvbox':    {bg:'#282828',fg:'#ebdbb2',ac:'#fabd2f',dim:'#3c3836',hot:'#fb4934'},
-  'rose-pine':  {bg:'#191724',fg:'#e0def4',ac:'#ebbcba',dim:'#26233a',hot:'#eb6f92'},
-  'nord':       {bg:'#2e3440',fg:'#eceff4',ac:'#88c0d0',dim:'#3b4252',hot:'#bf616a'},
-  'catppuccin': {bg:'#1e1e2e',fg:'#cdd6f4',ac:'#cba6f7',dim:'#313244',hot:'#f38ba8'},
-  'everforest': {bg:'#272e33',fg:'#d3c6aa',ac:'#a7c080',dim:'#414b50',hot:'#e67e80'},
-  'kanagawa':   {bg:'#1f1f28',fg:'#dcd7ba',ac:'#7e9cd8',dim:'#2a2a37',hot:'#e46876'},
-  'amber':      {bg:'#130d02',fg:'#ffb000',ac:'#ffd060',dim:'#2e2006',hot:'#ff7a1a'},
-  'phosphor':   {bg:'#03120a',fg:'#3dff7a',ac:'#b6ffcc',dim:'#0c2c17',hot:'#00d65a'},
-  'paper':      {bg:'#f2eede',fg:'#222222',ac:'#cc3e28',dim:'#d8d3c0',hot:'#216609'},
+  'tokyo-night':{bg:'#1a1b26',fg:'#c0caf5',ac:'#7aa2f7',dim:'#24283b',line:'#3b4261',hot:'#f7768e',mode:'dark'},
+  'gruvbox':    {bg:'#282828',fg:'#d4be98',ac:'#7daea3',dim:'#3c3836',line:'#665c54',hot:'#ea6962',mode:'dark'},
+  'paper':      {bg:'#f2eede',fg:'#222222',ac:'#cc3e28',dim:'#d8d3c0',line:'#b9b29b',hot:'#216609',mode:'light'},
+  'everforest': {bg:'#2d353b',fg:'#d3c6aa',ac:'#7fbbb3',dim:'#343f44',line:'#475258',hot:'#e67e80',mode:'dark'},
+  'nord':       {bg:'#2e3440',fg:'#d8dee9',ac:'#81a1c1',dim:'#3b4252',line:'#4c566a',hot:'#bf616a',mode:'dark'},
+  'rose-pine':  {bg:'#faf4ed',fg:'#575279',ac:'#56949f',dim:'#f2e9e1',line:'#cecacd',hot:'#b4637a',mode:'light'},
+  'starship':   {bg:'#1c1c1e',fg:'#f5f5f7',ac:'#ff9f0a',dim:'#2c2c2e',line:'#8e8e93',hot:'#ff5f4a',mode:'dark'},
 };
 const TK=Object.keys(THEMES);
+/* first theme: paper for a light-mode visitor, gruvbox for dark; follows the OS live until the visitor picks one */
+const lightMQ=matchMedia('(prefers-color-scheme: light)'), sysTheme=()=>lightMQ.matches?'paper':'gruvbox';
 const WS=['opening','projects','sabbatical','stance','timeline','contact'];
 const WS_FIRST=[0,1,3,4,5,6], STEP_WS=[0,1,1,2,3,4,5], STEPS=7;
 const FOCUS=['name','um','om','ph','ph','ph','ct'];
@@ -307,6 +348,22 @@ const ARCHIVE=[
 
 /* ---------------- variants ---------------- */
 const V={
+ D:{name:'B + A (founder)',cls:'vB vD',touch:'sheet',
+  tt:t=>t,
+  bar:()=>`<div class="ws">${WS.map((n,i)=>`<b data-act="ws" data-w="${i}" title="${n}">${i+1}<span class="d"> ${n}</span></b>`).join('')}</div>
+    <div class="rt"><span data-act="archive"><span class="d">archive</span><span class="m">▤</span></span><span data-act="contact"><span class="d">contact</span><span class="m">@</span></span>
+    <span class="chip halo" data-act="theme-ui"><i></i><span data-theme-name></span></span><span class="clock d"></span></div>`,
+  L:{d:[{name:[0,0,60,100],term:[60,0,40,58],now:[60,58,40,42]},{uc:[0,0,30,68],st:[0,68,30,32],um:[30,0,70,100]},{oc:[0,0,30,68],st:[0,68,30,32],om:[30,0,70,100]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ct:[0,0,100,100]}],
+     m:[{name:[0,0,100,40],term:[0,40,100,36],now:[0,76,100,24]},{uc:[0,0,100,38],um:[0,38,100,48],st:[0,86,100,14]},{oc:[0,0,100,38],om:[0,38,100,48],st:[0,86,100,14]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ct:[0,0,100,100]}]},
+  spec:{From:"B's windows and single typeface · A's reading order (name, project name and pitch on the left) · A's rounded bar on top",
+   Faces:'IBM Plex Mono only, weights 400 / 500 / 700',
+   Scale:'name 700 min(15cqw, 30cqh), two lines · project name 28–52px · pitch 500 16 / 1.45 · body 13 / 1.6 · terminal 14 / 1.6 · title bars 12 · bar 12.5',
+   Windows:'no gaps between tiles, 10px inset from the screen · 1px borders · square · 22px title bars, focused one filled with the accent',
+   Bar:'rounded strip on top, 36px · workspace numbers with names (numbers only on touch) · archive · contact · theme switch · clock',
+   'Theme switch':'theme name with a slight accent halo; pulses after load until the first interaction; opens a dropdown of swatches (desktop and touch)',
+   Compositions:'master window (70%) on the right; copy above a project stack on the left. Touch: copy, then composition, then stack',
+   Themes:'tokyo-night, gruvbox, paper, everforest, nord, rose-pine (Dawn), starship · palettes from unmacos',
+   Default:'paper in light mode, gruvbox in dark · CRT on, no curvature · compositions keep their own palette'}},
  A:{name:'Gapped',theme:'tokyo-night',touch:'sheet',
   tt:t=>t,
   bar:()=>`<div class="ws">${WS.map((n,i)=>`<b data-act="ws" data-w="${i}" title="${n}">${i+1}</b>`).join('')}</div>
@@ -356,11 +413,13 @@ const V={
 
 /* ---------------- state (all in the URL) ---------------- */
 const Q=new URLSearchParams(location.search);
-const vk=V[Q.get('variant')]?Q.get('variant'):'A', v=V[vk];
-let theme=THEMES[Q.get('theme')]?Q.get('theme'):v.theme;
-let crt=['0','1','2'].includes(Q.get('crt'))?+Q.get('crt'):1;
+const vk=V[Q.get('variant')]?Q.get('variant'):'D', v=V[vk];
+let picked=!!THEMES[Q.get('theme')];
+let theme=picked?Q.get('theme'):sysTheme();
+lightMQ.addEventListener('change',()=>{if(!picked){theme=sysTheme();applyTheme()}});
+let crt=Q.get('crt')==='0'?0:1;
 let follow=Q.get('follow')==='1';
-const save=()=>{const u=new URL(location.href);u.searchParams.set('variant',vk);u.searchParams.set('theme',theme);u.searchParams.set('crt',crt);u.searchParams.set('follow',follow?1:0);history.replaceState(null,'',u)};
+const save=()=>{const u=new URL(location.href);u.searchParams.set('variant',vk);if(picked)u.searchParams.set('theme',theme);else u.searchParams.delete('theme');u.searchParams.set('crt',crt);u.searchParams.set('follow',follow?1:0);history.replaceState(null,'',u)};
 
 /* ---------------- DOM ---------------- */
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -372,7 +431,11 @@ const copy=p=>`<div class="b-copy"><div class="kick">featured ${p.n} / ${NFEAT}<
 const stack=`<div class="b-stack">${Object.values(PROJ).map(p=>`<div data-act="go" data-s="${p.n}" data-p="${p.n}">${p.slug}</div>`).join('')}<div class="more" data-act="archive">+${ARCHIVE.length} archive</div></div>`;
 const themeUI=v.touch==='sheet'?TK.map(k=>`<button data-act="theme-set" data-t="${k}"><i style="background:linear-gradient(135deg,${THEMES[k].bg} 50%,${THEMES[k].ac} 50%)"></i>${k}</button>`).join('')
   :v.touch==='dialog'?`<div class="tt">${v.tt('themes')}</div><div class="lst">${TK.map(k=>`<button data-act="theme-set" data-t="${k}"><i style="background:${THEMES[k].ac}"></i>${k}</button>`).join('')}</div>`:'';
-document.body.className='v'+vk;
+document.body.className=v.cls||'v'+vk;
+/* halo pulse: on after load, off at the first interaction of any kind */
+document.body.classList.add('idle');
+const woke=()=>{document.body.classList.remove('idle');['pointerdown','keydown','wheel','touchstart'].forEach(e=>removeEventListener(e,woke,true))};
+['pointerdown','keydown','wheel','touchstart'].forEach(e=>addEventListener(e,woke,true));
 $('#root').innerHTML=`<div class="screen">
   <div class="bar">${v.bar()}</div>
   <div class="area">
@@ -443,7 +506,7 @@ addEventListener('resize',()=>{crtResize();curveResize()});
 function applyTheme(){const t=THEMES[theme];for(const k in t)document.documentElement.style.setProperty('--'+k,t[k]);
   $$('[data-theme-name]').forEach(e=>e.textContent=theme);$$('#themes [data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===theme));
   $('#ts').value=theme;followComps();save();label()}
-const cycle=()=>{theme=TK[(TK.indexOf(theme)+1)%TK.length];applyTheme()};
+const cycle=()=>{picked=true;theme=TK[(TK.indexOf(theme)+1)%TK.length];applyTheme()};
 let tt;function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),1400)}
 
 /* compositions: own palette, or follow the site theme (overrides the scene's CSS variables) */
@@ -467,14 +530,14 @@ document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');
   if(act==='archive')arch();
   if(act==='arch-close')arch(false);
   if(act==='theme-ui'){e.stopPropagation();$('#themes').classList.toggle('on')}
-  if(act==='theme-set'){theme=a.dataset.t;applyTheme()}
+  if(act==='theme-set'){picked=true;theme=a.dataset.t;applyTheme()}
   if(act==='theme-cycle'){cycle();toast(`theme: ${theme} · ${TK.indexOf(theme)+1}/${TK.length}`)}
   if(act==='copy'){navigator.clipboard?.writeText('shrujancheruku@gmail.com');ctype('',['copied to clipboard'],true)}
 });
 addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select,[contenteditable]'))return;
   if(e.key==='ArrowLeft')sw(-1);if(e.key==='ArrowRight')sw(1);
   if(e.key==='t'){cycle();if(v.touch==='cycle')toast(`theme: ${theme} · ${TK.indexOf(theme)+1}/${TK.length}`)}
-  if(e.key==='c')setCrt((crt+1)%3);if(e.key==='f'){follow=!follow;followComps();save();label()}
+  if(e.key==='c')setCrt(1-crt);if(e.key==='f'){follow=!follow;followComps();save();label()}
   if(e.key==='s')$('#spec').classList.toggle('on');
   if(e.key==='Escape'){arch(false);$('#themes').classList.remove('on')}});
 const clock=()=>$$('.clock').forEach(c=>c.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));clock();setInterval(clock,10000);
@@ -505,7 +568,7 @@ const MAP=(()=>{const n=256,c=document.createElement('canvas');c.width=c.height=
 $('#cmap').setAttribute('href',MAP);
 function curveResize(){const s=$('.screen').getBoundingClientRect();const m=$('#cmap');m.setAttribute('width',s.width);m.setAttribute('height',s.height);
   $('#cdisp').setAttribute('scale',Math.round(Math.max(s.width,s.height)*.32))}
-function setCrt(n){crt=n;document.body.classList.toggle('crt',crt>0);document.body.classList.toggle('curved',crt===2);
+function setCrt(n){crt=n;document.body.classList.toggle('crt',crt>0);
   requestAnimationFrame(()=>{crtResize();curveResize();place(step,0)});save();label()}
 
 /* ---------------- frame loop + fps ---------------- */
@@ -517,21 +580,21 @@ let fr=0,last=performance.now(),fps=0;
 /* ---------------- switcher + spec ---------------- */
 const keys=Object.keys(V);
 function sw(d){const u=new URL(location.href);const nk=keys[(keys.indexOf(vk)+d+keys.length)%keys.length];
-  u.searchParams.set('variant',nk);u.searchParams.delete('theme');location.href=u}
+  u.searchParams.set('variant',nk);location.href=u}
 $('#vp').onclick=()=>sw(-1);$('#vn').onclick=()=>sw(1);
-$('#ts').innerHTML=TK.map(k=>`<option value="${k}">${k}${k===v.theme?' (default)':''}</option>`).join('');
-$('#ts').onchange=e=>{theme=e.target.value;applyTheme()};
-$('#cb').onclick=()=>setCrt((crt+1)%3);
+$('#ts').innerHTML=TK.map(k=>`<option value="${k}">${k}${k==='paper'?' (light default)':k==='gruvbox'?' (dark default)':''}</option>`).join('');
+$('#ts').onchange=e=>{picked=true;theme=e.target.value;applyTheme()};
+$('#cb').onclick=()=>setCrt(1-crt);
 $('#fb').onclick=()=>{follow=!follow;followComps();save();label()};
 $('#sb').onclick=()=>$('#spec').classList.toggle('on');
 $('#hide').onclick=()=>{$('#sw').classList.toggle('min');$('#hide').textContent=$('#sw').classList.contains('min')?'+':'–'};
 function label(){
   $('#lab').textContent=`${vk} · ${v.name}`;
-  $('#cb').textContent='CRT: '+['off','on','curved'][crt];$('#cb').classList.toggle('on',crt>0);
+  $('#cb').textContent='CRT: '+['off','on'][crt];$('#cb').classList.toggle('on',crt>0);
   $('#fb').textContent='comps: '+(follow?'follow theme':'own palette');$('#fb').classList.toggle('on',follow);
   $('#spec').innerHTML=`<b>${vk} · ${v.name}</b><table>${Object.entries(v.spec).map(([k,x])=>`<tr><td>${k}</td><td>${x}</td></tr>`).join('')}</table>
     <h4>state</h4><table><tr><td>workspace</td><td>${step<0?'-':STEP_WS[step]+1+' · '+WS[STEP_WS[step]]} (step ${step})</td></tr><tr><td>theme</td><td>${theme}</td></tr>
-    <tr><td>CRT</td><td>${['off','bezel + overlay','bezel + overlay + curvature/fringe'][crt]}</td></tr><tr><td>compositions</td><td>${follow?'follow site theme':'own palette'}</td></tr>
+    <tr><td>CRT</td><td>${['off','bezel + overlay'][crt]}</td></tr><tr><td>first theme</td><td>${picked?'picked by visitor':'from OS: '+(lightMQ.matches?'light → paper':'dark → gruvbox')}</td></tr><tr><td>compositions</td><td>${follow?'follow site theme':'own palette'}</td></tr>
     <tr><td>layout</td><td>${mq.matches?'touch (one column)':'desktop'} · ${innerWidth}×${innerHeight}</td></tr><tr><td>fps</td><td>${fps||'…'}</td></tr></table>
     <h4>keys</h4>← → variant · t theme · c CRT · f compositions · s this panel · esc close`}
 setInterval(()=>{if($('#spec').classList.contains('on'))label()},1000);
