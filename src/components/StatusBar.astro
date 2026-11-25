@@ -1,0 +1,32 @@
+---
+// The status bar strip. Its workspace numbers, toggles and clock come later.
+---
+
+<header class="bar"></header>
+
+<style>
+  .bar {
+    position: relative;
+    z-index: 40;
+    flex: none;
+    height: 36px;
+    margin: 14px 14px 7px;
+    padding: 0 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--dim);
+    font: 500 12.5px var(--mono);
+  }
+
+  @media (max-width: 760px) {
+    .bar {
+      height: 40px;
+      border-radius: 20px;
+      margin: 8px 8px 6px;
+    }
+  }
+</style>
