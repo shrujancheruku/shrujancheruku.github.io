@@ -5,6 +5,10 @@
 import { gsap } from "gsap";
 import { Flip } from "gsap/Flip";
 import { Observer } from "gsap/Observer";
+import {
+  notFoundTitle as NOT_FOUND_TITLE,
+  openAddresses,
+} from "../lib/addresses";
 import { interpretKey } from "../lib/keys";
 import { createWheelGate } from "../lib/wheel-gate";
 import {
@@ -27,20 +31,51 @@ const modelEl = document.getElementById("desktop-model");
 if (!found || !modelEl) throw new Error("the desktop is missing its markup");
 const area: HTMLElement = found;
 
+const addressEl = document.getElementById("desktop-addresses");
+if (!addressEl) throw new Error("the desktop is missing its addresses");
+const book = openAddresses(JSON.parse(addressEl.textContent ?? "{}"));
+
 const workspaces: Workspace[] = JSON.parse(modelEl.textContent ?? "[]");
 const steps = stepCount(workspaces);
-const panes = [...area.querySelectorAll<HTMLElement>(".pane")];
+const notFoundPane = area.querySelector<HTMLElement>(
+  '.pane[data-window="notfound"]',
+);
+const panes = [...area.querySelectorAll<HTMLElement>(".pane")].filter(
+  (p) => p !== notFoundPane,
+);
 const numbers = [
   ...document.querySelectorAll<HTMLButtonElement>(".ws button[data-workspace]"),
 ];
 const touch = matchMedia("(max-width: 760px)");
 
 let step = 0;
+/** An unknown path booted the desktop: the not-found terminal is on show. */
+let notFound = area.dataset.notFound === "true";
 
 const layoutOf = (n: number): Layout => {
   const s = stepAt(workspaces, n);
   return touch.matches ? s.touch : s.desktop;
 };
+
+/** The not-found terminal floats over the opening until the first jump. */
+function showNotFound(): void {
+  if (!notFoundPane) return;
+  if (!notFound) {
+    notFoundPane.style.display = "none";
+    return;
+  }
+  Object.assign(notFoundPane.style, {
+    display: "block",
+    left: "10%",
+    top: "10%",
+    width: "80%",
+    height: "80%",
+    zIndex: "100",
+  });
+  notFoundPane.classList.add("focus");
+  const missing = notFoundPane.querySelector("[data-missing]");
+  if (missing) missing.textContent = location.pathname;
+}
 
 /** Put the windows of a step in place; animate from where they are if asked. */
 function place(n: number, animate: boolean): void {
@@ -66,6 +101,8 @@ function place(n: number, animate: boolean): void {
       zIndex: String(z++),
     });
   }
+
+  showNotFound();
 
   const { workspace } = locate(workspaces, n);
   area.dataset.step = String(n);
@@ -111,7 +148,94 @@ function goTo(n: number): void {
   if (next === step) return;
   step = next;
   place(step, true);
+  follow(step);
 }
+
+// ---- the address bar
+// Scrolling updates the address and the tab title and adds no history entry; a
+// deliberate jump adds one. Both are exported below for other scripts.
+
+/** Show the address of a step without adding history (scrolling). */
+function follow(n: number): void {
+  if (notFound && n !== 0) notFound = false;
+  if (notFound) return;
+  const address = book.forStep(n);
+  document.title = address.title;
+  if (
+    location.pathname !== address.path &&
+    book.stepFor(location.pathname) !== n
+  ) {
+    history.replaceState(null, "", address.path);
+  }
+}
+
+/** Back or Forward: show the step of the address, with no new entry. */
+function restore(): void {
+  const n = book.stepFor(location.pathname);
+  notFound = n === undefined;
+  const next = n ?? 0;
+  const address = book.forPath(location.pathname);
+  document.title = address?.title ?? NOT_FOUND_TITLE;
+  step = next;
+  place(step, true);
+  if (touch.matches)
+    window.scrollTo({ top: step * innerHeight, behavior: "instant" });
+}
+addEventListener("popstate", restore);
+
+/**
+ * A deliberate jump to a step: adds a history entry (unless it is where we
+ * already are), so Back undoes it. Status bar items, workspace numbers and
+ * keys, and links use this.
+ */
+export function jump(n: number): void {
+  const next = Math.max(0, Math.min(steps - 1, n));
+  const here = !notFound && book.stepFor(location.pathname) === next;
+  if (!here) {
+    const address = book.forStep(next);
+    history.pushState(null, "", address.path);
+    document.title = address.title;
+  }
+  if (notFound) {
+    notFound = false;
+    place(step, false);
+  }
+  goTo(next);
+}
+
+/** A deliberate jump to an address of the site; false if the path is not one. */
+export function jumpToPath(path: string): boolean {
+  const n = book.stepFor(path);
+  if (n === undefined) return false;
+  jump(n);
+  return true;
+}
+
+/** One scroll step up or down: follows the address without a history entry. */
+export function scrollStep(direction: 1 | -1): void {
+  goTo(stepAfter(workspaces, step, direction));
+}
+
+/** The global step on show. */
+export const currentStep = (): number => step;
+
+// links to addresses of the site are jumps
+document.addEventListener("click", (e) => {
+  if (e.defaultPrevented || e.button !== 0) return;
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  const a = e.target instanceof Element ? e.target.closest("a[href]") : null;
+  if (
+    !(a instanceof HTMLAnchorElement) ||
+    a.target ||
+    a.hasAttribute("download")
+  )
+    return;
+  const url = new URL(a.href, location.href);
+  if (url.origin !== location.origin) return;
+  if (book.stepFor(url.pathname) === undefined) return;
+  e.preventDefault();
+  jumpToPath(url.pathname);
+});
 
 // ---- touch: follow native scroll-snap
 addEventListener(
@@ -125,6 +249,7 @@ addEventListener(
     if (n === step) return;
     step = n;
     place(step, true);
+    follow(step);
   },
   { passive: true },
 );
@@ -161,7 +286,7 @@ const wheel = Observer.create({
     const e = self.event as WheelEvent;
     if (e.ctrlKey || scrollsInside(e.target, e.deltaY)) return;
     const direction = gate.feed(e.timeStamp, e.deltaY);
-    if (direction) goTo(stepAfter(workspaces, step, direction));
+    if (direction) scrollStep(direction);
   },
 });
 
@@ -177,16 +302,16 @@ addEventListener("keydown", (e: KeyboardEvent) => {
   if (!command) return;
   if (command.type === "workspace") {
     e.preventDefault();
-    goTo(firstStepOf(workspaces, command.index));
+    jump(firstStepOf(workspaces, command.index));
   } else if (!e.repeat) {
     e.preventDefault();
-    goTo(stepAfter(workspaces, step, command.direction));
+    scrollStep(command.direction);
   }
 });
 
 for (const b of numbers) {
   b.addEventListener("click", () =>
-    goTo(firstStepOf(workspaces, Number(b.dataset.workspace))),
+    jump(firstStepOf(workspaces, Number(b.dataset.workspace))),
   );
 }
 
@@ -221,9 +346,12 @@ addEventListener("resize", () => {
 });
 
 // ---- boot
-step = touch.matches
-  ? Math.max(0, Math.min(steps - 1, Math.round(scrollY / innerHeight)))
-  : 0;
-if (touch.matches) wheel.disable();
+// the entry page says which step its address opens
+history.scrollRestoration = "manual";
+step = Math.max(0, Math.min(steps - 1, Number(area.dataset.bootStep ?? 0)));
+if (touch.matches) {
+  window.scrollTo({ top: step * innerHeight, behavior: "instant" });
+  wheel.disable();
+}
 place(step, false);
 area.dataset.ready = "true";
