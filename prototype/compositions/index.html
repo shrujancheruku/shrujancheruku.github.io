@@ -261,7 +261,7 @@ const THEMES={
 };
 const TK=Object.keys(THEMES);
 const lightMQ=matchMedia('(prefers-color-scheme: light)'), sysTheme=()=>lightMQ.matches?'paper':'starship';
-const WS=['opening','projects','sabbatical','timeline','contact'];
+const WS=['opening','projects','timeline','sabbatical','contact'];
 const PROJ={
   i:{slug:'issho',n:1,pitch:'Find your people through the things you already love.',proof:['live at joinissho.com','v2 is being rebuilt from a written spec'],meta:'TypeScript · Go',links:['repository','live site']},
   u:{slug:'unmacos',n:2,pitch:'A keyboard-first desktop for macOS, installed with one command.',proof:['tiling windows and fuzzy menus','23 themes, switched live','one install command'],meta:'Shell · v1.5.0',links:['repository','live site'],own:1},
@@ -344,7 +344,7 @@ const phn=a=>a.ph?`<span class="ph-note">${a.ph===1?'placeholder':a.ph}</span>`:
 const BASE_W=()=>`
   ${W('name','~ — shrujan',`<div class="b-name"><h1><span>Shrujan</span> <span>Cheruku</span></h1><div class="lab">product engineer</div></div>`)}
   ${W('term','zsh',`<div class="b-term" id="term"></div>`)}
-  ${W('now','~/now',`<div class="b-now" data-act="ws" data-w="2"><b>Nov 2025 → now</b><div>sabbatical</div><div class="dimt" style="margin-top:.6em">10/10 would recommend to a friend.</div></div>`)}
+  ${W('now','~/now',`<div class="b-now" data-act="ws" data-w="3"><b>Nov 2025 → now</b><div>sabbatical</div><div class="dimt" style="margin-top:.6em">10/10 would recommend to a friend.</div></div>`)}
   ${PK.map(k=>W(k+'c','',copy(PROJ[k]))+W(k+'m','',`<iframe data-comp data-k="${k}" tabindex="-1"></iframe>`,'comp')).join('')}
   ${W('st','featured',`<div class="b-stack">${Object.values(PROJ).map(p=>`<div data-act="go" data-s="${p.n}" data-p="${p.n}">${p.slug}</div>`).join('')}<div class="more" data-act="archive">+${NA} archive</div></div>`)}
   ${W('sc','',sabCopy,'','sc')}
@@ -356,8 +356,8 @@ const BASE_W=()=>`
 const S=[
   {ws:0,f:'name',d:{name:[0,0,60,100],term:[60,0,40,58],now:[60,58,40,42]},m:{name:[0,0,100,40],term:[0,40,100,36],now:[0,76,100,24]}},
   ...PK.map(k=>({ws:1,k,f:k+'m',d:{[k+'c']:[0,0,30,62],st:[0,62,30,38],[k+'m']:[30,0,70,100]},m:{[k+'c']:[0,0,100,34],[k+'m']:[0,34,100,48],st:[0,82,100,18]}})),
-  {ws:2,f:'sc',d:{sc:[0,0,34,100],p1:[34,0,33,50],p2:[67,0,33,50],p3:[34,50,33,50],p4:[67,50,33,50]},m:{sc:[0,0,100,36],p1:[0,36,50,32],p2:[50,36,50,32],p3:[0,68,50,32],p4:[50,68,50,32]}},
-  {ws:3,f:'tl',d:{tl:[0,0,62,100],il:[62,0,38,40],sk:[62,40,38,60]},m:{tl:[0,0,100,60],il:[0,60,100,20],sk:[0,80,100,20]},dOpen:{tl:[0,0,46,100],il:[46,0,54,100]},mOpen:{il:[0,0,100,100]}},
+  {ws:2,f:'tl',d:{tl:[0,0,62,100],il:[62,0,38,40],sk:[62,40,38,60]},m:{tl:[0,0,100,60],il:[0,60,100,20],sk:[0,80,100,20]},dOpen:{tl:[0,0,46,100],il:[46,0,54,100]},mOpen:{il:[0,0,100,100]}},
+  {ws:3,f:'sc',d:{sc:[0,0,34,100],p1:[34,0,33,50],p2:[67,0,33,50],p3:[34,50,33,50],p4:[67,50,33,50]},m:{sc:[0,0,100,36],p1:[0,36,50,32],p2:[50,36,50,32],p3:[0,68,50,32],p4:[50,68,50,32]}},
   {ws:4,f:'ct',d:{ct:[0,0,58,100],name:[58,0,42,62],term:[58,62,42,38]},m:{ct:[0,0,100,74],term:[0,74,100,26]}},
 ];
 const STEPS=S.length, WS_FIRST=WS.map((_,w)=>S.findIndex(s=>s.ws===w));
@@ -485,12 +485,12 @@ const go=s=>scrollTo({top:s*innerHeight,behavior:'smooth'});
 function onScroll(){const s=Math.max(0,Math.min(STEPS-1,Math.round(scrollY/innerHeight)));if(s===step)return;
   const prev=step;step=s;
   if(archOpen&&prev>=0)archClose(true);
-  if(ilOpen&&S[s].ws!==3){ilOpen=false;ilRender(0)}
+  if(ilOpen&&S[s].ws!==2){ilOpen=false;ilRender(0)}
   place(s,prev<0?0:.85);
   if(S[s].k){startComp(S[s].k);if(prev>=0)type('open '+PROJ[S[s].k].slug)}
   if(prev>=0&&s===0&&prev>0)type('cd ~')
   if(S[s].ws===4&&!contacted){contacted=true;ctype('contact',CONTACT)}
-  if(S[s].ws===3)enterTimeline();
+  if(S[s].ws===2)enterTimeline();
   label()}
 addEventListener('scroll',onScroll,{passive:true});
 mq.addEventListener('change',()=>{place(step,.5);if(archOpen)floatPlace(0)});
@@ -543,7 +543,7 @@ function ilRender(animate){const host=$('#ilA');host.classList.toggle('il-open',
   if(ilOpen){gsap.fromTo(b,{height:0},{height:'auto',duration:.7,ease:'expo.out',delay:.35});
     gsap.fromTo(kids,{y:16,opacity:0,filter:'blur(4px)'},{y:0,opacity:1,filter:'blur(0px)',duration:.7,stagger:.08,ease:'expo.out',delay:.5})}
   else gsap.to(b,{height:0,duration:.45,ease:'power3.inOut'})}
-function toggleIl(){if(S[step].ws!==3){go(WS_FIRST[3]);setTimeout(()=>{ilOpen=true;ilRender(1);place(step,.85)},900);return}
+function toggleIl(){if(S[step].ws!==2){go(WS_FIRST[2]);setTimeout(()=>{ilOpen=true;ilRender(1);place(step,.85)},900);return}
   if(archOpen)archClose(true);ilOpen=!ilOpen;place(step,.85);ilRender(1);label()}
 
 /* ---------------- theme ---------------- */
