@@ -14,7 +14,7 @@
 //   on the slot (share cards), and the composition's `card` frame under
 //   reduced motion when the composition `flashes`.
 import { Cancelled, type Clock, createClock } from "../lib/composition-clock";
-import { drawing } from "../lib/composition-rules";
+import { drawing, frameToShow } from "../lib/composition-rules";
 
 export { Cancelled };
 
@@ -168,12 +168,14 @@ export function mount(slot: HTMLElement, composition: Composition): void {
     slot.dataset.state = mode;
   };
 
-  const frameName = (): string | null => {
-    const asked = slot.dataset.frame;
-    if (asked && composition.frames[asked]) return asked;
-    if (composition.flashes && reduced.matches) return composition.card;
-    return null;
-  };
+  const frameName = (): string | null =>
+    frameToShow({
+      asked: slot.dataset.frame,
+      frames: Object.keys(composition.frames),
+      card: composition.card,
+      flashes: composition.flashes ?? false,
+      reduced: reduced.matches,
+    });
 
   const stop = (): void => {
     running?.cancel();

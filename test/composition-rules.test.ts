@@ -4,6 +4,7 @@ import {
   chunkOf,
   closureBytes,
   drawing,
+  frameToShow,
   missingCompositions,
   overCompositionBudget,
   shouldLoad,
@@ -112,5 +113,38 @@ describe("what a built composition weighs", () => {
       "orca-flow.A1b2.js",
     );
     expect(chunkOf("orca-flow", ["orca-flow-session.A.js"])).toBeUndefined();
+  });
+});
+
+describe("which still frame to show", () => {
+  const frames = ["end", "top"];
+  const base = { frames, card: "end", flashes: false, reduced: false };
+
+  test("none by default", () => {
+    expect(frameToShow({ ...base, asked: undefined })).toBeNull();
+  });
+
+  test("a named frame that exists", () => {
+    expect(frameToShow({ ...base, asked: "top" })).toBe("top");
+  });
+
+  test("the word card asks for the composition's own card frame", () => {
+    expect(frameToShow({ ...base, asked: "card" })).toBe("end");
+  });
+
+  test("an unknown name is ignored", () => {
+    expect(frameToShow({ ...base, asked: "nope" })).toBeNull();
+  });
+
+  test("reduced motion freezes a flashing composition at its card", () => {
+    expect(
+      frameToShow({ ...base, asked: undefined, flashes: true, reduced: true }),
+    ).toBe("end");
+  });
+
+  test("reduced motion leaves a composition that does not flash playing", () => {
+    expect(
+      frameToShow({ ...base, asked: undefined, reduced: true }),
+    ).toBeNull();
   });
 });

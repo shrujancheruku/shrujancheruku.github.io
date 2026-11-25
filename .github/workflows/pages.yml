@@ -34,14 +34,16 @@ jobs:
         run: bunx astro check
       - name: Tests
         run: bun test
+      # The build drives Chromium too: it prints the resume PDF, captures the share
+      # cards and measures the first load, so the browser comes before it.
+      - name: Install the browser (the build and the end-to-end tests)
+        run: bunx playwright install --with-deps chromium
       # The workflow's own token (contents: read, set above) is the only credential:
       # the project facts and the collision check read public repositories with it.
-      - name: Build (projects, then the path collision check)
+      - name: Build (projects, PDF, share cards, then the checks and load budgets)
         run: bun run build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install the browser for the end-to-end tests
-        run: bunx playwright install --with-deps chromium
       - name: End-to-end tests (against the production build)
         run: bun run test:e2e
       - name: Upload the Pages artifact

@@ -1,0 +1,24 @@
+---
+// The head tags that make an address share well (#48): its title, description
+// and card as Open Graph and Twitter tags, and the favicon. Every URL comes from
+// `Astro.site` (astro.config.mjs), the one place the host is written.
+import { APPLE_ICON, FAVICON, shareTags } from "../lib/share";
+
+interface Props {
+  path: string;
+  title: string;
+  description: string;
+  /** From `cardPathFor`. */
+  card: string;
+}
+
+const { path, title, description, card } = Astro.props;
+const site = Astro.site;
+if (!site)
+  throw new Error("astro.config.mjs needs a `site` for the share tags");
+const tags = shareTags({ site, path, title, description, card });
+---
+
+<link rel="icon" type="image/png" href={FAVICON} />
+<link rel="apple-touch-icon" href={APPLE_ICON} />
+{tags.map((t) => <meta property={t.property} name={t.name} content={t.content} />)}
