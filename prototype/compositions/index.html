@@ -69,6 +69,11 @@ body.idle .halo{animation:halo 2s ease-in-out 1s infinite}
 body.idle .tip{display:flex;top:calc(100% + 10px + var(--i)*34px);opacity:1;transform:none;transition:none;animation:tipin .5s cubic-bezier(.2,.9,.2,1) both;animation-delay:calc(.5s + var(--i)*.12s)}
 body.idle .tip::after{opacity:.5}
 body.idle .tip::before{display:none}
+/* workspace numbers: the same tooltip, under the left of the bar */
+.ws{position:relative;--i:0}
+.ws .tip{left:6px;right:auto} .ws .tip::before{left:13px;right:auto} .ws .tip::after{left:16.5px;right:auto}
+.ws:hover .tip{opacity:1;transform:none;transition-delay:.25s}
+@media (hover:none){.ws .tip{display:none!important}}
 @keyframes tipin{from{opacity:0;transform:translateY(-6px)}}
 #themes{position:absolute;z-index:45;visibility:hidden;opacity:0;right:10px;top:54px;transform:translateY(-8px);width:min(460px,calc(100% - 20px));background:var(--dim);border:1px solid var(--line);border-radius:16px;padding:12px;
   display:grid;grid-template-columns:repeat(4,1fr);gap:8px;box-shadow:0 20px 60px #0008;font:12px var(--mono);transition:opacity .2s,transform .3s cubic-bezier(.2,.9,.2,1),visibility 0s .3s}
@@ -432,7 +437,7 @@ document.body.className='v'+vk+' idle';
 const woke=()=>{document.body.classList.remove('idle');['pointerdown','keydown','wheel','touchstart'].forEach(e=>removeEventListener(e,woke,true))};
 ['pointerdown','keydown','wheel','touchstart'].forEach(e=>addEventListener(e,woke,true));
 $('#root').innerHTML=`<div class="screen">
-  <div class="bar"><div class="ws">${WS.map((n,i)=>`<b data-act="ws" data-w="${i}" title="${n}">${i+1}<span class="d"> ${n}</span></b>`).join('')}</div>
+  <div class="bar"><div class="ws">${WS.map((n,i)=>`<b data-act="ws" data-w="${i}" title="${n}">${i+1}<span class="d"> ${n}</span></b>`).join('')}<span class="tip">workspaces <kbd>1</kbd>–<kbd>${WS.length}</kbd></span></div>
     <div class="rt">${vk==='E'?'':`<span data-act="archive" id="barArch"><span class="d">archive</span><span class="m">▤</span></span>`}<div class="tg">
       <button class="ib" data-act="ws" data-w="0" aria-label="home"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 9.2 10 3.8l6.5 5.4v7.3h-13z"/><path d="M8.2 16.5v-4.2h3.6v4.2"/></svg><span class="tip">home <kbd>H</kbd></span></button>
       <button class="ib" data-act="ws" data-w="4" aria-label="contact"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.8" y="4.8" width="14.4" height="10.4" rx="2"/><path d="m3.4 6 6.6 5 6.6-5"/></svg><span class="tip">contact <kbd>C</kbd></span></button>
@@ -576,6 +581,7 @@ addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select,[conte
   if(e.key==='a')archToggle();if(e.key==='k')overlay('card');if(e.key==='m')overlay('touch');
   if(e.key==='t')cycle();if(e.key==='e')setCrt(1-crt);if(e.key==='i')toggleIl();
   if(e.key==='s')$('#spec').classList.toggle('on');
+  if(/^[1-9]$/.test(e.key)&&+e.key<=WS.length){if(archOpen)archClose();go(WS_FIRST[e.key-1])}
   if(e.key==='h')go(WS_FIRST[0]);if(e.key==='c')go(WS_FIRST[4]);
   if(e.key==='Escape'){$('#ov').classList.remove('on');$('#ov').innerHTML='';archClose();$('#themes').classList.remove('on')}});
 const clock=()=>$$('.clock').forEach(c=>c.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));clock();setInterval(clock,10000);
@@ -654,7 +660,7 @@ function label(){
   $('#spec').innerHTML=`<b>take ${take} · ${TAKES[take]}</b>${p?`<h4>${p.slug}</h4><table>${Object.entries(sp).map(([a,x])=>`<tr><td>${a}</td><td>${x}</td></tr>`).join('')}</table>`:'<p>Go to a featured project (workspace 2) to see its composition\'s spec.</p>'}
     <h4>every composition</h4>IBM Plex Mono 400 / 500 / 700 · text about 13px in a desktop window, about 11px on touch · fills its window with no label · starts from its beginning each time its step is entered · with reduced motion it shows its share-card frame in the visitor\'s theme · the share card is always paper
     <h4>state</h4><table><tr><td>step</td><td>${step+1} / ${STEPS} · ${step<0?'-':WS[S[step].ws]}${p?' · '+p.slug:''}</td></tr><tr><td>theme</td><td>${theme}</td></tr><tr><td>layout</td><td>${mq.matches?'touch (one column)':'desktop'} · ${innerWidth}×${innerHeight}</td></tr></table>
-    <h4>keys</h4>← → take · k share card · m touch preview · t theme · e CRT · a archive · s this panel`}
+    <h4>keys</h4>1–5 workspace · ← → take · k share card · m touch preview · t theme · e CRT · a archive · s this panel`}
 
 /* ---------------- boot ---------------- */
 history.scrollRestoration='manual';
