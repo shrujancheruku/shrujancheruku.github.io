@@ -84,3 +84,47 @@ export function stackOf(
     archive: archiveCount > 0 ? `+${archiveCount} archive` : null,
   };
 }
+
+export type Fact =
+  | { kind: "text"; label: string }
+  | { kind: "link"; label: string; href: string };
+
+export interface ArchiveEntry {
+  /** The repository as written: the entry's address is `/work/<slug>/`. */
+  slug: string;
+  name: string;
+  /** The repository, which the name links to. */
+  href: string;
+  /** The release version chip; none if the project has no version. */
+  version: string | null;
+  pitch: string;
+  /** Main language, repository, live; missing parts are left out. */
+  facts: Fact[];
+}
+
+export interface ArchiveCopy {
+  /** `~/archive · 3`. */
+  heading: string;
+  entries: ArchiveEntry[];
+}
+
+/** What the archive window says: no image, no year. */
+export function archiveOf(archive: readonly Project[]): ArchiveCopy {
+  return {
+    heading: `~/archive · ${archive.length}`,
+    entries: archive.map((p) => ({
+      slug: p.repository,
+      name: p.name,
+      href: p.repositoryUrl,
+      version: p.version?.label ?? null,
+      pitch: p.pitch,
+      facts: [
+        ...(p.language ? [{ kind: "text" as const, label: p.language }] : []),
+        { kind: "link", label: "repository ↗", href: p.repositoryUrl },
+        ...(p.live
+          ? [{ kind: "link" as const, label: "live ↗", href: p.live }]
+          : []),
+      ],
+    })),
+  };
+}

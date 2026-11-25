@@ -4,8 +4,9 @@ import { compositions, PENDING } from "../compositions/registry";
 // workspaces' tilings (src/lib/workspaces.ts); this file only holds them.
 // Windows other tickets build are placeholders until then.
 import { missingCompositions } from "../lib/composition-rules";
-import { copyOf, stackOf } from "../lib/project-copy";
+import { archiveOf, copyOf, stackOf } from "../lib/project-copy";
 import type { Project } from "../lib/projects";
+import ArchiveWindow from "./ArchiveWindow.astro";
 import CompositionSlot from "./CompositionSlot.astro";
 import ContactWindow from "./ContactWindow.astro";
 import EducationWindow from "./EducationWindow.astro";
@@ -23,8 +24,8 @@ import Window from "./Window.astro";
 interface Props {
   /** The featured projects, in order: one copy and composition window each. */
   featured: Project[];
-  /** How many projects are in the archive. */
-  archive: number;
+  /** The archive projects, in order. */
+  archive: Project[];
 }
 
 const { featured, archive } = Astro.props;
@@ -64,14 +65,15 @@ if (missing.length > 0)
 {
   featured.map((project, i) => (
     <>
-      <ProjectCopy n={i + 1} copy={copyOf(project, i + 1, featured.length, archive)} />
+      <ProjectCopy n={i + 1} copy={copyOf(project, i + 1, featured.length, archive.length)} />
       <Window id={`comp-${i + 1}`}>
         <CompositionSlot repository={project.repository} position={i + 1} ticket={PENDING_TICKETS[project.repository]} />
       </Window>
     </>
   ))
 }
-<ProjectStack stack={stackOf(featured, archive)} />
+<ProjectStack stack={stackOf(featured, archive.length)} />
+{archive.length > 0 && <ArchiveWindow archive={archiveOf(archive)} />}
 
 <!-- timeline -->
 <TimelineWindow />

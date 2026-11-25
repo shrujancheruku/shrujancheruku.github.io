@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  archiveAddresses,
   createAddressBook,
   DESCRIPTION,
   notFoundTitle,
@@ -84,5 +85,46 @@ describe("the address book", () => {
   test("helper titles", () => {
     expect(notFoundTitle).toBe("Not found — Shrujan Cheruku");
     expect(titleForProject("orca-flow")).toBe("orca-flow — Shrujan Cheruku");
+  });
+});
+
+describe("the archive's addresses", () => {
+  const withArchive = createAddressBook(
+    workspaces,
+    [
+      { repository: "issho", pitch: "Find your people." },
+      { repository: "unmacos", pitch: "A Mac in a tab." },
+      { repository: "TrueCrypt-Steganography", pitch: "Hide things." },
+    ],
+    archiveAddresses(workspaces, [
+      { repository: "claude-orchestrate", pitch: "Run many." },
+      { repository: "aidan-landing-page", pitch: "A page." },
+    ]),
+  );
+
+  test("/archive/ opens the last featured project's step with the archive on", () => {
+    expect(withArchive.forPath("/archive/")).toMatchObject({
+      path: "/archive/",
+      title: "Archive — Shrujan Cheruku",
+      step: 3,
+      archive: "",
+    });
+  });
+
+  test("an archive project opens the archive on its entry, titled and described by it", () => {
+    expect(withArchive.forPath("/work/claude-orchestrate/")).toMatchObject({
+      title: "claude-orchestrate — Shrujan Cheruku",
+      description: "Run many.",
+      step: 3,
+      archive: "claude-orchestrate",
+    });
+  });
+
+  test("the step keeps its own address", () => {
+    expect(withArchive.forStep(3).path).toBe("/work/truecrypt-steganography/");
+  });
+
+  test("an empty archive adds nothing", () => {
+    expect(archiveAddresses(workspaces, [])).toEqual([]);
   });
 });

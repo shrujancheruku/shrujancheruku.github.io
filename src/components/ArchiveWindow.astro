@@ -1,0 +1,170 @@
+---
+// The archive window: the projects that are selected but not featured. It is a
+// window of the projects workspace's tiling (the `open` variant in
+// src/lib/workspaces.ts), so it appears by re-tiling, not by floating. The
+// desktop script opens and closes it, staggers its entries in, and marks the
+// entry an address opens on (`/work/<slug>/`) with `aria-current`.
+import type { ArchiveCopy } from "../lib/project-copy";
+import Window from "./Window.astro";
+
+interface Props {
+  archive: ArchiveCopy;
+}
+
+const { archive } = Astro.props;
+---
+
+<Window id="archive">
+  <div class="archive" data-archive>
+    <header>
+      <div>
+        <p class="kick">{archive.heading}</p>
+        <h2>archive</h2>
+      </div>
+      <button type="button" class="close" data-archive-close>esc ✕</button>
+    </header>
+    <ol class="entries">
+      {
+        archive.entries.map((e) => (
+          <li class="entry" data-entry={e.slug}>
+            <a class="name" href={e.href} rel="noopener">{e.name}</a>
+            {e.version && <span class="ver">{e.version}</span>}
+            <p class="pitch">{e.pitch}</p>
+            <p class="facts">
+              {e.facts.map((f) =>
+                f.kind === "link" ? (
+                  <a href={f.href} rel="noopener">{f.label}</a>
+                ) : (
+                  <span class="lang">{f.label}</span>
+                ),
+              )}
+            </p>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</Window>
+
+<style>
+  .archive {
+    position: absolute;
+    inset: 0;
+    /* a long list scrolls inside the window */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    padding: 22px 26px 18px;
+  }
+
+  /* no line under the heading */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1em;
+    padding-bottom: 6px;
+  }
+
+  .kick {
+    font: 400 12px var(--mono);
+    opacity: 0.55;
+  }
+
+  h2 {
+    font: 700 clamp(26px, 9cqw, 44px) / 1 var(--mono);
+    letter-spacing: -0.05em;
+    margin: 0.15em 0 0.3em;
+  }
+
+  .close {
+    font: 500 12px var(--mono);
+    opacity: 0.6;
+    white-space: nowrap;
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .close:hover,
+  .close:focus-visible {
+    opacity: 1;
+    color: var(--ac);
+  }
+
+  .entries {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .entry {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 1em;
+    align-items: baseline;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--dim);
+  }
+
+  .entry:last-child {
+    border-bottom: 0;
+  }
+
+  .name {
+    font: 700 17px var(--mono);
+    color: var(--ac);
+    overflow-wrap: anywhere;
+  }
+
+  .entry:hover .name {
+    text-decoration: underline;
+  }
+
+  .ver {
+    font: 500 11px / 1 var(--mono);
+    padding: 3px 7px;
+    border-radius: 9px;
+    background: var(--dim);
+    color: var(--fg);
+    white-space: nowrap;
+  }
+
+  .pitch {
+    grid-column: 1 / -1;
+    font: 500 14px / 1.45 var(--mono);
+    max-width: 60ch;
+  }
+
+  .facts {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 1.4em;
+    align-items: center;
+    font: 500 12.5px var(--mono);
+  }
+
+  .facts a {
+    color: var(--ac);
+  }
+
+  .facts a:hover {
+    text-decoration: underline;
+  }
+
+  .lang {
+    opacity: 0.55;
+  }
+
+  /* the entry an address opened on */
+  .entry[aria-current="true"] .name {
+    text-decoration: underline;
+  }
+
+  .entry[aria-current="true"] {
+    box-shadow: -10px 0 0 -8px var(--ac);
+  }
+</style>

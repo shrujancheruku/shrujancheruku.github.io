@@ -73,6 +73,18 @@ const grid2 = (
   [ids[3]]: [x + w / 2, y + h / 2, w / 2, h / 2],
 });
 
+/** The share of the width the workspace keeps while the archive is open. */
+const ARCHIVE_SHARE = 0.42;
+
+/** A layout squeezed horizontally into the left `share` of the area. */
+const squeeze = (layout: Layout, share: number): Layout =>
+  Object.fromEntries(
+    Object.entries(layout).map(([id, [x, y, w, h]]) => [
+      id,
+      [x * share, y, w * share, h] as Rect,
+    ]),
+  );
+
 const WORKSPACE_NAMES = [
   ["opening", "opening"],
   ["projects", "projects"],
@@ -85,17 +97,28 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
   const projectSteps = Array.from({ length: featured }, (_, i) => {
     const copy = `copy-${i + 1}`;
     const comp = `comp-${i + 1}`;
+    const desktop: Layout = {
+      [copy]: [0, 0, 30, 62],
+      stack: [0, 62, 30, 38],
+      [comp]: [30, 0, 70, 100],
+    };
     return stepOf(
       comp,
-      {
-        [copy]: [0, 0, 30, 62],
-        stack: [0, 62, 30, 38],
-        [comp]: [30, 0, 70, 100],
-      },
+      desktop,
       {
         [copy]: [0, 0, 100, 34],
         [comp]: [0, 34, 100, 48],
         stack: [0, 82, 100, 18],
+      },
+      // the archive open: the workspace squeezes into the left 42%, the archive
+      // takes the right 58% and focus; on touch it takes the whole workspace
+      {
+        focus: "archive",
+        desktop: {
+          ...squeeze(desktop, ARCHIVE_SHARE),
+          archive: [ARCHIVE_SHARE * 100, 0, 100 - ARCHIVE_SHARE * 100, 100],
+        },
+        touch: { archive: [0, 0, 100, 100] },
       },
     );
   });

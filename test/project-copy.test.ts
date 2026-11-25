@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { copyOf, stackOf } from "../src/lib/project-copy";
+import { archiveOf, copyOf, stackOf } from "../src/lib/project-copy";
 import type { Project } from "../src/lib/projects-core";
 
 const project = (over: Partial<Project> = {}): Project => ({
@@ -99,5 +99,48 @@ describe("the stack", () => {
 
   test("has no archive line when the archive is empty", () => {
     expect(stackOf(featured, 0).archive).toBeNull();
+  });
+});
+
+describe("the archive window", () => {
+  const entry = (over: Partial<Project> = {}) =>
+    project({
+      featured: false,
+      repository: "claude-orchestrate",
+      name: "claude-orchestrate",
+      ...over,
+    });
+
+  test("the heading counts the entries", () => {
+    expect(archiveOf([entry(), entry()]).heading).toBe("~/archive · 2");
+  });
+
+  test("an entry has the name linked to the repository, the version chip and the pitch", () => {
+    const [e] = archiveOf([entry()]).entries;
+    expect(e).toMatchObject({
+      name: "claude-orchestrate",
+      href: "https://github.com/shrujancheruku/unmacos",
+      version: "v1.5.0",
+      pitch: "A keyboard-first desktop for macOS.",
+      slug: "claude-orchestrate",
+    });
+  });
+
+  test("the facts are language, repository, live; missing parts are left out", () => {
+    const all = archiveOf([entry()]).entries[0]?.facts;
+    expect(all).toEqual([
+      { kind: "text", label: "Shell" },
+      {
+        kind: "link",
+        label: "repository ↗",
+        href: "https://github.com/shrujancheruku/unmacos",
+      },
+      { kind: "link", label: "live ↗", href: "https://example.com/unmacos/" },
+    ]);
+    const bare = archiveOf([
+      entry({ language: null, live: null, version: null }),
+    ]).entries[0];
+    expect(bare?.facts.map((f) => f.label)).toEqual(["repository ↗"]);
+    expect(bare?.version).toBeNull();
   });
 });

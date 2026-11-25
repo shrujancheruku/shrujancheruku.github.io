@@ -151,3 +151,23 @@ test("a featured project is tiled 34 / 48 / 18, and the stack scrolls under its 
     page.locator('[data-stack] a[data-position="1"]'),
   ).toHaveAttribute("aria-current", "true");
 });
+
+test("on touch the archive takes the whole workspace", async ({ page }) => {
+  await page.goto("/archive/");
+  const area = page.locator("main.area");
+  await expect(area).toHaveAttribute("data-ready", "true");
+  await page.waitForTimeout(1100);
+  const shown = await page.$$eval(".pane", (els) =>
+    els
+      .filter((e) => getComputedStyle(e).display !== "none")
+      .map((e) => (e as HTMLElement).dataset.window),
+  );
+  expect(shown).toEqual(["archive"]);
+  const a = await page.locator('[data-window="archive"]').boundingBox();
+  const m = await area.boundingBox();
+  expect(Math.round(a?.width ?? 0)).toBe(Math.round(m?.width ?? 1));
+  expect(Math.round(a?.height ?? 0)).toBe(Math.round(m?.height ?? 1));
+  await page.locator(".close").click();
+  await page.waitForTimeout(1100);
+  await expect(page).toHaveURL(/\/work\/rapid-radiology\/$/);
+});
