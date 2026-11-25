@@ -18,7 +18,7 @@ const readPdf = async (bytes: Buffer) => {
 test.describe("/resume/", () => {
   test("is a letter-size sheet with no desktop around it", async ({ page }) => {
     await page.goto("/resume/");
-    await expect(page).toHaveTitle("Shrujan Cheruku – Resume");
+    await expect(page).toHaveTitle("Resume — Shrujan Cheruku");
     await expect(page.locator("main.area, .screen, nav.status")).toHaveCount(0);
     expect(await page.locator("body.idle, [data-crt]").count()).toBe(0);
     const box = await page.locator(".sheet").boundingBox();

@@ -6,7 +6,7 @@
 import ResumeEntry from "../components/ResumeEntry.astro";
 import ShareHead from "../components/ShareHead.astro";
 import { DESCRIPTION, titleFor } from "../lib/addresses";
-import { buildResume, PDF_PATH, PDF_TITLE } from "../lib/resume";
+import { buildResume, PDF_PATH } from "../lib/resume";
 import { RESUME_CARD } from "../lib/share";
 import type { Entry } from "../lib/timeline";
 
@@ -27,7 +27,7 @@ const degree: Entry = {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
-    <title>{PDF_TITLE}</title>
+    <title>{titleFor("Resume")}</title>
     <meta name="description" content={`${r.name}, ${r.title}.`} />
     <ShareHead path="/resume/" title={titleFor("Resume")} description={DESCRIPTION} card={RESUME_CARD} />
     <link rel="preload" href="/fonts/fira-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
