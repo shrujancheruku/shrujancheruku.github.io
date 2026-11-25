@@ -1,6 +1,7 @@
-// Plays every typed terminal on the page: each [data-terminal] reads its
-// exchanges from its data attribute and renders the timeline from
-// src/lib/terminal.ts, frame by frame.
+// Plays the typed terminals on the page. A [data-terminal] reads its exchanges
+// from its data attribute and renders the timeline from src/lib/terminal.ts,
+// frame by frame. It plays on load, unless it is [data-manual]: then its
+// window calls playTerminal itself (the contact window, on arrival).
 import { type Exchange, type Progress, progressAt } from "../lib/terminal";
 
 function render(
@@ -8,6 +9,7 @@ function render(
   exchanges: readonly Exchange[],
   p: Progress,
 ) {
+  const promptText = root.dataset.prompt ?? "❯ ";
   const log = root.querySelector<HTMLElement>(".log");
   const line = root.querySelector<HTMLElement>(".line .typed");
   if (!log || !line) return;
@@ -26,7 +28,7 @@ function render(
         el.className = "row";
         const prompt = document.createElement("span");
         prompt.className = "p";
-        prompt.textContent = "❯ ";
+        prompt.textContent = promptText;
         el.append(prompt, text);
       } else {
         el.className = "reply";
@@ -39,8 +41,16 @@ function render(
   root.dataset.typing = p.typing ? String(p.typing.index) : "";
 }
 
-for (const root of document.querySelectorAll<HTMLElement>("[data-terminal]")) {
+/**
+ * Types out a terminal's exchanges from the start. With `instant`, the final
+ * state is drawn at once (a terminal already played in this visit).
+ */
+export function playTerminal(root: HTMLElement, instant = false): void {
   const exchanges: Exchange[] = JSON.parse(root.dataset.terminal ?? "[]");
+  if (instant) {
+    render(root, exchanges, { done: exchanges.length, typing: null });
+    return;
+  }
   const start = performance.now();
   let last = "";
 
@@ -54,4 +64,10 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-terminal]")) {
     if (p.typing || p.done < exchanges.length) requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
+}
+
+for (const root of document.querySelectorAll<HTMLElement>(
+  "[data-terminal]:not([data-manual])",
+)) {
+  playTerminal(root);
 }
