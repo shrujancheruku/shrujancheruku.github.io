@@ -119,11 +119,11 @@ const css = `
 @media (max-width:760px){
   .scene.is{display:block;padding:0}
   .scene.is .pn.site{position:absolute;inset:0;border:0;border-radius:0;background:var(--bg)}
-  .is .pg{font-size:3.1cqw}
+  .is .pg{font-size:2.6cqw}
   .is .sec{grid-template-columns:1fr;padding-right:42cqw}.is .sec .c{display:none}
-  .is .sec h2{font-size:5.4cqw}.is .sec small{font-size:2.6cqw}.is .sec p{font-size:2.9cqw}
+  .is .sec h2{font-size:5cqw}.is .sec p{font-size:2.6cqw}
   .is .hero h1{font-size:8cqw}.is .hero p{max-width:26ch}
-  .scene.is .pn.app{position:absolute;right:calc(2.5*var(--u));bottom:calc(2.5*var(--u));width:calc(21*var(--u));aspect-ratio:404/644;border:calc(.7*var(--u)) solid var(--line);border-radius:calc(2.6*var(--u));background:color-mix(in srgb,var(--fg) 88%,var(--bg));box-shadow:0 calc(2*var(--u)) calc(5*var(--u)) #0006;transform:rotate(3deg)}
+  .scene.is .pn.app{position:absolute;right:calc(2.5*var(--u));bottom:calc(-2*var(--u));width:calc(21*var(--u));aspect-ratio:404/644;border:calc(.7*var(--u)) solid var(--line);border-radius:calc(2.6*var(--u));background:color-mix(in srgb,var(--fg) 88%,var(--bg));box-shadow:0 calc(2*var(--u)) calc(5*var(--u)) #0006;transform:rotate(3deg)}
   .is .av{border-radius:calc(2*var(--u))}
   .is .scrn{font-size:min(5cqw,3.2cqh);padding:4cqw}
   .is .cities{display:none}

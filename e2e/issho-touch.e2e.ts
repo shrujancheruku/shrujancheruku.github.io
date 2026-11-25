@@ -25,8 +25,25 @@ test("on touch the site fills the window as text only, with the phone in front c
     expect(phone.x + phone.width / 2).toBeGreaterThan(box.x + box.width / 2);
     expect(phone.y + phone.height / 2).toBeGreaterThan(box.y + box.height / 2);
     expect(phone.width).toBeLessThan(box.width * 0.6);
-    expect(phone.x + phone.width).toBeLessThanOrEqual(box.x + box.width + 1);
-    expect(phone.y + phone.height).toBeLessThanOrEqual(box.y + box.height + 1);
+    // the bezel may run off the bottom, as in the prototype, but the phone's
+    // header and, once the run holds, its card stay in view
+    await expect(slot(page)).toHaveAttribute("data-state", "held", {
+      timeout: 50_000,
+    });
+    for (const part of [".app .apphd", ".app .scrn.on .c"]) {
+      const b = await sc.locator(part).first().boundingBox();
+      expect(b, part).toBeTruthy();
+      if (!b) continue;
+      expect(b.x + b.width, part).toBeLessThanOrEqual(box.x + box.width + 1);
+      expect(b.y + b.height, part).toBeLessThanOrEqual(box.y + box.height + 1);
+    }
+    // the hero's paragraph does not run under the phone
+    const hero = await sc.locator(".site .hero p").first().boundingBox();
+    expect(hero).toBeTruthy();
+    if (hero)
+      expect(
+        hero.x + hero.width <= phone.x || hero.y + hero.height <= phone.y,
+      ).toBe(true);
   }
   // text only on the site: no card; the phone has the header and the card
   await expect(sc.locator(".site .c").first()).toBeHidden();
