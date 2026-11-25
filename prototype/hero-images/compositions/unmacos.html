@@ -26,8 +26,13 @@ body{transition:background .6s,color .6s}
 <script type="module">
 import { card } from "./kit.js";
 const $ = s => document.querySelector(s), desk = $("#desk"), sleep = ms => new Promise(r => setTimeout(r, ms));
-const THEMES = { "tokyo-night": ["#1a1b26","#c0caf5","#7aa2f7","#2a2e44"], everforest: ["#272e33","#d3c6aa","#a7c080","#414b50"], "rose-pine": ["#191724","#e0def4","#ebbcba","#2a2740"], gruvbox: ["#282828","#ebdbb2","#fabd2f","#3c3836"] };
+// the site's shipped themes, palettes from unmacos's colors.toml: [background, foreground, accent, lighter_background]
+const THEMES = { "tokyo-night": ["#1a1b26","#c0caf5","#7aa2f7","#24283b"], gruvbox: ["#282828","#d4be98","#7daea3","#3c3836"], paper: ["#f2eede","#222222","#cc3e28","#d8d3c0"], everforest: ["#2d353b","#d3c6aa","#7fbbb3","#343f44"], nord: ["#2e3440","#d8dee9","#81a1c1","#3b4252"], "rose-pine": ["#faf4ed","#575279","#56949f","#f2e9e1"], starship: ["#1c1c1e","#f5f5f7","#ff9f0a","#2c2c2e"] };
 const theme = n => { const [bg, fg, ac, dim] = THEMES[n]; Object.entries({ bg, fg, ac, dim }).forEach(([k, v]) => document.body.style.setProperty("--" + k, v)); $("#tn").textContent = n; };
+// starts on the visitor's theme (?theme= on load, or the host page calling startTheme when the visitor switches); the demo cycles on from there
+const order = Object.keys(THEMES); let ti = Math.max(0, order.indexOf(new URLSearchParams(location.search).get("theme"))); theme(order[ti]);
+let held = 0; // the start theme stays up for at least one full beat before the demo switches away
+window.startTheme = (n, pal) => { if (pal && !THEMES[n]) { THEMES[n] = pal; order.push(n); } ti = order.indexOf(n); theme(n); held = Date.now() + 2500; };
 const APPS = {
   nvim: `<span class="d"> 1 </span><span class="a">local</span> path = vim.fn.expand(<span class="a">"~/.local/state/unmacos/theme"</span>)
 <span class="d"> 2 </span>
@@ -86,11 +91,10 @@ const apps = ["btop", "firefox", "ghostty", "lazygit", "nvim", "orca", "spotify_
 // Starts with the desktop already in use. Every beat moves a window AND switches the theme, so both read at once;
 // one window opens and closes inside the cycle. Nothing resets, so the loop has no visible seam.
 ["nvim", "btop", "spotify_player"].forEach(a => spawn(a, true)); focus = tiles[0]; layout();
-const order = Object.keys(THEMES); let ti = 0;
 const beat = async key => { // move + theme together
   await keys(`${k("alt", "shift", key)} move · ${k("alt", "ctrl", "shift", "space")} theme`, 350);
   const [a, b, c, ...rest] = tiles; tiles = [c, a, b, ...rest]; focus = c; layout();
-  theme(order[ti = (ti + 1) % order.length]); await sleep(1900);
+  if (Date.now() > held) theme(order[ti = (ti + 1) % order.length]); await sleep(1900);
 };
 if (!card) { await sleep(900); for (;;) {
   await beat("h");

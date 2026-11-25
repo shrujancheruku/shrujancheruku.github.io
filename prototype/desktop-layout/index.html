@@ -6,7 +6,7 @@
   how is the theme offered on touch; which themes ship and which comes first; how does a composition
   sit in its window; and does the CRT (bezel + WebGL 2 overlay, optional SVG curvature) hold up.
   Three variants, switchable via ?variant=A|B|C, the switcher, or ← →.
-  Keys: t theme · c CRT (off / on) · f compositions follow theme · s spec panel.
+  Keys: t theme · c CRT (off / on) · f compositions follow theme (unmacos always demos its own switching) · s spec panel.
   Workspaces 3–5 are placeholders on purpose: their windows are decided after this.
   Run: cd prototype/desktop-layout && bun run view  →  http://localhost:4518/desktop-layout/
 -->
@@ -197,9 +197,22 @@ body.vB{--gap:0px;--mono:'IBM Plex Mono',monospace;font-family:var(--mono)}
 }
 
 /* ======================= D · B + A (founder's pick): B's windows and type, A's order and bar ======================= */
-body.vD .win{border-color:var(--line)}
-body.vD .pane.focus .win{border-color:var(--ac)}
-.vD .bar{order:0;margin:10px 10px 8px;height:36px;line-height:normal;border:1px solid var(--line);border-radius:18px;background:var(--dim);padding:0 6px;
+/* A's windows: 14px gaps, 2px rounded borders, focused border is an accent→hot gradient, no title bars (faint label only) */
+body.vD{--gap:14px}
+body.vD .win{border:2px solid var(--dim);border-radius:14px}
+body.vD .pane.focus .win{border-color:transparent;background:linear-gradient(var(--bg),var(--bg)) padding-box,linear-gradient(135deg,var(--ac),var(--hot)) border-box}
+.vD .tt,.vD .pane.focus .tt{position:absolute;top:10px;left:16px;z-index:2;height:auto;line-height:normal;padding:0;background:none;color:var(--fg);font:11px var(--mono);opacity:.4;pointer-events:none}
+.vD .win:has(.comp) .tt,.vD .win:has(.b-copy) .tt{display:none}
+.vD .b-name,.vD .b-copy{padding-left:5cqw}
+.vD .b-copy{padding:28px 24px 22px}
+.vD .b-term{padding:34px 18px 16px}
+.vD .b-now{padding:16px 18px}
+.vD .b-stack{top:32px;border-top:1px solid var(--dim)}
+.vD .b-stack > :last-child{border-bottom:0}
+.vD .ctwrap .b-term{padding:40px 28px}
+.vD #arch .win{border-color:var(--ac)}
+.vD #arch .tt{display:none}
+.vD .bar{order:0;margin:14px 14px 7px;height:36px;line-height:normal;border:1px solid var(--line);border-radius:18px;background:var(--dim);padding:0 6px;
   display:flex;align-items:center;justify-content:space-between;gap:12px;font:500 12.5px var(--mono);transition:background .45s,border-color .45s}
 .vD .ws{gap:2px}
 .vD .ws b{height:24px;line-height:24px;padding:0 10px;border-radius:12px;background:none}
@@ -208,17 +221,19 @@ body.vD .pane.focus .win{border-color:var(--ac)}
 .vD .rt{display:flex;align-items:center;gap:14px;padding-right:2px}
 .vD .rt > *{padding:0;border:0}
 .vD .rt [data-act]:hover{background:none;color:var(--ac)}
-.vD .area{margin:0 10px 10px}
+.vD .area{margin:0 7px 7px}
 .vD .b-name{justify-content:center;padding-bottom:0}
 .vD .b-name h1{font-size:min(15cqw,30cqh);white-space:normal;line-height:.95}
 .vD .b-name h1 span{display:block}
 .vD .b-name .lab{margin-top:3cqh}
 /* the theme switch: a slight halo, pulsing until the visitor first interacts */
-.vD .chip{white-space:nowrap;display:flex;align-items:center;gap:7px;background:var(--bg);border-radius:13px;height:26px;padding:0 10px 0 6px;color:var(--ac);
-  box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 45%,transparent),0 0 10px 1px color-mix(in srgb,var(--ac) 30%,transparent)}
-.vD .chip i{width:14px;height:14px;border-radius:50%;background:conic-gradient(var(--ac) 0 33%,var(--hot) 0 66%,var(--fg) 0)}
-body.idle .halo{animation:halo 2.2s ease-in-out 1.2s infinite}
-@keyframes halo{50%{box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 70%,transparent),0 0 18px 4px color-mix(in srgb,var(--ac) 45%,transparent)}}
+.vD .chip{white-space:nowrap;display:flex;align-items:center;gap:7px;background:var(--ac);border-radius:13px;height:26px;padding:0 11px 0 6px;color:var(--bg);font-weight:700;cursor:pointer;
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--ac) 35%,transparent),0 0 14px 2px color-mix(in srgb,var(--ac) 45%,transparent);transition:box-shadow .2s,transform .2s}
+.vD .chip:hover{transform:scale(1.04)}
+.vD .rt .chip:hover{color:var(--bg)}
+.vD .chip i{width:14px;height:14px;border-radius:50%;background:conic-gradient(var(--bg) 0 50%,var(--hot) 0);box-shadow:0 0 0 1.5px var(--bg)}
+body.idle .halo{animation:halo 2s ease-in-out 1s infinite}
+@keyframes halo{50%{box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 55%,transparent),0 0 24px 7px color-mix(in srgb,var(--ac) 60%,transparent)}}
 .vD #themes{right:10px;top:54px;transform:translateY(-8px);width:min(460px,calc(100% - 20px));background:var(--dim);border:1px solid var(--line);border-radius:16px;padding:12px;
   display:grid;grid-template-columns:repeat(4,1fr);gap:8px;box-shadow:0 20px 60px #0008;font:12px var(--mono)}
 .vD #themes.on{transform:none}
@@ -230,7 +245,10 @@ body.vD #spec{top:auto;bottom:60px}
 @media (max-width:760px){
   .vD .bar{height:40px;border-radius:20px;margin:8px 8px 6px;line-height:normal}
   .vD .ws b{padding:0 9px;height:28px;line-height:28px;border-radius:14px}
-  .vD .area{margin:0 8px 8px}
+  body.vD{--gap:10px}
+  .vD .area{margin:0 5px 5px}
+  .vD .b-copy{padding:18px 16px 14px}
+  .vD .b-term{padding:30px 14px 12px}
   .vD #themes{left:8px;right:8px;width:auto;top:56px}
   body.vD #sw{top:auto;bottom:8px}
 }
@@ -329,8 +347,8 @@ const THEMES={
   'starship':   {bg:'#1c1c1e',fg:'#f5f5f7',ac:'#ff9f0a',dim:'#2c2c2e',line:'#8e8e93',hot:'#ff5f4a',mode:'dark'},
 };
 const TK=Object.keys(THEMES);
-/* first theme: paper for a light-mode visitor, gruvbox for dark; follows the OS live until the visitor picks one */
-const lightMQ=matchMedia('(prefers-color-scheme: light)'), sysTheme=()=>lightMQ.matches?'paper':'gruvbox';
+/* first theme: paper for a light-mode visitor, starship for dark; follows the OS live until the visitor picks one */
+const lightMQ=matchMedia('(prefers-color-scheme: light)'), sysTheme=()=>lightMQ.matches?'paper':'starship';
 const WS=['opening','projects','sabbatical','stance','timeline','contact'];
 const WS_FIRST=[0,1,3,4,5,6], STEP_WS=[0,1,1,2,3,4,5], STEPS=7;
 const FOCUS=['name','um','om','ph','ph','ph','ct'];
@@ -355,15 +373,15 @@ const V={
     <span class="chip halo" data-act="theme-ui"><i></i><span data-theme-name></span></span><span class="clock d"></span></div>`,
   L:{d:[{name:[0,0,60,100],term:[60,0,40,58],now:[60,58,40,42]},{uc:[0,0,30,68],st:[0,68,30,32],um:[30,0,70,100]},{oc:[0,0,30,68],st:[0,68,30,32],om:[30,0,70,100]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ct:[0,0,100,100]}],
      m:[{name:[0,0,100,40],term:[0,40,100,36],now:[0,76,100,24]},{uc:[0,0,100,38],um:[0,38,100,48],st:[0,86,100,14]},{oc:[0,0,100,38],om:[0,38,100,48],st:[0,86,100,14]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ph:[0,0,100,100]},{ct:[0,0,100,100]}]},
-  spec:{From:"B's windows and single typeface · A's reading order (name, project name and pitch on the left) · A's rounded bar on top",
+  spec:{From:"B's single typeface and project stack · A's windows, reading order (name, project name and pitch on the left) · A's rounded bar on top",
    Faces:'IBM Plex Mono only, weights 400 / 500 / 700',
    Scale:'name 700 min(15cqw, 30cqh), two lines · project name 28–52px · pitch 500 16 / 1.45 · body 13 / 1.6 · terminal 14 / 1.6 · title bars 12 · bar 12.5',
-   Windows:'no gaps between tiles, 10px inset from the screen · 1px borders · square · 22px title bars, focused one filled with the accent',
+   Windows:'(from A) 14px gaps (10 on touch) · 2px border · 14px radius · focused border is an accent→hot gradient · no title bars, only a faint 11px label',
    Bar:'rounded strip on top, 36px · workspace numbers with names (numbers only on touch) · archive · contact · theme switch · clock',
-   'Theme switch':'theme name with a slight accent halo; pulses after load until the first interaction; opens a dropdown of swatches (desktop and touch)',
+   'Theme switch':'pill filled with the accent, theme name in the background colour, accent halo; pulses after load until the first interaction; opens a dropdown of swatches (desktop and touch)',
    Compositions:'master window (70%) on the right; copy above a project stack on the left. Touch: copy, then composition, then stack',
    Themes:'tokyo-night, gruvbox, paper, everforest, nord, rose-pine (Dawn), starship · palettes from unmacos',
-   Default:'paper in light mode, gruvbox in dark · CRT on, no curvature · compositions keep their own palette'}},
+   Default:'paper in light mode, starship in dark · CRT on, no curvature · compositions follow the site theme, except unmacos, which starts on the visitor\'s theme then demos its own switching'}},
  A:{name:'Gapped',theme:'tokyo-night',touch:'sheet',
   tt:t=>t,
   bar:()=>`<div class="ws">${WS.map((n,i)=>`<b data-act="ws" data-w="${i}" title="${n}">${i+1}</b>`).join('')}</div>
@@ -418,7 +436,7 @@ let picked=!!THEMES[Q.get('theme')];
 let theme=picked?Q.get('theme'):sysTheme();
 lightMQ.addEventListener('change',()=>{if(!picked){theme=sysTheme();applyTheme()}});
 let crt=Q.get('crt')==='0'?0:1;
-let follow=Q.get('follow')==='1';
+let follow=Q.get('follow')!=='0';
 const save=()=>{const u=new URL(location.href);u.searchParams.set('variant',vk);if(picked)u.searchParams.set('theme',theme);else u.searchParams.delete('theme');u.searchParams.set('crt',crt);u.searchParams.set('follow',follow?1:0);history.replaceState(null,'',u)};
 
 /* ---------------- DOM ---------------- */
@@ -443,7 +461,7 @@ $('#root').innerHTML=`<div class="screen">
     ${W('term','zsh',`<div class="b-term" id="term"></div>`)}
     ${W('now','~/now',`<div class="b-now" data-act="go" data-s="3"><b>Nov 2025 → now</b><div>sabbatical</div><div class="dimt" style="margin-top:.6em">10/10 would recommend to a friend.</div></div>`)}
     ${W('uc','unmacos — README',copy(PROJ.u))}
-    ${W('um','unmacos',`<iframe data-comp src="${PROJ.u.comp}" tabindex="-1"></iframe>`,'comp')}
+    ${W('um','unmacos',`<iframe data-comp data-own src="${PROJ.u.comp}?theme=${theme}" tabindex="-1"></iframe>`,'comp')}
     ${W('oc','orca-flow — README',copy(PROJ.o))}
     ${W('om','orca-flow',`<iframe data-comp src="${PROJ.o.comp}" tabindex="-1"></iframe>`,'comp')}
     ${W('st','featured',stack)}
@@ -495,6 +513,7 @@ function place(s,dur){
 const go=s=>scrollTo({top:s*innerHeight,behavior:'smooth'});
 function onScroll(){const s=Math.max(0,Math.min(STEPS-1,Math.round(scrollY/innerHeight)));if(s===step)return;
   const prev=step;step=s;place(s,prev<0?0:.85);
+  if(s===1&&prev!==1)followComps(); /* unmacos restarts on the visitor's theme each time its step is entered */
   if(prev>=0){if(s===1&&prev<1)type('open unmacos');if(s===2&&prev===1)type('open orca-flow');if(s===0&&prev>0)type('cd ~')}
   if(s===6&&!contacted){contacted=true;ctype('contact',CONTACT)}
   label()}
@@ -511,7 +530,9 @@ let tt;function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('on
 
 /* compositions: own palette, or follow the site theme (overrides the scene's CSS variables) */
 function followComps(){const t=THEMES[theme];
-  $$('iframe[data-comp]').forEach(f=>{const d=f.contentDocument;if(!d||!d.head)return;let s=d.getElementById('follow');
+  /* unmacos demos theme switching itself: it is only told where to start (the visitor's theme), never overridden */
+  $$('iframe[data-own]').forEach(f=>{try{f.contentWindow.startTheme?.(theme,[t.bg,t.fg,t.ac,t.dim])}catch{}});
+  $$('iframe[data-comp]:not([data-own])').forEach(f=>{const d=f.contentDocument;if(!d||!d.head)return;let s=d.getElementById('follow');
     if(!follow){s?.remove();return}
     if(!s){s=d.createElement('style');s.id='follow';d.head.append(s);const l=d.createElement('link');l.rel='stylesheet';l.href=$('#fontcss').href;d.head.append(l)}
     const mono=getComputedStyle(document.body).getPropertyValue('--mono');
@@ -582,7 +603,7 @@ const keys=Object.keys(V);
 function sw(d){const u=new URL(location.href);const nk=keys[(keys.indexOf(vk)+d+keys.length)%keys.length];
   u.searchParams.set('variant',nk);location.href=u}
 $('#vp').onclick=()=>sw(-1);$('#vn').onclick=()=>sw(1);
-$('#ts').innerHTML=TK.map(k=>`<option value="${k}">${k}${k==='paper'?' (light default)':k==='gruvbox'?' (dark default)':''}</option>`).join('');
+$('#ts').innerHTML=TK.map(k=>`<option value="${k}">${k}${k==='paper'?' (light default)':k==='starship'?' (dark default)':''}</option>`).join('');
 $('#ts').onchange=e=>{picked=true;theme=e.target.value;applyTheme()};
 $('#cb').onclick=()=>setCrt(1-crt);
 $('#fb').onclick=()=>{follow=!follow;followComps();save();label()};
@@ -594,7 +615,7 @@ function label(){
   $('#fb').textContent='comps: '+(follow?'follow theme':'own palette');$('#fb').classList.toggle('on',follow);
   $('#spec').innerHTML=`<b>${vk} · ${v.name}</b><table>${Object.entries(v.spec).map(([k,x])=>`<tr><td>${k}</td><td>${x}</td></tr>`).join('')}</table>
     <h4>state</h4><table><tr><td>workspace</td><td>${step<0?'-':STEP_WS[step]+1+' · '+WS[STEP_WS[step]]} (step ${step})</td></tr><tr><td>theme</td><td>${theme}</td></tr>
-    <tr><td>CRT</td><td>${['off','bezel + overlay'][crt]}</td></tr><tr><td>first theme</td><td>${picked?'picked by visitor':'from OS: '+(lightMQ.matches?'light → paper':'dark → gruvbox')}</td></tr><tr><td>compositions</td><td>${follow?'follow site theme':'own palette'}</td></tr>
+    <tr><td>CRT</td><td>${['off','bezel + overlay'][crt]}</td></tr><tr><td>first theme</td><td>${picked?'picked by visitor':'from OS: '+(lightMQ.matches?'light → paper':'dark → starship')}</td></tr><tr><td>compositions</td><td>${follow?'follow site theme':'own palette'}</td></tr>
     <tr><td>layout</td><td>${mq.matches?'touch (one column)':'desktop'} · ${innerWidth}×${innerHeight}</td></tr><tr><td>fps</td><td>${fps||'…'}</td></tr></table>
     <h4>keys</h4>← → variant · t theme · c CRT · f compositions · s this panel · esc close`}
 setInterval(()=>{if($('#spec').classList.contains('on'))label()},1000);
