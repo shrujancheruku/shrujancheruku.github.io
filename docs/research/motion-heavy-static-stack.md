@@ -170,7 +170,7 @@ This is a small sample drawn from Codrops and Awwwards write-ups, not a survey.
 
 - **Satori** ([repo](https://github.com/vercel/satori)): runs in Node 16+, browsers and Web Workers. Input is JSX or plain element objects; output is SVG only. Supports flexbox, grid and block layout; `table` and `ruby` throw; many properties are ignored; output is not guaranteed to match a browser. Fonts must be supplied as TTF, OTF, WOFF or WOFF2 buffers, and variable fonts render only their default instance. The README suggests Sharp for SVG-to-PNG.
 - **Takumi** ([repo](https://github.com/kane50613/takumi)): no headless browser; native binding for Node and Bun, WebAssembly for browsers and Workers. Supports "a subset of browser CSS" including flexbox, grid, block, inline, table and float, plus Tailwind v4 utilities. Writes raster images directly and can write animated ones.
-- **astro-og-canvas** ([README](https://github.com/delucis/astro-og-canvas/tree/latest/packages/astro-og-canvas)): an `OGImageRoute` helper exporting `getStaticPaths` and `GET`, so cards are generated as static files during the Astro build. Depends on `canvaskit-wasm`. Astro-only.
+- **astro-og-canvas** ([repo](https://github.com/delucis/astro-og-canvas), README in `packages/astro-og-canvas`): an `OGImageRoute` helper exporting `getStaticPaths` and `GET`, so cards are generated as static files during the Astro build. Depends on `canvaskit-wasm`. Astro-only.
 - These tools draw a card from data. They cannot render the site's own WebGL or animated pages.
 
 ### Screenshots of live pages
