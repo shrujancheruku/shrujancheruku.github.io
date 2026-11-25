@@ -10,14 +10,17 @@
     "check": "astro check",
     "lint": "biome ci .",
     "format": "biome format --write .",
-    "test": "bun test"
+    "test": "bun test",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
-    "astro": "7.4.13"
+    "astro": "7.4.13",
+    "gsap": "3.15.1"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.12",
     "@biomejs/biome": "2.6.9",
+    "@playwright/test": "1.65.1",
     "@types/bun": "^1.4.5",
     "typescript": "6.0.2"
   }
