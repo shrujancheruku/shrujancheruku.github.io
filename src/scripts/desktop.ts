@@ -31,7 +31,7 @@ const RETILE = 0.85;
 /** One step per wheel gesture; held shut while a re-tile runs. */
 const gate = createWheelGate({
   lockMs: RETILE * 1000,
-  quietMs: 120,
+  tailMs: 500,
   threshold: 40,
 });
 
@@ -199,7 +199,7 @@ function place(n: number, animate: boolean): void {
 /** The newest re-tile; one that a later one overwrote does not open the wheel. */
 let latest: gsap.core.Timeline | null = null;
 function settled(retiling: gsap.core.Timeline): void {
-  if (retiling === latest) gate.release(performance.now());
+  if (retiling === latest) gate.release();
 }
 
 /** Open or close the step's disclosure; the windows re-tile and listen for the event. */
