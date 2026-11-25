@@ -1,0 +1,38 @@
+---
+// The ~/now window of the opening: a one-line sabbatical teaser. Clicking it
+// jumps to the sabbatical workspace with a history entry (see desktop.ts).
+import Window from "./Window.astro";
+---
+
+<Window id="now" label="~/now">
+  <a class="teaser" href="/now/">
+    <span class="when">Nov 2025 → now</span> · sabbatical
+  </a>
+</Window>
+
+<style>
+  .teaser {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    text-align: left;
+    font: 400 14px / 1.6 var(--mono);
+    cursor: pointer;
+  }
+
+  .when {
+    color: var(--ac);
+    font-weight: 500;
+  }
+
+  .teaser:hover,
+  .teaser:focus-visible {
+    text-decoration: underline;
+    outline: none;
+  }
+</style>

@@ -4,7 +4,9 @@
 // Windows other tickets build are placeholders until then.
 import EducationWindow from "./EducationWindow.astro";
 import NameWindow from "./NameWindow.astro";
+import NowWindow from "./NowWindow.astro";
 import Placeholder from "./Placeholder.astro";
+import TerminalWindow from "./TerminalWindow.astro";
 import TimelineWindow from "./TimelineWindow.astro";
 import Window from "./Window.astro";
 
@@ -18,8 +20,16 @@ const projects = Array.from({ length: featured }, (_, i) => i + 1);
 
 <!-- opening, and again on contact -->
 <NameWindow />
-<Window id="term" label="zsh"><Placeholder ticket={35} /></Window>
-<Window id="now" label="~/now"><Placeholder ticket={35} /></Window>
+<TerminalWindow
+  id="term"
+  label="zsh"
+  exchanges={[
+    { command: "whoami", replies: ["product engineer"] },
+    { command: "cat claim", replies: ["I design and build."] },
+    { command: "cat ask", replies: ["Give me a problem, not a spec."] },
+  ]}
+/>
+<NowWindow />
 
 <!-- projects: one step per featured project -->
 {
