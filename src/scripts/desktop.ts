@@ -28,6 +28,12 @@ gsap.registerPlugin(Flip, Observer);
 
 /** How long a re-tile takes, in seconds. */
 const RETILE = 0.85;
+/** One step per wheel gesture; held shut while a re-tile runs. */
+const gate = createWheelGate({
+  lockMs: RETILE * 1000,
+  quietMs: 120,
+  threshold: 40,
+});
 
 const found = document.querySelector<HTMLElement>("main.area");
 const modelEl = document.getElementById("desktop-model");
@@ -160,13 +166,18 @@ function place(n: number, animate: boolean): void {
   }
 
   if (state) {
-    Flip.from(state, {
+    // the wheel stays shut for the whole re-tile, which on a busy page starts
+    // late and ends well after the wheel event that asked for it
+    gate.hold();
+    const retiling = Flip.from(state, {
       targets: panes,
       duration: RETILE,
       ease: "expo.out",
       // animate width and height, so text is re-set rather than stretched
       scale: false,
       overwrite: true,
+      onComplete: () => settled(retiling),
+      onInterrupt: () => settled(retiling),
       onEnter: (els) =>
         gsap.fromTo(
           els,
@@ -181,7 +192,14 @@ function place(n: number, animate: boolean): void {
           ease: "expo.out",
         }),
     });
+    latest = retiling;
   }
+}
+
+/** The newest re-tile; one that a later one overwrote does not open the wheel. */
+let latest: gsap.core.Timeline | null = null;
+function settled(retiling: gsap.core.Timeline): void {
+  if (retiling === latest) gate.release(performance.now());
 }
 
 /** Open or close the step's disclosure; the windows re-tile and listen for the event. */
@@ -329,12 +347,7 @@ addEventListener(
   { passive: true },
 );
 
-// ---- wide: one step per wheel gesture, through Observer
-const gate = createWheelGate({
-  lockMs: RETILE * 1000,
-  quietMs: 120,
-  threshold: 40,
-});
+// ---- wide: one step per wheel gesture, through Observer (the gate is above)
 
 /** True if the wheel is over a window whose own content can still scroll that way. */
 function scrollsInside(target: EventTarget | null, dy: number): boolean {
