@@ -15,6 +15,21 @@ test("rapid-radiology types the findings, then both reports arrive, then it hold
 }) => {
   await open(page);
   const scene = slot(page).locator(".scene");
+  // record, in the page, when each state begins, so timings don't depend on polling
+  await slot(page).evaluate((el) => {
+    const log: { state: string; at: number }[] = [];
+    (window as unknown as { rrStates: typeof log }).rrStates = log;
+    const note = () => {
+      const state = el.dataset.state ?? "";
+      if (log.at(-1)?.state !== state)
+        log.push({ state, at: performance.now() });
+    };
+    note();
+    new MutationObserver(note).observe(el, {
+      attributes: true,
+      attributeFilter: ["data-state"],
+    });
+  });
   await expect(slot(page)).toHaveAttribute("data-state", "playing");
   const started = Date.now();
   await expect(slot(page)).toHaveAttribute("data-state", "held", {
@@ -48,14 +63,23 @@ test("rapid-radiology types the findings, then both reports arrive, then it hold
   expect(colours[0]).not.toBe(colours[1]);
   await expect(mark).toContainText("Comparison is made");
 
-  // held about 7.5 s, then it restarts from the beginning
-  const heldAt = Date.now();
+  // held about 7.5 s from the moment the end state is reached, then it restarts
   await expect(slot(page)).not.toHaveAttribute("data-state", "held", {
-    timeout: 12_000,
+    timeout: 15_000,
   });
-  const held = Date.now() - heldAt;
-  expect(held).toBeGreaterThan(5500);
-  expect(held).toBeLessThan(10_500);
+  const states = await page.evaluate(
+    () =>
+      (window as unknown as { rrStates: { state: string; at: number }[] })
+        .rrStates,
+  );
+  const i = states.findIndex((s) => s.state === "held");
+  const heldAt = states[i]?.at ?? Number.NaN;
+  const after = states[i + 1];
+  expect(after?.state).toBe("playing");
+  const held = (after?.at ?? Number.NaN) - heldAt;
+  // the hold's timers can only run late under load, never early
+  expect(held).toBeGreaterThan(7400);
+  expect(held).toBeLessThan(9500);
   await expect(scene.locator(".types span.on")).toHaveCount(0);
 });
 
