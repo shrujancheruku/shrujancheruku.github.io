@@ -9,6 +9,7 @@ import type { Composition } from "./kit";
 type Loader = () => Promise<{ default: Composition }>;
 
 export const compositions: Record<string, Loader> = {
+  issho: () => import("./issho"),
   "orca-flow": () => import("./orca-flow"),
   unmacos: () => import("./unmacos"),
 };
@@ -19,6 +20,5 @@ export const compositions: Record<string, Loader> = {
  * fails the build. Until then the project's window shows its placeholder.
  */
 export const PENDING: readonly string[] = [
-  "issho", // #40
   "rapid-radiology", // #42
 ];
