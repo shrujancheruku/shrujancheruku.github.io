@@ -68,6 +68,10 @@ _Avoid_: CV, resume section
 The period from Nov 2025 to now: travelling, time with family, and helping friends launch their products. It is both a workspace of the portfolio and the top entry of the timeline.
 _Avoid_: Career break, gap
 
+**Canonical address**:
+The one public address the portfolio is known by, `https://shrujan.dev`. Every other address that reaches it (`www`, `http`, `shrujancheruku.github.io`) redirects there.
+_Avoid_: Domain (that is the name registered at Porkbun), home URL
+
 **Legacy site**:
 The 2017 portfolio this repository originally served. Its code is kept in the repository for posterity and is not published.
 _Avoid_: Old site, v1
