@@ -10,7 +10,7 @@ export const THEMES = {
   "tokyo-night": ["#1a1b26", "#c0caf5", "#7aa2f7", "#24283b", "#414868", "#f7768e"],
   gruvbox: ["#282828", "#d4be98", "#7daea3", "#3c3836", "#504945", "#ea6962"],
   paper: ["#f2eede", "#222222", "#cc3e28", "#d8d3c0", "#bfbaa6", "#cc3e28"],
-  "issho-light": ["#F3F5F9", "#131B40", "#24307A", "#D5DBE7", "#7A849C", "#CC3719"],
+  "issho-light": ["#F3F5F9", "#131B40", "#885716", "#D5DBE7", "#7A849C", "#CC3719"],
   "issho-dark": ["#0D1330", "#F1F3F8", "#DEA92C", "#222B52", "#6C78AA", "#EB603A"],
   nord: ["#2e3440", "#d8dee9", "#81a1c1", "#3b4252", "#4c566a", "#bf616a"],
   "rose-pine": ["#faf4ed", "#575279", "#56949f", "#f2e9e1", "#cecacd", "#b4637a"],
