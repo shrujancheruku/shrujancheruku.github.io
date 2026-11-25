@@ -1,19 +1,37 @@
 ---
 import "../styles/global.css";
+import NotFoundWindow from "../components/NotFoundWindow.astro";
 import StatusBar from "../components/StatusBar.astro";
 import Windows from "../components/Windows.astro";
-import { createWorkspaces, stepCount } from "../lib/workspaces";
+import type { AddressData } from "../lib/addresses";
+import { createWorkspaces, firstStepOf, stepCount } from "../lib/workspaces";
 
 interface Props {
   title: string;
   description: string;
   /** How many featured projects there are: one scroll step each. A placeholder until #37 reads the content. */
   featured?: number;
+  /** Every address of the site, for the script to follow (src/lib/addresses.ts). */
+  addresses: AddressData;
+  /** The step this entry page opens on (default: the first). */
+  step?: number;
+  /** An unknown path: boot with the not-found terminal. */
+  notFound?: boolean;
 }
 
-const { title, description, featured = 4 } = Astro.props;
+const {
+  title,
+  description,
+  featured = 4,
+  addresses,
+  step = 0,
+  notFound = false,
+} = Astro.props;
 const workspaces = createWorkspaces({ featured });
 const steps = stepCount(workspaces);
+const workspacePaths = workspaces.map(
+  (_, i) => addresses.byStep[firstStepOf(workspaces, i)] ?? "/",
+);
 ---
 
 <!doctype html>
@@ -45,8 +63,9 @@ const steps = stepCount(workspaces);
     <!-- The bezel: a permanent frame around the screen, CRT effect or not. -->
     <div class="screen">
       <StatusBar workspaces={workspaces} />
-      <main class="area" data-step="0" data-workspace="0">
+      <main class="area" data-step={step} data-workspace="0" data-boot-step={step} data-not-found={notFound ? "true" : undefined}>
         <Windows featured={featured} />
+        {notFound && <NotFoundWindow workspaces={workspaces} paths={workspacePaths} />}
         <slot />
       </main>
     </div>
@@ -54,6 +73,7 @@ const steps = stepCount(workspaces);
     <div class="snaps" aria-hidden="true">
       {Array.from({ length: steps }, () => <div class="snap" />)}
     </div>
+    <script type="application/json" id="desktop-addresses" set:html={JSON.stringify(addresses)} />
     <script type="application/json" id="desktop-model" set:html={JSON.stringify(workspaces)} />
     <script>
       import "../scripts/desktop";
