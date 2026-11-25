@@ -2,6 +2,8 @@
 // The stack: every featured project, the current one marked, and the archive
 // line. The desktop script marks the current one (`aria-current`) and turns a
 // click on a project into a jump; #38 binds the `[data-archive-open]` line.
+// On touch the window is 18% tall (the prototype's tiling), too short for every
+// project and the archive line, so the rows scroll under the opaque label band.
 import type { Stack } from "../lib/project-copy";
 import Window from "./Window.astro";
 
@@ -12,7 +14,7 @@ interface Props {
 const { stack } = Astro.props;
 ---
 
-<Window id="stack" label="featured">
+<Window id="stack" label="featured" scrolls>
   <nav class="stack" aria-label="featured projects" data-stack>
     {
       stack.items.map((item) => (
@@ -90,11 +92,18 @@ const { stack } = Astro.props;
 
   @media (max-width: 760px) {
     .stack {
-      inset-block-start: 26px;
+      inset: 0;
+      padding-top: 32px;
+      border-top: 0;
     }
 
     .stack > * {
+      flex: 1 0 34px;
       max-height: none;
+    }
+
+    .stack > :first-child {
+      border-top: 1px solid var(--dim);
     }
   }
 </style>

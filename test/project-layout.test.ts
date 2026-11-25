@@ -32,3 +32,21 @@ describe("the projects workspace holds for 3, 4, 5 and 6 featured projects", () 
     });
   }
 });
+
+test("a featured step's tilings are the prototype's, to the percent", () => {
+  // prototype/compositions at f4e8d4a, index.html, the step table (S)
+  const projects = createWorkspaces({ featured: 4 }).find(
+    (w) => w.id === "projects",
+  );
+  const step = projects?.steps[1];
+  expect(step?.desktop).toEqual({
+    "copy-2": [0, 0, 30, 62],
+    stack: [0, 62, 30, 38],
+    "comp-2": [30, 0, 70, 100],
+  });
+  expect(step?.touch).toEqual({
+    "copy-2": [0, 0, 100, 34],
+    "comp-2": [0, 34, 100, 48],
+    stack: [0, 82, 100, 18],
+  });
+});

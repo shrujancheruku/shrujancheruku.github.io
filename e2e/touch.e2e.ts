@@ -103,3 +103,51 @@ test("no hover tooltips and no clock on touch, before or after interaction", asy
   for (const tip of await page.locator(".tip").all())
     await expect(tip).toBeHidden();
 });
+
+test("a featured project is tiled 34 / 48 / 18, and the stack scrolls under its label band", async ({
+  page,
+}) => {
+  await page.goto("/work/");
+  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
+  await page.waitForTimeout(1100);
+  const heights = await page.$$eval(
+    '[data-window="copy-1"], [data-window="comp-1"], [data-window="stack"]',
+    (els) => {
+      const total = els.reduce(
+        (sum, e) => sum + e.getBoundingClientRect().height,
+        0,
+      );
+      return els.map((e) =>
+        Math.round((e.getBoundingClientRect().height / total) * 100),
+      );
+    },
+  );
+  expect(heights).toEqual([34, 48, 18]);
+
+  const stack = page.locator("[data-stack]");
+  const band = page.locator('[data-window="stack"] .label');
+  expect(
+    await band.evaluate((e) => getComputedStyle(e).backgroundColor),
+  ).not.toBe("rgba(0, 0, 0, 0)");
+  // too short for every row: it scrolls, and the last row comes clear of the band
+  expect(await stack.evaluate((e) => e.scrollHeight > e.clientHeight)).toBe(
+    true,
+  );
+  await stack.evaluate((e) => {
+    e.scrollTop = e.scrollHeight;
+  });
+  const bandBottom = (await band.boundingBox())?.y ?? 0;
+  const bandBox = await band.boundingBox();
+  const last = await page.locator("#archive-stack").boundingBox();
+  const win = await page.locator('[data-window="stack"] .win').boundingBox();
+  expect(last?.y ?? 0).toBeGreaterThanOrEqual(
+    bandBottom + (bandBox?.height ?? 0) - 1,
+  );
+  expect((last?.y ?? 0) + (last?.height ?? 0)).toBeLessThanOrEqual(
+    (win?.y ?? 0) + (win?.height ?? 0),
+  );
+  await page.locator("#archive-stack").scrollIntoViewIfNeeded();
+  await expect(
+    page.locator('[data-stack] a[data-position="1"]'),
+  ).toHaveAttribute("aria-current", "true");
+});
