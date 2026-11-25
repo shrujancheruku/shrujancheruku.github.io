@@ -173,7 +173,9 @@ const { workspaces } = Astro.props;
     box-shadow: 0 0 0 1.5px var(--fg);
   }
 
-  .ib.th {
+  /* the halo: a slight ring on the theme switch, pulsing while idle. The ring
+     hangs off the class, so removing it (as the share card does) removes both */
+  .ib.th.halo {
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--ac) 35%, transparent);
   }
 

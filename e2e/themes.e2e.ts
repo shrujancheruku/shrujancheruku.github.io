@@ -167,6 +167,22 @@ test("with reduced motion the halo does not pulse", async ({ browser }) => {
   ).toBe("none");
 });
 
+test("the theme switch's ring is the halo: without the class, no ring", async ({
+  page,
+}) => {
+  await ready(page);
+  const theme = page.locator('[data-act="theme"]');
+  const ring = () => theme.evaluate((el) => getComputedStyle(el).boxShadow);
+  // past the first interaction the pulse stops, but the ring stays
+  await page.mouse.move(5, 5);
+  await page.mouse.down();
+  await page.mouse.up();
+  expect(await ring()).not.toBe("none");
+  // the share card removes the class: ring and pulse go together
+  await theme.evaluate((el) => el.classList.remove("halo"));
+  expect(await ring()).toBe("none");
+});
+
 test("a tooltip shows its name and key on hover after 250ms", async ({
   page,
 }) => {
