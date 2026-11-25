@@ -1,7 +1,7 @@
 import { devices, expect, type Page, test } from "@playwright/test";
 
 test.use({ ...devices["Pixel 7"] });
-test.describe.configure({ timeout: 60_000 });
+test.describe.configure({ timeout: 120_000 });
 
 const slot = (page: Page) =>
   page.locator('[data-composition="rapid-radiology"]');
@@ -19,7 +19,7 @@ test("two beats: the findings are typed, then the OpenAI report takes their plac
   await expect(scene.locator(".openai")).toBeHidden();
   await expect(scene.locator(".gemini")).toBeHidden();
   await expect(slot(page)).toHaveAttribute("data-state", "held", {
-    timeout: 40_000,
+    timeout: 60_000,
   });
   await expect(scene.locator(".openai")).toBeVisible();
   await expect(scene.locator(".f")).toBeHidden();

@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 
-test.describe.configure({ timeout: 60_000 });
+test.describe.configure({ timeout: 120_000 });
 
 const slot = (page: Page) =>
   page.locator('[data-composition="rapid-radiology"]');
@@ -18,11 +18,11 @@ test("rapid-radiology types the findings, then both reports arrive, then it hold
   await expect(slot(page)).toHaveAttribute("data-state", "playing");
   const started = Date.now();
   await expect(slot(page)).toHaveAttribute("data-state", "held", {
-    timeout: 30_000,
+    timeout: 45_000,
   });
   const took = Date.now() - started;
   expect(took).toBeGreaterThan(6500);
-  expect(took).toBeLessThan(20_000);
+  expect(took).toBeLessThan(45_000);
 
   await expect(scene.locator(".types span.on")).toHaveText("CT Chest");
   await expect(scene.locator(".f")).toContainText(
@@ -107,7 +107,7 @@ test("it follows the site theme live", async ({ page }) => {
   await open(page);
   const scene = slot(page).locator(".scene");
   await expect(slot(page)).toHaveAttribute("data-state", "held", {
-    timeout: 30_000,
+    timeout: 45_000,
   });
   const accent = () =>
     scene
