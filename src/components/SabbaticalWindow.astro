@@ -1,0 +1,51 @@
+---
+// The copy window of the sabbatical workspace (left, 34%).
+import Window from "./Window.astro";
+---
+
+<Window id="sabbatical" label="~/sabbatical" scrolls>
+  <div class="copy">
+    <p class="when">Nov 2025 → Now</p>
+    <h2>sabbatical</h2>
+    <ul>
+      <li>travelling the world</li>
+      <li>time with family</li>
+      <li>helping friends launch their products</li>
+    </ul>
+    <p class="foot">10/10 would recommend to a friend.</p>
+  </div>
+</Window>
+
+<style>
+  .copy {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .when {
+    font: 400 13px / 1.6 var(--mono);
+    color: var(--ac);
+  }
+
+  h2 {
+    font: 700 clamp(30px, 4.2cqw, 56px) / 1 var(--title);
+    letter-spacing: -0.02em;
+  }
+
+  ul {
+    list-style: none;
+    font: 400 15px / 1.6 var(--mono);
+  }
+
+  li::before {
+    content: "▸ ";
+    color: var(--ac);
+  }
+
+  .foot {
+    margin-top: auto;
+    font: 500 16px / 1.45 var(--mono);
+  }
+</style>

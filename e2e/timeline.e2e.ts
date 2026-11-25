@@ -133,11 +133,9 @@ test("leaving the workspace closes it", async ({ page }) => {
   );
 });
 
-test("the lower right is a placeholder window for the skills ticket", async ({
-  page,
-}) => {
+test("the lower right is the skills window, 38% x 60%", async ({ page }) => {
   const r = await rect(page, "skills");
   expect(Math.round((r.width / r.area) * 100)).toBe(38);
   expect(Math.round((r.height / r.areaHeight) * 100)).toBe(60);
-  await expect(page.locator('[data-window="skills"] .ph')).toContainText("#44");
+  await expect(page.locator('[data-window="skills"] .ph')).toHaveCount(0);
 });

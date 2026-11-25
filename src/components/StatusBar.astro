@@ -1,6 +1,9 @@
 ---
 // The status bar strip. Left: the workspace numbers with their names (numbers
-// only on touch). The toggles and the clock on the right come with #33.
+// only on touch). Right: four icon toggles (home, contact, crt effect, theme)
+// and a clock on desktop. Each toggle carries a tooltip that shows on hover or
+// focus, and is written out as a staircase until the first interaction.
+import { THEME_NAMES, THEMES } from "../lib/themes";
 import type { Workspace } from "../lib/workspaces";
 
 interface Props {
@@ -20,7 +23,46 @@ const { workspaces } = Astro.props;
         </button>
       ))
     }
+    <span class="tip" data-tip="workspaces">
+      workspaces <kbd>1</kbd> – <kbd>{workspaces.length}</kbd>
+    </span>
   </nav>
+  <div class="rt">
+    <div class="tg">
+      <button type="button" class="ib" data-act="home" aria-label="home" style="--i:0">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 9.2 10 3.8l6.5 5.4v7.3h-13z"></path><path d="M8.2 16.5v-4.2h3.6v4.2"></path></svg>
+        <span class="tip">home <kbd>H</kbd></span>
+      </button>
+      <button type="button" class="ib" data-act="contact" aria-label="contact" style="--i:1">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.8" y="4.8" width="14.4" height="10.4" rx="2"></rect><path d="m3.4 6 6.6 5 6.6-5"></path></svg>
+        <span class="tip">contact <kbd>C</kbd></span>
+      </button>
+      <button type="button" class="ib" data-act="crt" aria-label="crt effect" aria-pressed="true" style="--i:2">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.6" y="3.4" width="14.8" height="10.4" rx="2"></rect><path d="M5.4 6.8h9.2M5.4 9.6h9.2M7.4 16.8h5.2M10 13.8v3"></path></svg>
+        <span class="tip">crt effect <b data-crt-state>on</b> <kbd>E</kbd></span>
+      </button>
+      <button type="button" class="ib th halo" data-act="theme" aria-label="theme" aria-haspopup="true" aria-expanded="false" style="--i:3">
+        <i></i>
+        <span class="tip">theme <b data-theme-name>paper</b> <kbd>T</kbd></span>
+      </button>
+    </div>
+    <span class="clock" data-clock></span>
+  </div>
+  <div class="themes" id="themes" role="menu" aria-label="theme">
+    {
+      THEME_NAMES.map((name) => (
+        <button
+          type="button"
+          role="menuitemradio"
+          aria-checked="false"
+          data-theme-set={name}
+        >
+          <i style={`background:linear-gradient(135deg,${THEMES[name].bg} 50%,${THEMES[name].ac} 50%)`} />
+          {name}
+        </button>
+      ))
+    }
+  </div>
 </header>
 
 <style>
@@ -42,8 +84,10 @@ const { workspaces } = Astro.props;
   }
 
   .ws {
+    position: relative;
     display: flex;
     gap: 2px;
+    --i: 0;
   }
 
   .ws button {
@@ -69,7 +113,299 @@ const { workspaces } = Astro.props;
     color: var(--bg);
   }
 
+
+  .rt {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-right: 2px;
+  }
+
+  .tg {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .ib {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: none;
+    color: var(--fg);
+    cursor: pointer;
+    transition:
+      background 0.2s,
+      color 0.2s;
+  }
+
+  .ib svg {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .ib:hover,
+  .ib:focus-visible {
+    background: var(--bg);
+    color: var(--ac);
+    outline: none;
+  }
+
+  .ib[aria-pressed="true"] {
+    color: var(--ac);
+  }
+
+  .ib.th i {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: conic-gradient(var(--fg) 0 50%, var(--ac) 0);
+    box-shadow: 0 0 0 1.5px var(--fg);
+  }
+
+  .ib.th {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ac) 35%, transparent);
+  }
+
+  /* the halo pulses from about a second after load until the first interaction */
+  :global(body.idle) .halo {
+    animation: halo 2s ease-in-out 1s infinite;
+  }
+
+  @keyframes halo {
+    50% {
+      box-shadow:
+        0 0 0 3px color-mix(in srgb, var(--ac) 55%, transparent),
+        0 0 24px 7px color-mix(in srgb, var(--ac) 60%, transparent);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(body.idle) .halo {
+      animation: none;
+    }
+  }
+
+  .clock {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* tooltips: a name and its key, after 250ms of hover or focus */
+  .tip {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: -4px;
+    z-index: 46;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 6px 5px 9px;
+    border-radius: 8px;
+    background: var(--fg);
+    color: var(--bg);
+    font: 500 12px var(--mono);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition:
+      opacity 0.15s,
+      transform 0.2s;
+  }
+
+  .tip::before {
+    content: "";
+    position: absolute;
+    top: -4px;
+    right: 13px;
+    width: 8px;
+    height: 8px;
+    background: inherit;
+    transform: rotate(45deg);
+  }
+
+  .tip::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    right: 16.5px;
+    width: 1px;
+    height: calc(10px + var(--i) * 34px);
+    background: var(--fg);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .tip b {
+    font-weight: 700;
+    color: color-mix(in srgb, var(--ac) 55%, var(--bg));
+  }
+
+  .tip :global(kbd) {
+    font: 700 11px var(--mono);
+    border: 1px solid color-mix(in srgb, var(--bg) 45%, transparent);
+    border-radius: 5px;
+    padding: 1px 5px;
+  }
+
+  .ib:hover .tip,
+  .ib:focus-visible .tip,
+  .ws:hover .tip,
+  .ws:has(:focus-visible) .tip {
+    opacity: 1;
+    transform: none;
+    transition-delay: 0.25s;
+  }
+
+  .ws .tip {
+    left: 6px;
+    right: auto;
+  }
+
+  .ws .tip::before {
+    left: 13px;
+    right: auto;
+  }
+
+  .ws .tip::after {
+    left: 16.5px;
+    right: auto;
+  }
+
+  /* on touch there is no hover: no tooltips, and no keys to name */
+  @media (hover: none) {
+    .tip {
+      display: none;
+    }
+  }
+
+  /* until the first interaction: written out as a staircase with leaders */
+  :global(body.idle) .tip {
+    display: flex;
+    top: calc(100% + 10px + var(--i) * 34px);
+    opacity: 1;
+    transform: none;
+    transition: none;
+    animation: tipin 0.5s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+    animation-delay: calc(0.5s + var(--i) * 0.12s);
+  }
+
+  :global(body.idle) .tip::after {
+    opacity: 0.5;
+  }
+
+  :global(body.idle) .tip::before {
+    display: none;
+  }
+
+  @keyframes tipin {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+
+  /* on touch: the four without key labels, and no workspaces tip (no keys there) */
+  @media (hover: none) {
+    :global(body.idle) .tip kbd {
+      display: none;
+    }
+
+    :global(body.idle) .ws .tip {
+      display: none;
+    }
+  }
+
+  /* the theme menu: swatches under the bar, issho light over dark in the right column */
+  .themes {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 45;
+    width: min(460px, 100%);
+    padding: 12px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--dim);
+    box-shadow: 0 20px 60px #0008;
+    font: 12px var(--mono);
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition:
+      opacity 0.2s,
+      transform 0.3s cubic-bezier(0.2, 0.9, 0.2, 1),
+      visibility 0s 0.3s;
+  }
+
+  .themes[data-open="true"] {
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.2s,
+      transform 0.3s cubic-bezier(0.2, 0.9, 0.2, 1);
+  }
+
+  .themes button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 0;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .themes button[aria-checked="true"] {
+    background: var(--bg);
+    color: var(--ac);
+  }
+
+  .themes button[data-theme-set="issho-light"] {
+    grid-column: 4;
+    grid-row: 1;
+  }
+
+  .themes button[data-theme-set="issho-dark"] {
+    grid-column: 4;
+    grid-row: 2;
+  }
+
+  .themes i {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px var(--line);
+  }
+
   @media (max-width: 760px) {
+    .clock {
+      display: none;
+    }
+
+    .themes {
+      left: 0;
+      width: auto;
+    }
+
     .bar {
       height: 40px;
       border-radius: 20px;
