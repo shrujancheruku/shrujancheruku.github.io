@@ -46,6 +46,9 @@ test("wheel scrolling moves one step at a time through all five workspaces", asy
   // 4 featured projects + 4 other workspaces = 8 steps; the last flick has nowhere to go
   expect(seen).toEqual([1, 1, 1, 1, 2, 3, 4, 4]);
 
+  // over the status bar, not the timeline window, which scrolls its own content first
+  const bar = await page.locator("header.bar").boundingBox();
+  await page.mouse.move(640, (bar?.y ?? 0) + (bar?.height ?? 0) / 2);
   for (let i = 0; i < 8; i++) {
     await page.mouse.wheel(0, -120);
     await settle(page);

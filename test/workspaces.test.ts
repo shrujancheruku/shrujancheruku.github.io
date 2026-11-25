@@ -2,12 +2,14 @@ import { describe, expect, test } from "bun:test";
 import {
   createWorkspaces,
   firstStepOf,
+  focusOf,
   type Layout,
   locate,
   type Rect,
   stepAfter,
   stepCount,
   stepsIn,
+  tilingOf,
 } from "../src/lib/workspaces";
 
 /** A workspace by position; fails loudly rather than returning undefined. */
@@ -182,5 +184,41 @@ describe("the decided proportions", () => {
     const l = at(at(ws, 4).steps, 0).touch;
     expect(tile(l, "contact")[3]).toBe(74);
     expect(tile(l, "term")[3]).toBe(26);
+  });
+});
+
+describe("the timeline's open variant (Education & Internships)", () => {
+  const ws = createWorkspaces({ featured: 4 });
+  const step = at(at(ws, 2).steps, 0);
+
+  test("closed it is the decided tiling", () => {
+    expect(tilingOf(step, "desktop", false)).toBe(step.desktop);
+  });
+
+  test("open narrows the timeline to 46%, education takes the right 54%, skills leaves", () => {
+    const l = tilingOf(step, "desktop", true);
+    expect(tile(l, "timeline")).toEqual([0, 0, 46, 100]);
+    expect(tile(l, "education")).toEqual([46, 0, 54, 100]);
+    expect(l.skills).toBeUndefined();
+  });
+
+  test("open on touch gives education the whole workspace", () => {
+    const l = tilingOf(step, "touch", true);
+    expect(l).toEqual({ education: [0, 0, 100, 100] });
+  });
+
+  test("a step with no variant keeps its tiling when asked to open", () => {
+    const s = at(at(ws, 4).steps, 0);
+    expect(tilingOf(s, "desktop", true)).toBe(s.desktop);
+    expect(focusOf(s, true)).toBe(s.focus);
+  });
+
+  test("the open tiling fills the area without overlap", () => {
+    for (const kind of ["desktop", "touch"] as const) {
+      const l = tilingOf(step, kind, true);
+      const area = Object.values(l).reduce((a, [, , w, h]) => a + w * h, 0);
+      expect(Math.round(area)).toBe(10000);
+      expect(Object.keys(l)).toContain(focusOf(step, true));
+    }
   });
 });
