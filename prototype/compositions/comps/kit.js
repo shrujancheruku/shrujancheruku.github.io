@@ -5,17 +5,18 @@ export const Q = new URLSearchParams(location.search);
 export const isCard = Q.has("card");
 export const still = isCard || matchMedia("(prefers-reduced-motion: reduce)").matches;
 export const take = ["A", "B", "C"].includes(Q.get("take")) ? Q.get("take") : "A";
-// the site's seven themes: background, foreground, accent, dim, line, hot
+// the site's eight themes: background, foreground, accent, dim, line, hot
 export const THEMES = {
   "tokyo-night": ["#1a1b26", "#c0caf5", "#7aa2f7", "#24283b", "#414868", "#f7768e"],
   gruvbox: ["#282828", "#d4be98", "#7daea3", "#3c3836", "#504945", "#ea6962"],
   paper: ["#f2eede", "#222222", "#cc3e28", "#d8d3c0", "#bfbaa6", "#cc3e28"],
-  everforest: ["#2d353b", "#d3c6aa", "#7fbbb3", "#343f44", "#475258", "#e67e80"],
+  "issho-light": ["#F3F5F9", "#131B40", "#24307A", "#D5DBE7", "#7A849C", "#CC3719"],
+  "issho-dark": ["#0D1330", "#F1F3F8", "#DEA92C", "#222B52", "#6C78AA", "#EB603A"],
   nord: ["#2e3440", "#d8dee9", "#81a1c1", "#3b4252", "#4c566a", "#bf616a"],
   "rose-pine": ["#faf4ed", "#575279", "#56949f", "#f2e9e1", "#cecacd", "#b4637a"],
   starship: ["#1c1c1e", "#f5f5f7", "#ff9f0a", "#2c2c2e", "#8e8e93", "#ff5f4a"],
 };
-export const LIGHT = ["paper", "rose-pine"];
+export const LIGHT = ["paper", "issho-light", "rose-pine"];
 const subs = [];
 export const onTheme = fn => subs.push(fn);
 export let theme = "paper";
