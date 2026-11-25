@@ -1,0 +1,112 @@
+---
+// Education & Internships: the degree as the heading, a cue that opens the
+// teaching post and the internships. Opening is the desktop script's job
+// (it re-tiles the workspace); this window follows its `desktop:open` event.
+import { cueText, education } from "../lib/timeline";
+import TimelineEntry from "./TimelineEntry.astro";
+import Window from "./Window.astro";
+---
+
+<Window id="education" label="education & internships" scrolls>
+  <div class="edu">
+    <h2 class="deg">{education.degree}</h2>
+    <p class="uni">{education.university} · {education.years}</p>
+    <p class="sub">{education.college} · {education.concentrations.join(" / ")}</p>
+    <button
+      type="button"
+      class="cue"
+      data-disclosure="education"
+      aria-expanded="false"
+      aria-controls="education-roles"
+    >
+      <span class="chev" aria-hidden="true">▸</span>{" "}
+      <span class="cl" data-closed={cueText(education, false)} data-open={cueText(education, true)}>{cueText(education, false)}</span>{" "}
+      <span class="note">· {education.cueNote}</span>
+    </button>
+    <div class="roles" id="education-roles" hidden>
+      {education.roles.map((entry) => <TimelineEntry entry={entry} />)}
+    </div>
+  </div>
+</Window>
+
+<script>
+  import { gsap } from "gsap";
+
+  const cue = document.querySelector<HTMLButtonElement>(
+    "[data-disclosure='education']",
+  );
+  const roles = document.getElementById("education-roles");
+  const label = cue?.querySelector<HTMLElement>(".cl");
+  const note = cue?.querySelector<HTMLElement>(".note");
+
+  // the re-tile takes ~0.85s; the roles come in as it settles
+  const STAGGER_DELAY = 0.4;
+
+  document.addEventListener("desktop:open", (e) => {
+    if (!cue || !roles || !label || !note) return;
+    const open = (e as CustomEvent<{ open: boolean }>).detail.open;
+    cue.setAttribute("aria-expanded", String(open));
+    label.textContent = open
+      ? (label.dataset.open ?? "hide")
+      : (label.dataset.closed ?? "");
+    note.hidden = open;
+    roles.hidden = !open;
+    if (!open) return;
+    gsap.fromTo(
+      roles.children,
+      { y: 16, opacity: 0, filter: "blur(4px)" },
+      {
+        y: 0,
+        opacity: 1,
+        filter: "blur(0px)",
+        duration: 0.7,
+        stagger: 0.08,
+        delay: STAGGER_DELAY,
+        ease: "expo.out",
+        clearProps: "filter,transform",
+      },
+    );
+  });
+</script>
+
+<style>
+  .deg {
+    font: 700 15px/1.4 var(--mono);
+  }
+  .uni {
+    color: var(--ac);
+    font: 500 13px/1.5 var(--mono);
+  }
+  .sub {
+    font: 12px/1.6 var(--mono);
+    opacity: 0.6;
+  }
+  .cue {
+    display: inline-block;
+    white-space: nowrap;
+    margin-top: 12px;
+    font: 500 13px var(--mono);
+    color: var(--bg);
+    background: var(--ac);
+    border: 0;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 14px;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ac) 30%, transparent);
+    transition: transform 0.2s;
+  }
+  .cue:hover {
+    transform: translateX(2px);
+  }
+  .chev {
+    display: inline-block;
+    transition: transform 0.35s;
+  }
+  .cue[aria-expanded="true"] .chev {
+    transform: rotate(90deg);
+  }
+  .roles {
+    padding-top: 8px;
+    --when: 16ch;
+  }
+</style>
