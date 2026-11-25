@@ -61,6 +61,11 @@ export interface Composition {
    * `sleep`, `type`, `every`, so pausing and restarting work.
    */
   play(kit: Kit): Promise<void>;
+  /**
+   * Optional: once the end state is on screen, hold it this long (state
+   * `held`), then play again from the beginning. Without it the end is held for good.
+   */
+  holdMs?: number;
   /** Named still frames: put the scene in that state at once. */
   frames: Record<string, (kit: Kit) => void>;
 }
@@ -192,6 +197,16 @@ export function mount(slot: HTMLElement, composition: Composition): void {
         if (running !== mine) return;
         finished = true;
         setMode("held");
+        const again = composition.holdMs;
+        if (again === undefined) return;
+        mine
+          .sleep(again)
+          .then(() => {
+            if (running === mine && active) begin();
+          })
+          .catch((e: unknown) => {
+            if (!(e instanceof Cancelled)) throw e;
+          });
       })
       .catch((e: unknown) => {
         if (!(e instanceof Cancelled)) throw e;

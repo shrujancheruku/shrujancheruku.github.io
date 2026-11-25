@@ -11,6 +11,7 @@ type Loader = () => Promise<{ default: Composition }>;
 export const compositions: Record<string, Loader> = {
   issho: () => import("./issho"),
   "orca-flow": () => import("./orca-flow"),
+  "rapid-radiology": () => import("./rapid-radiology"),
   unmacos: () => import("./unmacos"),
 };
 
@@ -19,6 +20,4 @@ export const compositions: Record<string, Loader> = {
  * removes its own line when it adds its composition above; a project in both
  * fails the build. Until then the project's window shows its placeholder.
  */
-export const PENDING: readonly string[] = [
-  "rapid-radiology", // #42
-];
+export const PENDING: readonly string[] = [];
