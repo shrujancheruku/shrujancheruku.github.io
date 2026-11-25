@@ -6,7 +6,8 @@
   how it opens and closes, and whether it re-tiles the workspace or floats above it.
   Host: the approved desktop (take D of prototype/desktop-layout + take A of prototype/workspace-windows, five
   workspaces, contact as decided). Only the archive differs between takes.
-  Four takes, switchable via ?variant=A|B|C|D, the switcher, or ← →.
+  Four takes, switchable via ?variant=A|B|C|D, the switcher, or ← →. E (the default) is the founder's pick: B's re-tiling
+  with A's list inside, no heading line, and no status bar item (opened only from the projects workspace).
   Keys: a open/close the archive · n 3 ↔ 9 entries (stress test) · t theme · c CRT · s spec panel · i Education & Internships · esc close.
   Archive entries 1–3 are the real archive with real GitHub facts; with n, rapid-radiology (as if replaced) and five
   placeholders are added. The archive window's heading line is placeholder wording.
@@ -370,8 +371,20 @@ const V={
    Entry:'ls-style output: one row per project, columns name | language | version | pitch, with repository ↗ · live ↗ under the pitch; narrow: name and language, then pitch, then links',
    Opens:'drops down; the first time per visit it types `ls -l ~/archive` and the rows print one by one; after that it opens printed',
    Closes:'esc, the status bar item again, a click on the scrim, or scrolling to another step'}},
+ E:{name:'Chosen · re-tile + float list',
+  html:()=>W('ar','',`<div class="lA">
+    <div class="ahd"><div><div class="kick">${AHEAD.kick} · ${NA}</div><h2>${AHEAD.title}</h2></div><button class="xbtn" data-act="arch-close">esc ✕</button></div>
+    ${ARCH.map(a=>`<div class="e">${nameLink(a)}${verChip(a)}<p>${a.p}</p><div class="ft">${a.l?`<span class="lang">${a.l}</span>`:''}${links(a)}${phn(a)}</div></div>`).join('')}
+   </div>`),
+  spec:{Idea:'the founder\'s pick: B\'s re-tiling with A\'s list inside',
+   Openers:'only from the projects workspace: the "+N archive" line in the featured stack and the line under the last featured project. No status bar item',
+   Where:'desktop: the projects workspace squeezes into the left 42% keeping its arrangement, the archive takes the right 58% at full height and focus; touch: the archive takes the whole workspace',
+   Entry:'A\'s list: name (17px, 700, accent, the repository link) with the version chip on the right, the pitch at 14px / 1.45 (500), then language · repository ↗ · live ↗',
+   Heading:'"~/archive · N", "archive" and esc ✕; no line under the heading',
+   Closes:'esc, ✕, the opener again, or scrolling to another step (the workspace re-tiles back)'}},
 };
-const vk=V[Q.get('variant')]?Q.get('variant'):'A', v=V[vk];
+const vk=V[Q.get('variant')]?Q.get('variant'):'E', v=V[vk];
+const RT=vk==='B'||vk==='E';
 
 /* ---------------- state ---------------- */
 let picked=!!THEMES[Q.get('theme')], theme=picked?Q.get('theme'):sysTheme();
@@ -388,7 +401,7 @@ const woke=()=>{document.body.classList.remove('idle');['pointerdown','keydown',
 ['pointerdown','keydown','wheel','touchstart'].forEach(e=>addEventListener(e,woke,true));
 $('#root').innerHTML=`<div class="screen">
   <div class="bar"><div class="ws">${WS.map((n,i)=>`<b data-act="ws" data-w="${i}" title="${n}">${i+1}<span class="d"> ${n}</span></b>`).join('')}</div>
-    <div class="rt"><span data-act="archive" id="barArch"><span class="d">archive</span><span class="m">▤</span></span><span data-act="ws" data-w="4"><span class="d">contact</span><span class="m">@</span></span>
+    <div class="rt">${vk==='E'?'':`<span data-act="archive" id="barArch"><span class="d">archive</span><span class="m">▤</span></span>`}<span data-act="ws" data-w="4"><span class="d">contact</span><span class="m">@</span></span>
     <span class="chip halo" data-act="theme-ui"><i></i><span data-theme-name></span></span><span class="clock d"></span></div></div>
   <div class="area">${BASE_W()}${v.html()}</div>
   <div id="themes">${TK.map(k=>`<button data-act="theme-set" data-t="${k}"><i style="background:linear-gradient(135deg,${THEMES[k].bg} 50%,${THEMES[k].ac} 50%)"></i>${k}</button>`).join('')}</div>
@@ -416,10 +429,10 @@ let step=-1;
 function gridLayout(n,x0,y0,w,h,cols){const rows=Math.ceil(n/cols),L={};
   for(let i=0;i<n;i++){const r=Math.floor(i/cols),c=i%cols,inRow=r===rows-1?n-r*cols:cols,cw=w/inRow;L['a'+i]=[x0+c*cw,y0+r*h/rows,cw,h/rows]}return L}
 function layoutOf(s){const st=S[s],m=mq.matches;let L=(ilOpen&&(m?st.mOpen:st.dOpen))||(m?st.m:st.d);
-  if(archOpen&&vk==='B'){if(m)return {ar:[0,0,100,100]};const o={};for(const k in L){const r=L[k];o[k]=[r[0]*.42,r[1],r[2]*.42,r[3]]}o.ar=[42,0,58,100];return o}
+  if(archOpen&&RT){if(m)return {ar:[0,0,100,100]};const o={};for(const k in L){const r=L[k];o[k]=[r[0]*.42,r[1],r[2]*.42,r[3]]}o.ar=[42,0,58,100];return o}
   if(archOpen&&vk==='C'){return m?{ah:[0,0,100,16],...gridLayout(NA,0,16,100,84,NA>4?2:1)}:{ah:[0,0,30,100],...gridLayout(NA,30,0,70,100,NA<=3?1:NA<=6?2:3)}}
   return L}
-function focusOf(s){if(archOpen&&vk==='B')return 'ar';if(archOpen&&vk==='C')return 'a0';return S[s].f}
+function focusOf(s){if(archOpen&&RT)return 'ar';if(archOpen&&vk==='C')return 'a0';return S[s].f}
 function place(s,dur,order){
   const L=layoutOf(s),f=focusOf(s);let z=1,k=0;
   for(const el of PANES){const id=el.id.slice(2),r=L[id];
@@ -461,7 +474,7 @@ function dPrint(){const el=$('#dterm');el.innerHTML='';const t=typer(el,999);
     ...ARCH.map(a=>`<div class="row"><span>${nameLink(a)}</span><span class="lg">${a.l||'—'}</span><span class="vr">${a.v||'—'}</span><span class="pt">${a.p}</span><span class="lv">${links(a)} ${phn(a)}</span></div>`),
     `<div class="hint">${NA} projects · esc to close</div>`];
   t('ls -l ~/archive',rows,dTyped,dTyped?0:70).then(()=>{const l=document.createElement('div');l.innerHTML='<span class="p">❯ </span><span class="cur"> </span>';el.append(l)});dTyped=true}
-function archOpenFn(from){if(archOpen)return;archOpen=true;opener=from||$('#barArch');openedBy=opener.closest('.bar')?'status bar':opener.closest('.b-stack')?'stack line':'line under last featured project';
+function archOpenFn(from){if(archOpen)return;archOpen=true;opener=from||$('#barArch')||$('#p-oc .more');openedBy=opener.closest?.('.bar')?'status bar':opener.closest('.b-stack')?'stack line':'line under last featured project';
   if(vk==='A'||vk==='D'){const el=$(vk==='A'?'#archA':'#archD'),t=floatTarget();
     gsap.to('#scrim',{autoAlpha:1,duration:.3});
     if(vk==='A'){const o=relRect(opener);if(mq.matches)gsap.fromTo(el,{...t,y:t.height,autoAlpha:1},{y:0,duration:.6,ease:'expo.out'});
@@ -469,16 +482,19 @@ function archOpenFn(from){if(archOpen)return;archOpen=true;opener=from||$('#barA
       gsap.from('#archA .e',{y:12,opacity:0,duration:.5,stagger:.05,delay:.2,ease:'expo.out'})}
     else{gsap.fromTo(el,{...t,yPercent:-105,autoAlpha:1},{yPercent:0,duration:.55,ease:'expo.out'});dPrint()}
     el.style.visibility='visible'}
-  else place(step,.85,vk==='B'?'archLast':'stagger');
-  $('#barArch').classList.add('aon');save();label()}
+  else place(step,.85,RT?'archLast':'stagger');
+  if(RT)gsap.from('#p-ar .e',{y:12,opacity:0,duration:.5,stagger:.05,delay:.35,ease:'expo.out'});
+  $('#barArch')?.classList.add('aon');save();label()}
 function archClose(quick){if(!archOpen)return;archOpen=false;
   if(vk==='A'||vk==='D'){const el=$(vk==='A'?'#archA':'#archD');gsap.to('#scrim',{autoAlpha:0,duration:.25});
     if(quick)gsap.to(el,{autoAlpha:0,duration:.2});
     else if(vk==='A'){if(mq.matches)gsap.to(el,{y:area().height,duration:.4,ease:'power3.in'});else{const o=relRect(opener);gsap.to(el,{...o,autoAlpha:0,duration:.45,ease:'power3.inOut'})}}
     else gsap.to(el,{yPercent:-105,duration:.4,ease:'power3.in'})}
   else if(!quick)place(step,.85);
-  $('#barArch').classList.remove('aon');save();label()}
-const archToggle=from=>archOpen?archClose():archOpenFn(from);
+  $('#barArch')?.classList.remove('aon');save();label()}
+const archToggle=from=>{if(archOpen)return archClose();
+  if(vk==='E'&&!from){if(S[step].ws!==1)return go(WS_FIRST[1]+NFEAT-1);from=$('#p-oc .more')}
+  archOpenFn(from)};
 
 /* ---------------- timeline + Education & Internships (approved) ---------------- */
 let tlEntered=false;
@@ -578,7 +594,8 @@ function label(){
 history.scrollRestoration='manual';
 applyTheme();setCrt(crt);
 const startWs=+(location.hash.match(/ws(\d)/)||[])[1]||0;
-scrollTo(0,WS_FIRST[startWs]*innerHeight);onScroll();
+/* E: /archive/ boots on the last featured project with the archive open */
+scrollTo(0,(vk==='E'&&Q.get('archive')==='1'?WS_FIRST[1]+NFEAT-1:WS_FIRST[startWs])*innerHeight);onScroll();
 gsap.from('.pane:not([style*="hidden"]) .win',{scale:.7,opacity:0,duration:.9,ease:'expo.out',stagger:.12});
 if(Q.get('archive')==='1')setTimeout(()=>archOpenFn(),700);
 </script>
