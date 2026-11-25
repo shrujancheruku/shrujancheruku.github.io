@@ -62,7 +62,11 @@ Sources: the REST field list is the live response of `GET /repos/shrujancheruku/
 
 ### Pushed date caveat
 
-[observed] This repository reports `pushed_at` as `2017-02-08`, although it has recent issues. So `pushed_at` tracks git pushes only, not issue or other activity. Whether a push to a non-default branch moves it is checked in [Not verified](#not-verified).
+[observed] Before this file was pushed, this repository reported `pushed_at` as `2017-02-08`, although it had issues opened this week. So `pushed_at` tracks git pushes only, not issue or other activity.
+
+[observed] Pushing this file to a new non-default branch moved `pushed_at` to the time of the push. So `pushed_at` means "last push to any branch", not "last change to the default branch". A work-in-progress branch, or a research branch like this one, makes a repository look freshly updated. For the date of the last change that visitors can see, read the default branch's latest commit date instead: `defaultBranchRef { target { ... on Commit { committedDate } } }` in GraphQL. For this repository that returned `2017-02-08` while `pushedAt` returned today's date.
+
+The earlier figures in this file were gathered before this push, so the other repositories' pushed dates may likewise reflect branch pushes.
 
 ### README
 
@@ -199,4 +203,3 @@ A push to this repository itself needs none of this: `on: push` works with no ex
 4. **The `opengraph.githubassets.com` rate limit** beyond the header value of 100: its window and its key.
 5. **Fine-grained token lifetime** and **per-repository secrets on a personal account**, both in the cross-repository section.
 6. **How late or how often a daily cron is dropped in practice.** GitHub publishes no figures.
-7. **Whether `pushed_at` moves on a push to a non-default branch.** Checked when this file was pushed; see the resolution comment on issue #2.
