@@ -1,0 +1,61 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- PROTOTYPE composition · issho: the marketing site scrolls through its six steps, and the phone in front shows
+     the app screen for the step on screen. Sources are easy to swap (v2 assets are coming): one full-page capture
+     and six app-screen SVGs in light and dark.
+     Takes: A laptop and phone · B the site is the window, phone in front · C three tiled panes (site, app, steps). -->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="kit.css">
+<style>
+#sv img{position:absolute;left:0;top:0;width:100%;height:auto;will-change:transform;transition:transform 1.3s cubic-bezier(.65,0,.2,1)}
+#pv{background:var(--bg)}
+#pv img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .6s}
+#pv img.on{opacity:1}
+.still img{transition:none!important}
+#steps{display:none}
+/* A · laptop and phone */
+.tA #lap{position:absolute;width:calc(72*var(--u));left:calc(50% - 31*var(--u));top:calc(50% - 25*var(--u))}
+.tA #lid{background:#222;border:calc(.22*var(--u)) solid var(--line);border-bottom:0;border-radius:calc(1.6*var(--u)) calc(1.6*var(--u)) 0 0;padding:calc(1.1*var(--u)) calc(1.1*var(--u)) calc(1.4*var(--u))}
+.tA #sv{aspect-ratio:16/10;border-radius:calc(.5*var(--u))}
+.tA #base{height:calc(1.5*var(--u));margin:0 calc(-5*var(--u));background:linear-gradient(var(--line),color-mix(in srgb,var(--line) 55%,var(--bg)));border-radius:calc(.3*var(--u)) calc(.3*var(--u)) calc(1.6*var(--u)) calc(1.6*var(--u))}
+.tA #ph{width:calc(20*var(--u));left:calc(50% - 45*var(--u));top:calc(50% - 11*var(--u));transform:rotate(-4deg);z-index:2}
+/* B · the site is the window */
+.tB .backdrop,.tC .backdrop{display:none}
+.tB #lap{position:absolute;inset:0}.tB #lid{height:100%}.tB #sv{height:100%}
+.tB #ph{width:calc(24*var(--u));right:calc(5*var(--u));bottom:calc(-3*var(--u));transform:rotate(3deg);z-index:2}
+/* C · tiled */
+.tC{display:grid;grid-template:1fr auto/1.7fr 1fr;gap:calc(1.2*var(--u));padding:calc(1.2*var(--u))}
+.tC #lap{grid-row:1/3;border:calc(.2*var(--u)) solid var(--dim);border-radius:calc(1.3*var(--u));overflow:hidden;min-height:0}
+.tC #lid,.tC #sv{height:100%}
+.tC #ph{position:relative;border:calc(.2*var(--u)) solid var(--dim);border-radius:calc(1.3*var(--u));background:var(--bg);box-shadow:none;padding:calc(1.6*var(--u));min-height:0}
+.tC #pv{aspect-ratio:auto;height:100%;border-radius:calc(.8*var(--u))}
+.tC #steps{display:block;padding:calc(1.4*var(--u)) calc(1.8*var(--u));font-size:calc(1.25*var(--u));line-height:1.75}
+#steps div{display:flex;gap:1.2ch;opacity:.5;transition:opacity .3s,color .3s}#steps div.on{opacity:1;color:var(--ac);font-weight:700}
+#steps div::before{content:attr(data-n)}
+/* touch: every take reads as the site with the phone in front */
+@media (max-width:520px){body{display:block!important;padding:0!important}.backdrop,#steps,#base{display:none!important}
+  #lap{position:absolute!important;inset:0!important;width:auto!important;border:0!important;border-radius:0!important}#lid{height:100%;border:0!important;padding:0!important;background:none!important}#sv{height:100%;aspect-ratio:auto!important;border-radius:0!important}
+  #ph{position:absolute!important;width:calc(17*var(--u))!important;left:auto!important;top:auto!important;right:calc(2.5*var(--u));bottom:calc(-2*var(--u));transform:rotate(3deg)!important;padding:calc(.7*var(--u))!important;background:#222!important;border:calc(.22*var(--u)) solid var(--line)!important;box-shadow:0 calc(2*var(--u)) calc(5*var(--u)) #0006!important}
+  #pv{aspect-ratio:404/644!important;height:auto!important}}
+</style>
+<div class="backdrop"></div>
+<div id="lap"><div id="lid"><div id="sv" class="scr"><img id="pg" src="../src/issho/site-full.png" alt=""></div></div><div id="base"></div></div>
+<div id="ph" class="phone"><div id="pv" class="scr"></div></div>
+<div id="steps" class="pn"></div>
+<script type="module">
+import { $, sleep, still, onTheme, theme, LIGHT } from "./kit.js";
+// one stop per step of the site: [how far down the page (fraction of its height), the app screen, the site's own kicker]
+const STOPS = [[0, "plan", null, 2200], [.142, "plan", "It starts with a plan"], [.284, "date", "Date set"], [.357, "going", "Going"], [.48, "day", "On the day"], [.596, "again", "How was it?"], [.669, "crew", "A crew"]];
+const names = ["plan", "date", "going", "day", "again", "crew"], pv = $("#pv"), pg = $("#pg");
+pv.innerHTML = names.map(n => `<img data-n="${n}" alt="">`).join("");
+const skin = t => pv.querySelectorAll("img").forEach(i => i.src = `../src/issho/${i.dataset.n}-${LIGHT.includes(t) ? "light" : "dark"}.svg`);
+onTheme(skin); skin(theme);
+$("#steps").innerHTML = STOPS.slice(1).map(([, , k], i) => `<div data-n="${i + 1}">${k}</div>`).join("");
+let at = 0;
+const show = i => { at = i; const [f, n] = STOPS[i], max = Math.max(0, pg.offsetHeight - $("#sv").offsetHeight);
+  pg.style.transform = `translateY(${-Math.min(f * pg.offsetHeight, max)}px)`;
+  pv.querySelectorAll("img").forEach(im => im.classList.toggle("on", im.dataset.n === n));
+  [...$("#steps").children].forEach((d, k) => d.classList.toggle("on", k === i - 1)); };
+addEventListener("resize", () => show(at));
+await pg.decode().catch(() => {});
+show(0);
+if (!still) for (;;) for (let i = 0; i < STOPS.length; i++) { show(i); await sleep(STOPS[i][3] || 3600); }
+</script>

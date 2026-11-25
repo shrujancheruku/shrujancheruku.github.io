@@ -1,0 +1,91 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- PROTOTYPE composition · orca-flow: one command in, nine tickets built side by side, one pull request out.
+     Takes: A a monitor · B the terminal is the window · C three tiled panes (console, tickets, pull request). -->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="kit.css">
+<style>
+body{font-size:calc(1.36*var(--u));line-height:1.56}
+#rig{position:absolute;inset:0;display:flex;flex-direction:column}
+#scr{flex:1;min-height:0;display:flex;flex-direction:column;gap:calc(1.3*var(--u));padding:calc(3*var(--u)) calc(3.4*var(--u))}
+.pn{border:0;border-radius:0;background:none;overflow:visible}
+.neck,.foot,.backdrop{display:none}
+body:not(.tC) .pn.focus{background:none}
+/* A · monitor */
+.tA .backdrop{display:block}
+.tA #rig{inset:auto;left:50%;top:50%;width:calc(90*var(--u));transform:translate(-50%,-50%)}
+.tA #bez{background:color-mix(in srgb,var(--fg) 88%,var(--bg));border:calc(.22*var(--u)) solid var(--line);border-radius:calc(1.4*var(--u));padding:calc(1*var(--u)) calc(1*var(--u)) calc(2.2*var(--u))}
+.tA.light #bez{background:#222}
+.tA #scr{aspect-ratio:16/10.4;border-radius:calc(.5*var(--u));background:var(--bg);padding:calc(2.2*var(--u)) calc(2.8*var(--u));gap:calc(1*var(--u))}
+.tA .neck,.tA .foot{display:block}
+.tA .neck{width:calc(9*var(--u));height:calc(4*var(--u));margin:0 auto;background:linear-gradient(90deg,var(--dim),var(--line),var(--dim))}
+.tA .foot{width:calc(28*var(--u));height:calc(1.1*var(--u));margin:0 auto;background:var(--line);border-radius:calc(1*var(--u)) calc(1*var(--u)) calc(.2*var(--u)) calc(.2*var(--u))}
+/* C · tiled */
+.tC #scr{display:grid;grid-template:1fr auto/1.25fr 1fr;gap:calc(1.2*var(--u));padding:calc(1.2*var(--u))}
+.tC .pn{border:calc(.2*var(--u)) solid var(--dim);border-radius:calc(1.3*var(--u));background:var(--bg);padding:calc(3.4*var(--u)) calc(2*var(--u)) calc(1.8*var(--u));overflow:hidden}
+.tC .pn.focus{border-color:transparent;background:linear-gradient(var(--bg),var(--bg)) padding-box,linear-gradient(135deg,var(--ac),var(--hot)) border-box}
+.tC #con{grid-area:1/1}.tC #pr{grid-area:2/1}.tC #tk{grid-area:1/2/3/3}
+.tC{font-size:calc(1.55*var(--u))}.tC .row{line-height:2.3}.tC .lbl{font-size:calc(1.05*var(--u))}
+.lbl{position:absolute;top:calc(1*var(--u));left:calc(2*var(--u));display:none}.tC .lbl{display:block}
+/* content */
+#con{display:flex;flex-direction:column;gap:calc(1*var(--u))}
+.p{color:var(--hot)}
+.row{display:grid;grid-template-columns:5ch 2ch 7ch 1fr;column-gap:1.5ch;white-space:nowrap;transition:opacity .3s}
+.row.q{opacity:.4}
+.row .st{display:flex;align-items:center;gap:1ch}
+.row.done .st{color:var(--ac)}.row.wait .st{color:var(--hot);font-weight:700}
+.sp{display:inline-block;width:1ch}
+.bar{height:calc(.9*var(--u));border-radius:99px;background:var(--dim);overflow:hidden;margin:.5em 0 .2em}
+.bar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--ac),var(--hot));transition:width .6s cubic-bezier(.2,.9,.2,1)}
+.fade{animation:in .35s both}@keyframes in{from{opacity:0;transform:translateX(-.5em)}}
+.still .fade{animation:none}
+#ok{font-weight:700;color:var(--ac)}
+#tk{flex:none}#pr{flex:none}
+@media (max-width:520px){#scr,.tA #scr,.tC #scr{display:flex;padding:calc(2*var(--u)) calc(2.2*var(--u));gap:calc(.8*var(--u))}
+  .tA #rig{inset:0;width:auto;transform:none}.tA #bez{border:0;padding:0;background:none}.tA #scr{aspect-ratio:auto;height:100%}.tA .neck,.tA .foot,.backdrop{display:none!important}
+  .tC .pn{border:0;padding:0;background:none}.tC .lbl{display:none}}
+</style>
+<div class="backdrop"></div>
+<div id="rig"><div id="bez" style="flex:1;min-height:0;display:flex;flex-direction:column"><div id="scr" class="scr">
+  <section class="pn" id="con"><span class="lbl">flow · console</span><div id="cmd"></div><div id="hd"></div><div id="co" class="wide"></div><div id="qa" class="wide"></div></section>
+  <section class="pn" id="tk"><span class="lbl">tickets</span><div id="rows"></div></section>
+  <section class="pn" id="pr"><span class="lbl">pull request</span><div id="tally"></div><div class="bar"><i id="fill"></i></div><div id="ok"></div><div id="ok2" class="d"></div></section>
+</div></div><div class="neck"></div><div class="foot"></div></div>
+<script type="module">
+import { $, sleep, still, typeInto } from "./kit.js";
+// the spec: nine tickets, each sized and routed to the cheapest model that can do it
+const T = [[43,"S","haiku"],[44,"S","haiku"],[45,"M","sonnet"],[46,"S","haiku"],[47,"M","sonnet"],[48,"M","sonnet"],[49,"S","haiku"],[50,"M","sonnet"],[51,"L","opus"]];
+const LABEL = { q: "queued", b: "build", c: "check", done: "merged ✓", wait: "waiting on you" };
+const SPIN = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"; let sp = 0;
+let st = {};
+const draw = () => {
+  $("#rows").innerHTML = T.map(([id, size, model]) => { const s = st[id] || "q";
+    return `<div class="row ${s}"><b>#${id}</b><span class="d">${size}</span><span>${model}</span><span class="st">${s === "b" || s === "c" ? `<span class="sp">${still ? "·" : SPIN[sp % 10]}</span>` : ""}${LABEL[s]}</span></div>`; }).join("");
+  const n = T.filter(([id]) => st[id] === "done").length, run = T.filter(([id]) => "bc".includes(st[id] || "q")).length;
+  $("#tally").innerHTML = `<span class="d">integration/shared-playlists-v1</span> <b>${n}/9</b> merged<span class="wide d">${run ? ` · ${run} in progress` : ""}</span>`;
+  $("#fill").style.width = n / 9 * 100 + "%";
+};
+if (!still) setInterval(() => { sp++; document.querySelectorAll(".sp").forEach(e => e.textContent = SPIN[sp % 10]); }, 90);
+const say = (el, html) => { el.innerHTML = `<div class="fade">${html}</div>`; };
+const set = (id, s) => { st[id] = s; draw(); };
+const focus = id => document.querySelectorAll(".pn").forEach(p => p.classList.toggle("focus", p.id === id));
+// [ms to wait, ticket, new state]: tickets that don't depend on each other run at the same time
+const RUN = [[0,43,"b"],[0,44,"b"],[0,45,"b"],[0,51,"b"],[900,43,"c"],[500,44,"c"],[500,43,"done"],[200,46,"b"],[500,44,"done"],[200,47,"b"],[600,45,"c"],[500,46,"c"],[400,45,"done"],[200,48,"b"],[400,46,"done"],[100,49,"b"]];
+const RUN2 = [[0,50,"b"],[500,47,"c"],[400,49,"c"],[400,47,"done"],[300,48,"c"],[300,49,"done"],[500,51,"c"],[300,48,"done"],[700,50,"c"],[400,51,"done"],[600,50,"done"]];
+for (;;) {
+  st = {}; ["#cmd", "#hd", "#co", "#qa", "#ok", "#ok2"].forEach(s => $(s).innerHTML = ""); draw(); focus("con");
+  $("#cmd").innerHTML = '<span class="p">❯ </span><b id="c"></b>'; await sleep(700); await typeInto($("#c"), "/flow:build #42", 16); await sleep(500);
+  say($("#hd"), `<b class="a">flow</b> · #42 Shared playlists v1 <span class="wide d">· 9 tickets · run_7c41</span>`); await sleep(500);
+  say($("#co"), `<b>Coordinator</b><br>Sized nine tickets: 4 small, 4 medium, 1 large.<br>#51 touches packages/records, so it goes to Opus.`); await sleep(900);
+  focus("tk");
+  for (const [ms, id, s] of RUN) { await sleep(ms); set(id, s); }
+  await sleep(300); set(50, "wait"); focus("con");
+  say($("#qa"), `<b class="h">Question from the coordinator</b><br>1) #50 says removed playlists are archived, the spec<br>   says deleted. Which one do you want?<br><span class="p">❯ </span><b id="r"></b>`);
+  await sleep(1500); await typeInto($("#r"), "1 deleted", 12); await sleep(400);
+  focus("tk");
+  for (const [ms, id, s] of RUN2) { await sleep(ms); set(id, s); }
+  say($("#qa"), `<span class="d">Answered: #50 deletes removed playlists.</span>`);
+  await sleep(500); focus("pr");
+  say($("#ok"), "✓ PR #53 ready to merge"); await sleep(250);
+  say($("#ok2"), `closes 9 tickets · reviewed · checks green<span class="wide"> · up to date with main</span>`);
+  if (still) break; await sleep(7000);
+}
+</script>
