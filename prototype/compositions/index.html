@@ -493,7 +493,9 @@ function typer(el,max=9){let q=Promise.resolve();
     if(fast){c.textContent=cmd;return done()}
     const iv=setInterval(()=>{c.textContent=cmd.slice(0,++i);if(i>=cmd.length){clearInterval(iv);setTimeout(done,240)}},42)}))}
 const type=typer($('#term'));
-type('whoami',['product engineer']);type('cat claim',['I design and build.']);type('cat ask',['Give me a problem, not a spec.']);
+/* the replies come back in the accent colour, not the terminal's text colour */
+const say=t=>[`<span class="ac">${t}</span>`];
+type('whoami',say('product engineer'));type('cat claim',say('I design and build.'));type('cat ask',say('Give me a problem, not a spec.'));
 const ctype=typer($('#cterm'),20);let contacted=false;
 
 /* ---------------- tiling ---------------- */
