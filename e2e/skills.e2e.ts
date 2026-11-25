@@ -71,9 +71,16 @@ test("hobbies are the tree with three folders and nine hobbies", async ({
 }) => {
   await enter(page);
   await settle(page);
-  const tree = page.locator('[data-window="skills"] .tree');
-  await expect(tree).toContainText("tree ~/hobbies");
+  const skills = page.locator('[data-window="skills"]');
+  await expect(skills).toContainText("tree ~/hobbies");
+  const tree = skills.getByRole("list", { name: "hobbies" });
   await expect(tree.locator("[data-hobby]")).toHaveCount(9);
+  // every row the list owns is an item: three folders and nine hobbies, and
+  // the prompt line sits outside it
+  const roles = await tree.evaluate((el) =>
+    [...el.children].map((c) => c.getAttribute("role")),
+  );
+  expect(roles).toEqual(Array(12).fill("listitem"));
   await expect(tree.locator(".hit")).toHaveText([
     "hiking",
     "photography",

@@ -44,8 +44,8 @@ const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
     </ul>
 
     <h3 class="head">hobbies</h3>
+    <div class="tree row"><span class="prompt">❯</span> tree ~/hobbies</div>
     <div class="tree" role="list" aria-label="hobbies">
-      <div class="row"><span class="prompt">❯</span> tree ~/hobbies</div>
       {
         hobbies.map((f, fi) => {
           const lastF = fi === hobbies.length - 1;
