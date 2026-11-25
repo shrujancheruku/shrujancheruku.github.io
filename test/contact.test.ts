@@ -60,6 +60,15 @@ describe("the channels", () => {
     });
   });
 
+  test('only the resume downloads, as #29\'s "the resume PDF download" asks', () => {
+    expect(CONTACT_CHANNELS.map((c) => [c.label, c.download])).toEqual([
+      ["email", false],
+      ["linkedin", false],
+      ["github", false],
+      ["resume", true],
+    ]);
+  });
+
   test("publish no phone number, form, booking or availability", () => {
     const all = CONTACT_CHANNELS.map((c) => c.href).join(" ");
     expect(all).not.toMatch(/^tel:/m);

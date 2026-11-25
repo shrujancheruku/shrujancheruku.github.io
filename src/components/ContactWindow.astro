@@ -28,6 +28,7 @@ const exchanges = [{ command: "contact", replies: [] as string[] }];
                 href={c.href}
                 target={c.newTab ? "_blank" : undefined}
                 rel={c.newTab ? "noopener noreferrer" : undefined}
+                download={c.download || undefined}
               >
                 {c.text}
               </a>

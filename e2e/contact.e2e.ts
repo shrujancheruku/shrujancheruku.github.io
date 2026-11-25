@@ -35,9 +35,10 @@ test.describe("arriving directly at /contact/", () => {
     await expect(
       term.locator('a[href="mailto:shrujancheruku@gmail.com"]'),
     ).toHaveCount(1);
-    await expect(
-      term.locator('a[href="/shrujan-cheruku-resume.pdf"]'),
-    ).toHaveCount(1);
+    const resume = term.locator('a[href="/shrujan-cheruku-resume.pdf"]');
+    await expect(resume).toHaveCount(1);
+    // the resume downloads rather than leaving the desktop
+    await expect(resume).toHaveAttribute("download", "");
 
     const linkedin = term.locator(
       'a[href="https://www.linkedin.com/in/shrujancheruku"]',
