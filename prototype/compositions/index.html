@@ -23,12 +23,15 @@
 <title>PROTOTYPE · compositions</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="fonts/iAWriterDuoS-Bold.woff2" as="font" type="font/woff2" crossorigin>
 <link id="fontcss" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <style>
+/* titles of about 24px and up use iA Writer Duo: IBM Plex Mono redrawn with a 1.5-cell m and w, because the bold monospace m clots at display sizes */
+@font-face{font-family:'iA Writer Duo';font-weight:700;font-display:swap;src:url(fonts/iAWriterDuoS-Bold.woff2) format('woff2')}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-snap-type:y mandatory}
-body{-webkit-font-smoothing:antialiased;background:var(--bg);color:var(--fg);transition:background .45s;--gap:14px;--mono:'IBM Plex Mono',monospace;font-family:var(--mono)}
+body{-webkit-font-smoothing:antialiased;background:var(--bg);color:var(--fg);transition:background .45s;--gap:14px;--mono:'IBM Plex Mono',monospace;--title:'iA Writer Duo',var(--mono);font-family:var(--mono)}
 a{color:inherit;text-decoration:none}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .snap{height:100vh;height:100svh;scroll-snap-align:start;scroll-snap-stop:always}
@@ -96,7 +99,7 @@ body.idle .tip::before{display:none}
 .dimt{opacity:.55}
 .ac{color:var(--ac)}
 .b-name{position:absolute;inset:0;padding:0 4cqw 0 5cqw;display:flex;flex-direction:column;justify-content:center}
-.b-name h1{font:700 min(15cqw,30cqh)/.95 var(--mono);letter-spacing:-.045em}
+.b-name h1{font:700 min(15cqw,30cqh)/.95 var(--title);letter-spacing:-.02em}
 .b-name h1 span{display:block}
 .b-name .lab{margin-top:3cqh;font:400 14px var(--mono);color:var(--ac)} .b-name .lab::before{content:"// "}
 .b-term{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;white-space:pre-wrap;padding:34px 18px 16px;font:400 14px/1.6 var(--mono)}
@@ -109,7 +112,7 @@ body.idle .tip::before{display:none}
 .b-now b{color:var(--ac);font-weight:500}
 .b-copy{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;padding:28px 24px 22px 5cqw;gap:12px}
 .b-copy .kick{font:400 12px var(--mono);opacity:.55}
-.b-copy h2{font:700 clamp(28px,13cqw,52px)/1 var(--mono);letter-spacing:0}
+.b-copy h2{font:700 clamp(28px,13cqw,52px)/1 var(--title);letter-spacing:-.02em}
 .b-copy .pitch{font:500 16px/1.45 var(--mono)}
 .b-copy ul{list-style:none;font:400 13px/1.6 var(--mono)} .b-copy ul li::before{content:"+ ";color:var(--ac)}
 .b-copy .meta{font:400 12px var(--mono);opacity:.55;margin-top:auto}
@@ -162,7 +165,7 @@ body.idle .tip::before{display:none}
 .ver{display:inline-block;font:500 11px/1 var(--mono);padding:3px 7px;border-radius:9px;background:var(--dim);color:var(--fg);white-space:nowrap}
 .lk{display:flex;gap:1.2em;flex-wrap:wrap;font:500 12.5px var(--mono)} .lk a{color:var(--ac)} .lk a:hover{text-decoration:underline}
 .ph-note{font:11px var(--mono);opacity:.45;font-style:italic}
-.ahd .kick{font:400 12px var(--mono);opacity:.55} .ahd h2{font:700 clamp(26px,9cqw,44px)/1 var(--mono);letter-spacing:-.05em;margin:.15em 0 .3em} .ahd p{font:500 14px/1.45 var(--mono);opacity:.85}
+.ahd .kick{font:400 12px var(--mono);opacity:.55} .ahd h2{font:700 clamp(26px,9cqw,44px)/1 var(--title);letter-spacing:-.02em;margin:.15em 0 .3em} .ahd p{font:500 14px/1.45 var(--mono);opacity:.85}
 .xbtn{font:500 12px var(--mono);opacity:.6;white-space:nowrap} .xbtn:hover{opacity:1;color:var(--ac)}
 #scrim{position:absolute;inset:0;z-index:20;visibility:hidden;opacity:0;background:color-mix(in srgb,var(--bg) 55%,transparent);backdrop-filter:blur(3px)}
 
@@ -194,7 +197,7 @@ body.idle .tip::before{display:none}
 .hC .back{align-self:flex-start;margin-top:14px}
 .eC{position:absolute;inset:0;display:flex;flex-direction:column;gap:8px;padding:20px 22px 18px;overflow:hidden}
 .eC .ix{font:11px var(--mono);opacity:.45;display:flex;justify-content:space-between}
-.eC .aname{font:700 clamp(17px,7cqw,30px)/1.05 var(--mono);letter-spacing:-.04em;color:var(--fg);word-break:break-word}
+.eC .aname{font:700 clamp(17px,7cqw,30px)/1.05 var(--title);letter-spacing:-.02em;color:var(--fg);word-break:break-word}
 .pane.focus .eC .aname{color:var(--ac)}
 .eC p{font:500 clamp(12.5px,3.4cqw,15px)/1.45 var(--mono);overflow:hidden}
 .eC .ft{margin-top:auto;display:flex;gap:1.2em;align-items:center;flex-wrap:wrap;font:12.5px var(--mono)} .eC .ft .lang{opacity:.55}
