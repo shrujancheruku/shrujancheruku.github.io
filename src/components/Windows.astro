@@ -30,10 +30,7 @@ interface Props {
 
 const { featured, archive } = Astro.props;
 // the ticket that writes each pending composition, for its placeholder
-const PENDING_TICKETS: Record<string, number> = {
-  issho: 40,
-  unmacos: 41,
-};
+const PENDING_TICKETS: Record<string, number> = {};
 
 // the build fails when a featured project has no composition
 const missing = missingCompositions(
