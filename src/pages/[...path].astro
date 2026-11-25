@@ -1,0 +1,28 @@
+---
+// One entry page per address in the address book (src/lib/addresses.ts): each
+// boots the same desktop already at its place, with its own title and
+// description. A new address in the book gets its page with no change here.
+import Desktop from "../layouts/Desktop.astro";
+import { getSite } from "../lib/site";
+
+export async function getStaticPaths() {
+  const { book } = await getSite();
+  return book.entries.map((address) => ({
+    params: {
+      path: address.path === "/" ? undefined : address.path.slice(1, -1),
+    },
+    props: { address },
+  }));
+}
+
+const { address } = Astro.props;
+const { featured, book } = await getSite();
+---
+
+<Desktop
+  title={address.title}
+  description={address.description}
+  featured={featured}
+  addresses={book.data}
+  step={address.step}
+/>

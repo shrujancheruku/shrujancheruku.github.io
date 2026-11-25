@@ -1,0 +1,55 @@
+---
+import type { Workspace } from "../lib/workspaces";
+// The terminal an unknown path boots with. The desktop script shows it over
+// the opening workspace and drops it at the first jump. The links are real
+// addresses; the script turns a click into a jump.
+import Window from "./Window.astro";
+
+interface Props {
+  workspaces: readonly Workspace[];
+  /** Where each workspace opens. */
+  paths: readonly string[];
+}
+
+const { workspaces, paths } = Astro.props;
+---
+
+<Window id="notfound" label="zsh — not found">
+  <div class="term">
+    <p><span class="prompt">~ $</span> cd <span data-missing></span></p>
+    <p class="err">cd: no such place</p>
+    <p>It was either never here or it left without saying.</p>
+    <p class="prompt">There are five places:</p>
+    <ul>
+      {
+        workspaces.map((w, i) => (
+          <li>
+            <span class="prompt">{i + 1}</span> <a href={paths[i]}>{w.name}</a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</Window>
+
+<style>
+  .term {
+    padding: 36px 24px 16px;
+    font: 14px/1.6 var(--mono);
+  }
+  p,
+  ul {
+    margin: 0 0 0.6em;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+  .prompt {
+    color: var(--hot);
+  }
+  .err,
+  a {
+    color: var(--ac);
+  }
+</style>

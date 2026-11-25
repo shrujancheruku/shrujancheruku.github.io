@@ -180,3 +180,37 @@ test("a tooltip shows its name and key on hover after 250ms", async ({
   await expect(tip).toHaveCSS("opacity", "1");
   await expect(tip).toHaveText("contact C");
 });
+
+test("Back after H returns to the previous place, and C is a jump too", async ({
+  page,
+}) => {
+  await ready(page);
+  await page.keyboard.press("3");
+  await expect(page.locator("main.area")).toHaveAttribute(
+    "data-workspace",
+    "2",
+  );
+  const where = new URL(page.url()).pathname;
+  await page.keyboard.press("h");
+  await expect(page.locator("main.area")).toHaveAttribute(
+    "data-workspace",
+    "0",
+  );
+  expect(new URL(page.url()).pathname).not.toBe(where);
+  await page.goBack();
+  await expect(page.locator("main.area")).toHaveAttribute(
+    "data-workspace",
+    "2",
+  );
+  expect(new URL(page.url()).pathname).toBe(where);
+  await page.getByRole("button", { name: "contact", exact: true }).click();
+  await expect(page.locator("main.area")).toHaveAttribute(
+    "data-workspace",
+    "4",
+  );
+  await page.goBack();
+  await expect(page.locator("main.area")).toHaveAttribute(
+    "data-workspace",
+    "2",
+  );
+});
