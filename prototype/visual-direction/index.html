@@ -1,0 +1,319 @@
+<!doctype html>
+<!--
+  PROTOTYPE — throwaway. Not the site, not the stack.
+  Question (ticket "Visual direction"): what does the site look and move like?
+  Three variants of the opening screen + one featured project section (unmacos),
+  switchable via ?variant=A|B|C, the bottom bar, or the ← → keys.
+  Run: open this file in a browser (needs network for fonts and GSAP).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE · visual direction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+
+/* ---------- switcher (not part of any design) ---------- */
+#sw{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:6px;
+  background:#111;color:#fff;border:1px solid #555;border-radius:999px;padding:6px 8px;font:500 13px/1 system-ui,sans-serif;
+  box-shadow:0 8px 30px rgba(0,0,0,.45)}
+#sw button{all:unset;cursor:pointer;width:28px;height:28px;border-radius:50%;text-align:center;line-height:28px;background:#2a2a2a}
+#sw button:hover{background:#ffd400;color:#000}
+#sw span{padding:0 10px;white-space:nowrap}
+#sw small{opacity:.55;margin-left:6px}
+
+/* ---------- shared: CSS-drawn desktop standing in for the hero image ---------- */
+.mock{--bg:#1a1b26;--fg:#c0caf5;--ac:#7aa2f7;--dim:#2a2e44;width:100%;height:100%;background:var(--bg);color:var(--fg);
+  display:grid;grid-template:auto 1fr 1fr/1.5fr 1fr;gap:1.2%;padding:1.2%;transition:background .5s,color .5s;font-family:'JetBrains Mono',monospace}
+.mock .mbar{grid-column:1/-1;display:flex;justify-content:space-between;font-size:clamp(8px,1vw,13px);padding:.4em .8em;background:var(--dim);border-radius:6px;transition:background .5s}
+.mock .mbar b{color:var(--ac);transition:color .5s}
+.mock .mw{border:2px solid var(--dim);border-radius:8px;padding:5%;display:flex;flex-direction:column;gap:7%;transition:border-color .5s;overflow:hidden}
+.mock .mw:nth-child(2){grid-row:2/4;border-color:var(--ac)}
+.mock .mw i{display:block;height:6px;border-radius:3px;background:var(--fg);opacity:.35}
+.mock .mw i.a{background:var(--ac);opacity:.9}
+
+/* ======================= A · Editorial type ======================= */
+body.vA{background:#efece4;color:#111;font-family:'Bricolage Grotesque',system-ui,sans-serif}
+.a-hero{height:100vh;position:relative;overflow:hidden;padding:3vh 4vw}
+.a-top{display:flex;justify-content:space-between;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+.a-top span:first-child::before{content:"";display:inline-block;width:.7em;height:.7em;border-radius:50%;background:#ff3b1d;margin-right:.6em}
+.a-name{font-size:min(28vw,38vh);line-height:.86;font-weight:250;letter-spacing:-.045em;margin-top:5vh;white-space:nowrap;font-stretch:80%;user-select:none}
+.a-name .line{display:block;overflow:hidden;padding-bottom:.14em;margin-bottom:-.1em}
+.a-name .line:nth-child(2){text-align:right}
+.a-name .ch{display:inline-block}
+.a-claim{position:absolute;left:4vw;bottom:9vh;transform-origin:left bottom}
+.a-claim em{font:italic 400 clamp(34px,5.2vw,92px)/1 'Instrument Serif',serif;display:block}
+.a-claim p{margin-top:.9em;font-size:clamp(15px,1.3vw,20px);max-width:28ch}
+.a-proj{height:100vh;position:relative;overflow:hidden;background:#111;color:#efece4}
+.a-idx{position:absolute;top:3vh;left:4vw;z-index:3;font-size:14px;letter-spacing:.08em;text-transform:uppercase;mix-blend-mode:difference}
+.a-shot{position:absolute;inset:0;clip-path:inset(32% 36% 32% 36%)}
+.a-title{position:absolute;top:50%;left:0;z-index:2;white-space:nowrap;font-size:34vw;font-weight:800;line-height:1;letter-spacing:-.05em;
+  transform:translate(30%,-50%);mix-blend-mode:difference;color:#fff;pointer-events:none}
+.a-cap{position:absolute;left:4vw;bottom:14vh;width:36vw;z-index:3;opacity:0}
+.a-cap em{font:italic 400 clamp(30px,4vw,68px)/1.02 'Instrument Serif',serif;display:block}
+.a-cap p{margin:1.2em 0;font-size:clamp(15px,1.25vw,19px);max-width:34ch;opacity:.8}
+.a-cap a{font-size:15px;text-transform:uppercase;letter-spacing:.08em;text-decoration:none;border-bottom:2px solid #ff3b1d;padding-bottom:4px}
+.a-end{height:60vh;display:grid;place-items:center;font-size:14px;text-transform:uppercase;letter-spacing:.1em;opacity:.5}
+
+/* ======================= B · Tiled desktop ======================= */
+body.vB{--bg:#1a1b26;--fg:#c0caf5;--ac:#7aa2f7;--dim:#2f334d;--hot:#f7768e;background:var(--bg);color:var(--fg);
+  font-family:'JetBrains Mono',monospace;transition:background .45s,color .45s}
+html:has(body.vB){scroll-snap-type:y mandatory}
+.b-snap{height:100vh;height:100svh;scroll-snap-align:start;scroll-snap-stop:always}
+.b-screen{position:fixed;inset:0;display:flex;flex-direction:column;padding:8px}
+.b-bar{display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:13px;padding:7px 12px;border-radius:9px;background:var(--dim);transition:background .45s}
+.b-ws{display:flex;gap:6px}
+.b-ws b{cursor:pointer;width:26px;height:26px;display:grid;place-items:center;border-radius:6px;font-weight:400}
+.b-ws b.on{background:var(--ac);color:var(--bg)}
+.b-theme{cursor:pointer;color:var(--ac)}
+.b-hint{opacity:.55}
+.b-area{position:relative;flex:1;margin-top:3px}
+.b-pane{position:absolute;padding:5px}
+.b-win{width:100%;height:100%;border:2px solid var(--dim);border-radius:11px;overflow:hidden;display:flex;flex-direction:column;container-type:size;transition:border-color .45s}
+.b-pane.focus .b-win{border-color:var(--ac)}
+.b-tt{font-size:12px;padding:6px 12px;opacity:.6;border-bottom:1px solid var(--dim);white-space:nowrap}
+.b-body{flex:1;padding:4cqmin 5cqmin;display:flex;flex-direction:column;justify-content:center;min-height:0}
+.b-name{font:800 min(24cqw,40cqh)/.88 'Bricolage Grotesque',sans-serif;letter-spacing:-.02em;font-stretch:80%}
+.b-label{margin-top:5cqh;font-size:max(12px,2.6cqw);color:var(--ac)}
+.b-term{justify-content:flex-end;overflow:hidden;font-size:max(12px,3.4cqw);line-height:1.7;white-space:pre-wrap}
+.b-term .p{color:var(--hot)} .b-term .cur{background:var(--fg);color:var(--bg);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.b-now{font-size:max(12px,3.4cqw);line-height:1.6}.b-now b{color:var(--ac);font-weight:400}
+.b-pj{flex-direction:row;gap:4cqw;align-items:center;justify-content:flex-start}
+.b-pj .shot{flex:1.4;aspect-ratio:16/10;border-radius:10px;overflow:hidden;border:2px solid var(--dim)}
+.b-pj .txt{flex:1;min-width:0}
+.b-pj h2{font:800 max(28px,7cqw)/.9 'Bricolage Grotesque',sans-serif;letter-spacing:-.04em}
+.b-pj p{margin-top:1.2em;font-size:max(12px,1.5cqw);line-height:1.6}
+.b-pj ul{list-style:none;margin-top:1.4em;font-size:max(12px,1.3cqw);line-height:1.9;opacity:0;transition:opacity .5s .3s}
+.b-pj ul li::before{content:"▸ ";color:var(--ac)}
+.b-pane.mono .b-pj ul{opacity:1}
+
+/* B on touch / narrow screens: same windows, stacked in one column */
+.b-hint .m{display:none}
+@media (max-width:760px){.b-hint .d{display:none}.b-hint .m{display:inline}.b-bar{font-size:12px;padding:9px 10px}
+  .b-term{font-size:13px;line-height:1.55}.b-now{font-size:13px}}
+@container (max-height:190px){.b-label{display:none}.b-name br{display:none}.b-name{font-size:min(12.5cqw,46cqh)}.b-body{padding-top:0;padding-bottom:0}}
+@container (max-width:620px){.b-pj{flex-direction:column;align-items:stretch;justify-content:center;gap:5cqh}
+  .b-pj .shot{flex:none}.b-pj .txt{flex:none}.b-pj h2{font-size:15cqw}.b-pj p,.b-pj ul{font-size:13px}.b-pj ul{margin-top:.8em}}
+
+/* ======================= C · Particle field ======================= */
+body.vC{background:#07070a;color:#f4f1ea;font-family:'Bricolage Grotesque',system-ui,sans-serif;height:400vh}
+#c-cv{position:fixed;inset:0;width:100%;height:100%}
+.c-o{position:fixed;z-index:2;pointer-events:none}
+.c-tl{top:4vh;left:4vw;font-size:13px;letter-spacing:.14em;text-transform:uppercase}
+.c-tr{top:4vh;right:4vw;font-size:13px;letter-spacing:.14em;text-transform:uppercase;opacity:.6}
+.c-claim{left:4vw;bottom:11vh}
+.c-claim em{font:italic 400 clamp(32px,4.4vw,76px)/1 'Instrument Serif',serif;display:block}
+.c-claim p{margin-top:.8em;font-size:clamp(14px,1.2vw,18px);opacity:.7}
+.c-pj{left:6vw;top:50%;transform:translateY(-50%);width:36vw;opacity:0}
+.c-pj small{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#6ff0c2}
+.c-pj h2{font-size:clamp(60px,9vw,160px);font-weight:800;letter-spacing:-.02em;line-height:.9;margin:.15em 0 .2em;font-stretch:80%}
+.c-pj em{font:italic 400 clamp(24px,2.6vw,44px)/1.05 'Instrument Serif',serif;display:block}
+.c-pj p{margin-top:1.1em;font-size:clamp(14px,1.15vw,18px);opacity:.7;max-width:36ch;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="sw"><button id="prev">←</button><span id="lab"></span><button id="next">→</button></div>
+
+<script>
+const THEMES=[
+  {n:'tokyo night',bg:'#1a1b26',fg:'#c0caf5',ac:'#7aa2f7',dim:'#2f334d',hot:'#f7768e'},
+  {n:'gruvbox',bg:'#282828',fg:'#ebdbb2',ac:'#fabd2f',dim:'#3c3836',hot:'#fb4934'},
+  {n:'rose pine',bg:'#191724',fg:'#e0def4',ac:'#ebbcba',dim:'#26233a',hot:'#eb6f92'},
+  {n:'nord',bg:'#2e3440',fg:'#eceff4',ac:'#88c0d0',dim:'#3b4252',hot:'#bf616a'},
+  {n:'paper',bg:'#f2eede',fg:'#222',ac:'#cc3e28',dim:'#d8d3c0',hot:'#216609'},
+];
+const setTheme=(el,t)=>{for(const k of['bg','fg','ac','dim','hot'])el.style.setProperty('--'+k,t[k])};
+const mock=()=>`<div class="mock"><div class="mbar"><span><b>1</b> 2 3 4</span><span>unmacos</span><span class="mt">tokyo night</span></div>
+  <div class="mw"><i class="a" style="width:40%"></i><i style="width:85%"></i><i style="width:70%"></i><i style="width:78%"></i><i class="a" style="width:30%"></i><i style="width:62%"></i><i style="width:88%"></i><i style="width:45%"></i></div>
+  <div class="mw"><i style="width:60%"></i><i class="a" style="width:80%"></i><i style="width:50%"></i></div>
+  <div class="mw"><i class="a" style="width:35%"></i><i style="width:75%"></i><i style="width:55%"></i></div></div>`;
+const root=document.getElementById('root');
+const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+const DBG=new URLSearchParams(location.hash.slice(1));
+const prog=()=>DBG.has('p')?+DBG.get('p'):clamp(scrollY/(document.documentElement.scrollHeight-innerHeight||1));
+
+/* ============ A · Editorial type ============ */
+function mountA(){
+  const sp=s=>[...s].map(c=>`<span class="ch">${c}</span>`).join('');
+  root.innerHTML=`
+  <section class="a-hero">
+    <div class="a-top"><span>Product engineer</span><span>Scroll ↓</span></div>
+    <h1 class="a-name"><span class="line">${sp('Shrujan')}</span><span class="line">${sp('Cheruku')}</span></h1>
+    <div class="a-claim"><em>I design and build.</em><p>Give me a problem, not a spec.</p></div>
+  </section>
+  <section class="a-proj">
+    <div class="a-idx">01 — Featured project</div>
+    <div class="a-shot">${mock()}</div>
+    <div class="a-title">unmacos</div>
+    <div class="a-cap"><em>A keyboard-first desktop for macOS.</em>
+      <p>Tiling windows, fuzzy menus and 23 themes switched live. Installed with one command.</p>
+      <a href="#">View project →</a></div>
+  </section>
+  <section class="a-end">end of prototype · next: sabbatical</section>`;
+  const chs=[...root.querySelectorAll('.ch')];
+  gsap.from(chs,{yPercent:115,duration:1.2,ease:'expo.out',stagger:.045,delay:.15});
+  gsap.from('.a-claim > *',{y:40,opacity:0,duration:1,ease:'power3.out',stagger:.12,delay:.9});
+  // letters get heavier near the cursor
+  let mx=-9999,my=-9999;const w=chs.map(()=>250);
+  addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+  (function tick(){
+    const R=innerWidth*.28;
+    chs.forEach((c,i)=>{const r=c.getBoundingClientRect();
+      const d=Math.hypot(mx-(r.left+r.width/2),my-(r.top+r.height/2));
+      const t=250+550*clamp(1-d/R)**1.5; w[i]+=(t-w[i])*.14; c.style.fontWeight=Math.round(w[i]);});
+    requestAnimationFrame(tick);
+  })();
+  gsap.registerPlugin(ScrollTrigger);
+  gsap.timeline({scrollTrigger:{trigger:'.a-hero',start:'top top',end:'+=90%',pin:true,scrub:.6}})
+    .to('.a-name .line:nth-child(1)',{xPercent:-55,ease:'none'},0)
+    .to('.a-name .line:nth-child(2)',{xPercent:55,ease:'none'},0)
+    .to('.a-name',{opacity:.12,ease:'none'},0)
+    .to('.a-claim',{y:()=>-innerHeight*.3,scale:1.7,ease:'none'},0);
+  const m=root.querySelector('.a-shot .mock'),mt=m.querySelector('.mt');let ti=0;
+  gsap.timeline({scrollTrigger:{trigger:'.a-proj',start:'top top',end:'+=280%',pin:true,scrub:.6,
+      onUpdate(s){const i=Math.floor(s.progress*9.99)%THEMES.length;if(i!==ti){ti=i;setTheme(m,THEMES[i]);mt.textContent=THEMES[i].n}}}})
+    .to('.a-shot',{clipPath:'inset(0% 0% 0% 0%)',ease:'power2.inOut',duration:1},0)
+    .to('.a-title',{x:()=>-innerWidth*1.25,ease:'none',duration:2},0)
+    .to('.a-shot',{clipPath:'inset(14% 5% 14% 46%)',ease:'power2.inOut',duration:1},1.1)
+    .to('.a-cap',{opacity:1,y:-20,duration:.5},1.6);
+}
+
+/* ============ B · Tiled desktop ============ */
+function mountB(){
+  root.innerHTML=`<div class="b-screen">
+    <div class="b-bar"><div class="b-ws"><b class="on">1</b><b>2</b><b>3</b></div>
+      <span class="b-hint"><span class="d">scroll: next workspace · t: switch theme</span><span class="m">swipe ↑ · tap theme</span></span>
+      <span><span class="b-theme">tokyo night</span> · <span class="b-clock"></span></span></div>
+    <div class="b-area">
+      <div class="b-pane focus" id="p-name"><div class="b-win"><div class="b-tt">~ — shrujan</div>
+        <div class="b-body"><div class="b-name">Shrujan <br>Cheruku</div><div class="b-label">product engineer</div></div></div></div>
+      <div class="b-pane" id="p-term"><div class="b-win"><div class="b-tt">zsh</div><div class="b-body b-term"></div></div></div>
+      <div class="b-pane" id="p-now"><div class="b-win"><div class="b-tt">~/now</div>
+        <div class="b-body b-now"><div><b>Nov 2025 → now</b></div><div>sabbatical</div><div style="opacity:.6;margin-top:.8em">10/10 would recommend to a friend.</div></div></div></div>
+      <div class="b-pane" id="p-proj"><div class="b-win"><div class="b-tt">01 — featured project — unmacos</div>
+        <div class="b-body b-pj"><div class="shot">${mock()}</div>
+          <div class="txt"><h2>unmacos</h2><p>A keyboard-first desktop for macOS.</p>
+          <ul><li>tiling windows</li><li>fuzzy menus</li><li>23 themes, switched live</li><li>installed with one command</li></ul></div></div></div></div>
+    </div></div><div class="b-snap"></div><div class="b-snap"></div><div class="b-snap"></div>`;
+  // [left, top, width, height, opacity] in % of the area, per workspace
+  const mq=matchMedia('(max-width:760px)');
+  const LM={ // narrow: one column
+    'p-name':[[0,0,100,44,1],[0,0,100,17,1],[0,0,100,17,0]],
+    'p-term':[[0,44,100,32,1],[0,17,100,21,1],[0,17,100,21,0]],
+    'p-now': [[0,76,100,24,1],[100,76,100,24,0],[100,76,100,24,0]],
+    'p-proj':[[0,100,100,62,0],[0,38,100,62,1],[0,0,100,100,1]],
+  };
+  const LD={
+    'p-name':[[0,0,62,100,1],[0,0,34,42,1],[0,0,34,42,0]],
+    'p-term':[[62,0,38,56,1],[0,42,34,34,1],[0,42,34,34,0]],
+    'p-now': [[62,56,38,44,1],[0,76,34,24,1],[0,76,34,24,0]],
+    'p-proj':[[100,0,38,100,0],[34,0,66,100,1],[0,0,100,100,1]],
+  };
+  const place=(s,dur)=>{const L=mq.matches?LM:LD;for(const id in L){const[l,t,w,h,o]=L[id][s];
+    gsap.to('#'+id,{left:l+'%',top:t+'%',width:w+'%',height:h+'%',autoAlpha:o,duration:dur,ease:'expo.out',overwrite:true})}
+    root.querySelectorAll('.b-ws b').forEach((b,i)=>b.classList.toggle('on',i===s));
+    document.getElementById('p-name').classList.toggle('focus',s===0);
+    document.getElementById('p-proj').classList.toggle('focus',s>0);
+    document.getElementById('p-proj').classList.toggle('mono',s===2);};
+  place(0,0);
+  gsap.from('.b-pane:not(#p-proj) .b-win',{scale:.6,opacity:0,duration:.9,ease:'expo.out',stagger:.14});
+  // terminal
+  const term=root.querySelector('.b-term');let q=Promise.resolve();
+  const type=(cmd,out)=>q=q.then(()=>new Promise(res=>{
+    const line=document.createElement('div');line.innerHTML='<span class="p">❯ </span><span class="c"></span><span class="cur"> </span>';term.append(line);
+    let i=0;const c=line.querySelector('.c');const iv=setInterval(()=>{c.textContent=cmd.slice(0,++i);
+      if(i>=cmd.length){clearInterval(iv);setTimeout(()=>{line.querySelector('.cur').remove();
+        if(out){const o=document.createElement('div');o.textContent=out;term.append(o)}
+        while(term.children.length>7)term.firstChild.remove();res()},260)}},45)}));
+  type('whoami','product engineer');type('cat claim','I design and build.');type('cat ask','Give me a problem, not a spec.');
+  let step=0;
+  const onS=()=>{const s=Math.round(prog()*2);if(s!==step){place(s,.9);
+    if(s>step&&s===1)type('open unmacos');if(s>step&&s===2)type('fullscreen');if(s<step)type('cd ..');step=s}};
+  addEventListener('scroll',onS);onS();
+  mq.addEventListener('change',()=>place(step,.6));
+  root.querySelectorAll('.b-ws b').forEach((b,i)=>b.onclick=()=>scrollTo({top:i*innerHeight,behavior:'smooth'}));
+  // themes
+  let ti=0;const tl=root.querySelector('.b-theme');
+  const cyc=()=>{ti=(ti+1)%THEMES.length;setTheme(document.body,THEMES[ti]);tl.textContent=THEMES[ti].n;
+    root.querySelectorAll('.mock').forEach(m=>{setTheme(m,THEMES[ti]);m.querySelector('.mt').textContent=THEMES[ti].n})};
+  tl.onclick=cyc;addEventListener('keydown',e=>{if(e.key==='t')cyc()});
+  const ck=root.querySelector('.b-clock');const tk=()=>ck.textContent=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});tk();setInterval(tk,10000);
+}
+
+/* ============ C · Particle field ============ */
+function mountC(){
+  root.innerHTML=`<canvas id="c-cv"></canvas>
+    <div class="c-o c-tl">Product engineer</div><div class="c-o c-tr">Scroll ↓</div>
+    <div class="c-o c-claim"><em>I design and build.</em><p>Give me a problem, not a spec.</p></div>
+    <div class="c-o c-pj"><small>01 — Featured project</small><h2>unmacos</h2><em>A keyboard-first desktop for macOS.</em>
+      <p>Tiling windows, fuzzy menus and 23 themes switched live. Installed with one command.</p></div>`;
+  const cv=document.getElementById('c-cv'),cx=cv.getContext('2d');
+  let W,H,T0,T1,P=[],mx=-9999,my=-9999;
+  const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+  function build(){
+    W=cv.width=innerWidth;H=cv.height=innerHeight;
+    // T0: the name
+    const o=document.createElement('canvas');o.width=W;o.height=H;const g=o.getContext('2d');
+    const fs=Math.min(W*.2,H*.34);g.font=`800 ${fs}px "Bricolage Grotesque",sans-serif`;g.fillStyle='#fff';g.textBaseline='middle';
+    g.fillText('Shrujan',W*.04,H*.3);g.textAlign='right';g.fillText('Cheruku',W*.96,H*.3+fs*.9);
+    const d=g.getImageData(0,0,W,H).data;T0=[];const st=Math.max(4,Math.round(W/300));
+    for(let y=0;y<H;y+=st)for(let x=0;x<W;x+=st)if(d[(y*W+x)*4+3]>128)T0.push([x,y]);
+    shuffle(T0);
+    // T1: outlines of a tiled desktop, right half
+    T1=[];const X=W*.5,Y=H*.2,w=W*.44,h=H*.6,gp=14,bar=h*.07;
+    const rects=[[X,Y,w,bar],[X,Y+bar+gp,w*.58,h-bar-gp],[X+w*.58+gp,Y+bar+gp,w*.42-gp,(h-bar-gp)*.5-gp/2],[X+w*.58+gp,Y+bar+gp+(h-bar-gp)*.5+gp/2,w*.42-gp,(h-bar-gp)*.5-gp/2]];
+    const per=rects.map(r=>2*(r[2]+r[3])),tot=per.reduce((a,b)=>a+b,0);
+    rects.forEach((r,k)=>{const n=Math.round(T0.length*per[k]/tot);for(let i=0;i<n;i++){let t=Math.random()*per[k],[x,y,ww,hh]=r,j=(Math.random()-.5)*3;
+      if(t<ww)T1.push([x+t,y+j]);else if(t<ww+hh)T1.push([x+ww+j,y+t-ww]);else if(t<2*ww+hh)T1.push([x+t-ww-hh,y+hh+j]);else T1.push([x+j,y+t-2*ww-hh])}});
+    shuffle(T1);
+    P=T0.map(()=>({x:Math.random()*W,y:Math.random()*H,vx:0,vy:0}));
+    if(DBG.has('warm'))for(let i=0;i<400;i++)frame(false); // debug: settle instantly
+  }
+  addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+  addEventListener('resize',build);
+  const claim=root.querySelector('.c-claim'),pj=root.querySelector('.c-pj'),tr=root.querySelector('.c-tr');
+  let t=0;
+  function frame(loop=true){
+    const p=prog();t+=.006;
+    const chaos=clamp(1-Math.abs(p-.42)/.2),T=p<.42?T0:T1,k=.035*(1-chaos)+.0008;
+    claim.style.opacity=clamp(1-p/.18);tr.style.opacity=.6*clamp(1-p/.1);
+    pj.style.opacity=clamp((p-.62)/.14);
+    cx.fillStyle='rgba(7,7,10,.28)';cx.fillRect(0,0,W,H);
+    const mix=clamp((p-.42)/.2);
+    cx.fillStyle=`rgb(${244-133*mix|0},${241-1*mix|0},${234-40*mix|0})`;
+    for(let i=0;i<P.length;i++){const q=P[i],tg=T[i%T.length];
+      q.vx+=(tg[0]-q.x)*k;q.vy+=(tg[1]-q.y)*k;
+      if(chaos>0){const a=(Math.sin(q.x*.004+t*3)+Math.cos(q.y*.005-t*2))*3.14;q.vx+=Math.cos(a)*chaos*.9;q.vy+=Math.sin(a)*chaos*.9}
+      const dx=q.x-mx,dy=q.y-my,dd=dx*dx+dy*dy;if(dd<16000){const f=(1-dd/16000)*3/Math.sqrt(dd+1);q.vx+=dx*f;q.vy+=dy*f}
+      q.vx*=.85;q.vy*=.85;q.x+=q.vx;q.y+=q.vy;cx.fillRect(q.x,q.y,1.6,1.6)}
+    if(loop)requestAnimationFrame(frame);
+  }
+  (document.fonts?document.fonts.load('800 100px "Bricolage Grotesque"'):Promise.resolve()).catch(()=>{}).then(()=>{build();frame()});
+}
+
+/* ============ switcher ============ */
+const V={A:['Editorial type',mountA],B:['Tiled desktop',mountB],C:['Particle field',mountC]};
+const keys=Object.keys(V);
+let cur=new URLSearchParams(location.search).get('variant');if(!V[cur])cur='A';
+document.body.className='v'+cur;
+document.getElementById('lab').innerHTML=`${cur} (${V[cur][0]})<small>prototype</small>`;
+const go=d=>{const u=new URL(location.href);u.searchParams.set('variant',keys[(keys.indexOf(cur)+d+keys.length)%keys.length]);location.href=u};
+document.getElementById('prev').onclick=()=>go(-1);document.getElementById('next').onclick=()=>go(1);
+addEventListener('keydown',e=>{if(e.target.matches('input,textarea,[contenteditable]'))return;
+  if(e.key==='ArrowLeft')go(-1);if(e.key==='ArrowRight')go(1)});
+history.scrollRestoration='manual';scrollTo(0,0);
+V[cur][1]();
+</script>
+</body>
+</html>
