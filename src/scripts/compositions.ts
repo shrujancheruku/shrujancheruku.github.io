@@ -41,12 +41,15 @@ if (area && modelEl) {
 
   const afterLoad = (): void => {
     loaded = true;
-    const idleCall =
-      window.requestIdleCallback ?? ((f: () => void) => setTimeout(f, 200));
-    idleCall(() => {
+    const ready = (): void => {
       idle = true;
       check();
-    });
+    };
+    // a busy main thread (the typing, the CRT) may not go idle for a long
+    // time: preload after two seconds at the latest
+    if (window.requestIdleCallback)
+      window.requestIdleCallback(ready, { timeout: 2000 });
+    else setTimeout(ready, 200);
   };
   if (loaded) afterLoad();
   else addEventListener("load", afterLoad, { once: true });

@@ -26,9 +26,34 @@ test("a composition is not part of the first load: it is asked for after the pag
       asked.push({ url: r.url(), afterLoad: loaded });
   });
   await ready(page);
-  await expect(slot(page)).toHaveAttribute("data-mounted", "true");
+  // the test is about order, not speed: a busy machine may take a while
+  await expect(slot(page)).toHaveAttribute("data-mounted", "true", {
+    timeout: 20_000,
+  });
   expect(asked.length).toBeGreaterThanOrEqual(2);
   for (const r of asked) expect(r.afterLoad).toBe(true);
+});
+
+test("a composition next to the opening still preloads when the page never goes idle", async ({
+  page,
+}) => {
+  // a main thread too busy to go idle: idle callbacks fire only at their timeout
+  await page.addInitScript(() => {
+    window.requestIdleCallback = ((
+      cb: IdleRequestCallback,
+      o?: IdleRequestOptions,
+    ) =>
+      o?.timeout
+        ? window.setTimeout(
+            () => cb({ didTimeout: true, timeRemaining: () => 0 }),
+            o.timeout,
+          )
+        : 0) as typeof window.requestIdleCallback;
+  });
+  await ready(page);
+  await expect(slot(page)).toHaveAttribute("data-mounted", "true", {
+    timeout: 10_000,
+  });
 });
 
 test("compositions are not loaded while the projects workspace is far off, and are when it gets close", async ({
