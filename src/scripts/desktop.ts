@@ -333,7 +333,7 @@ addEventListener("keydown", (e: KeyboardEvent) => {
   if (command.type === "workspace") {
     e.preventDefault();
     jump(firstStepOf(workspaces, command.index));
-  } else if (!e.repeat) {
+  } else if (command.type === "step" && !e.repeat) {
     e.preventDefault();
     scrollStep(command.direction);
   }
@@ -343,6 +343,16 @@ for (const b of numbers) {
   b.addEventListener("click", () =>
     jump(firstStepOf(workspaces, Number(b.dataset.workspace))),
   );
+}
+
+// home and contact: deliberate jumps to the opening and the last workspace.
+for (const [act, index] of [
+  ["home", 0],
+  ["contact", workspaces.length - 1],
+] as const) {
+  document
+    .querySelector(`[data-act="${act}"]`)
+    ?.addEventListener("click", () => jump(firstStepOf(workspaces, index)));
 }
 
 // ---- layout changes between wide and touch

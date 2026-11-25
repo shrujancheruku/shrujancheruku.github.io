@@ -10,12 +10,16 @@ export interface KeyInput {
 
 export type KeyCommand =
   | { type: "workspace"; index: number }
-  | { type: "step"; direction: 1 | -1 };
+  | { type: "step"; direction: 1 | -1 }
+  | { type: "crt" }
+  | { type: "theme" };
 
 /**
  * The command a key stands for, or null. Number keys jump to the workspace
  * with that number, and are ignored while any modifier is held. Scroll keys
- * move one step; shift only reverses the space bar.
+ * move one step; shift only reverses the space bar. H, C, E and T (home,
+ * contact, crt effect, theme) are ignored while any modifier, shift included,
+ * is held.
  */
 export function interpretKey(
   e: KeyInput,
@@ -38,6 +42,19 @@ export function interpretKey(
       return { type: "step", direction: -1 };
     case " ":
       return { type: "step", direction: e.shiftKey ? -1 : 1 };
+  }
+
+  // The toggle shortcuts are ignored while shift is held too (caps lock is fine).
+  if (e.shiftKey) return null;
+  switch (e.key.toLowerCase()) {
+    case "h":
+      return { type: "workspace", index: 0 };
+    case "c":
+      return { type: "workspace", index: workspaceCount - 1 };
+    case "e":
+      return { type: "crt" };
+    case "t":
+      return { type: "theme" };
     default:
       return null;
   }

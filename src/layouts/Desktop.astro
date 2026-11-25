@@ -4,6 +4,13 @@ import NotFoundWindow from "../components/NotFoundWindow.astro";
 import StatusBar from "../components/StatusBar.astro";
 import Windows from "../components/Windows.astro";
 import type { AddressData } from "../lib/addresses";
+import {
+  CRT_KEY,
+  DEFAULT_THEME,
+  THEME_KEY,
+  THEME_NAMES,
+  THEMES,
+} from "../lib/themes";
 import { createWorkspaces, firstStepOf, stepCount } from "../lib/workspaces";
 
 interface Props {
@@ -29,19 +36,35 @@ const {
 } = Astro.props;
 const workspaces = createWorkspaces({ featured });
 const steps = stepCount(workspaces);
+const themeCss = THEME_NAMES.map(
+  (n) =>
+    `[data-theme="${n}"]{${Object.entries(THEMES[n])
+      .map(([k, v]) => `--${k}:${v}`)
+      .join(";")}}`,
+).join("");
+const themeBoot = { names: THEME_NAMES, themeKey: THEME_KEY, crtKey: CRT_KEY };
 const workspacePaths = workspaces.map(
   (_, i) => addresses.byStep[firstStepOf(workspaces, i)] ?? "/",
 );
 ---
 
 <!doctype html>
-<html lang="en" data-theme="paper">
+<html lang="en" data-theme={DEFAULT_THEME} data-crt="on">
   <head>
     <meta charset="utf-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
+    <style is:global set:html={themeCss} />
+    <!-- before first paint: the remembered theme and crt choice, paper and on if there is none -->
+    <script is:inline define:vars={{ boot: themeBoot }}>
+      try {
+        const t = localStorage.getItem(boot.themeKey);
+        if (t && boot.names.includes(t)) document.documentElement.dataset.theme = t;
+        if (localStorage.getItem(boot.crtKey) === "off") document.documentElement.dataset.crt = "off";
+      } catch {}
+    </script>
     <title>{title}</title>
     <meta name="description" content={description} />
     <link
@@ -59,7 +82,7 @@ const workspacePaths = workspaces.map(
       crossorigin
     />
   </head>
-  <body>
+  <body class="idle">
     <!-- The bezel: a permanent frame around the screen, CRT effect or not. -->
     <div class="screen">
       <StatusBar workspaces={workspaces} />
@@ -77,6 +100,7 @@ const workspacePaths = workspaces.map(
     <script type="application/json" id="desktop-model" set:html={JSON.stringify(workspaces)} />
     <script>
       import "../scripts/desktop";
+      import "../scripts/chrome";
     </script>
   </body>
 </html>
