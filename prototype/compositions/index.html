@@ -346,7 +346,7 @@ const HV={
  D:{name:'config',note:'a config file: three keys by how often (the split into often and sometimes is the assistant\'s)',
   html:()=>prompt('cat hobbies.toml')+`<div class="dimt">[hobbies]</div>`+[['always',[0,1,2,3]],['often',[4,5]],['sometimes',[6,7,8]]].map(([k,ix])=>`<div class="ht"><span>${k}</span><span class="dimt">=</span><span>[${ix.map(i=>hw(i,1)).join(', ')}]</span></div>`).join('')},
 };
-let hob=HV[new URLSearchParams(location.search).get('hobbies')]?new URLSearchParams(location.search).get('hobbies'):'A';
+let hob=HV[new URLSearchParams(location.search).get('hobbies')]?new URLSearchParams(location.search).get('hobbies'):'C'; /* C · tree is the founder's pick */
 const SAB={when:'Nov 2025 → Now',lines:['travelling the world','time with family','helping friends launch their products'],joke:'10/10 would recommend to a friend.'};
 const CONTACT=['Feel free to get in touch. I always love hearing what people are building, and whether I can help.',' ',
   '<span class="k">email</span><a href="mailto:shrujancheruku@gmail.com">shrujancheruku@gmail.com</a>  <button data-act="copy">[copy]</button>',
