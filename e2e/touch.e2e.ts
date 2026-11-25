@@ -63,3 +63,22 @@ test("tapping a number jumps to its workspace", async ({ page }) => {
     "true",
   );
 });
+
+test("a featured project is copy, then composition, then stack", async ({
+  page,
+}) => {
+  await page.goto("/work/");
+  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
+  const order = await page.$$eval(
+    '[data-window="copy-1"], [data-window="comp-1"], [data-window="stack"]',
+    (els) =>
+      els
+        .map((e) => ({
+          id: (e as HTMLElement).dataset.window,
+          top: e.getBoundingClientRect().top,
+        }))
+        .sort((a, b) => a.top - b.top)
+        .map((e) => e.id),
+  );
+  expect(order).toEqual(["copy-1", "comp-1", "stack"]);
+});

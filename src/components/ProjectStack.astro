@@ -1,0 +1,100 @@
+---
+// The stack: every featured project, the current one marked, and the archive
+// line. The desktop script marks the current one (`aria-current`) and turns a
+// click on a project into a jump; #38 binds the `[data-archive-open]` line.
+import type { Stack } from "../lib/project-copy";
+import Window from "./Window.astro";
+
+interface Props {
+  stack: Stack;
+}
+
+const { stack } = Astro.props;
+---
+
+<Window id="stack" label="featured">
+  <nav class="stack" aria-label="featured projects" data-stack>
+    {
+      stack.items.map((item) => (
+        <a href={item.href} data-position={item.position}>{item.name}</a>
+      ))
+    }
+    {
+      stack.archive && (
+        <button type="button" id="archive-stack" data-archive-open>
+          {stack.archive}
+        </button>
+      )
+    }
+  </nav>
+</Window>
+
+<style>
+  .stack {
+    position: absolute;
+    inset: 32px 0 0;
+    border-top: 1px solid var(--dim);
+    font: 400 13px / 1 var(--mono);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .stack > * {
+    flex: 1 0 26px;
+    max-height: 34px;
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 1ch;
+    border-bottom: 1px solid var(--dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-align: left;
+    background: none;
+    border-left: 0;
+    border-right: 0;
+    border-top: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .stack > *::before {
+    content: " ";
+    white-space: pre;
+  }
+
+  .stack > :last-child {
+    border-bottom: 0;
+  }
+
+  .stack > [aria-current="true"] {
+    background: var(--dim);
+    color: var(--ac);
+  }
+
+  .stack > [aria-current="true"]::before {
+    content: "▸";
+  }
+
+  .stack > button {
+    opacity: 0.6;
+  }
+
+  .stack > button:hover {
+    opacity: 1;
+    color: var(--ac);
+  }
+
+  @media (max-width: 760px) {
+    .stack {
+      inset-block-start: 26px;
+    }
+
+    .stack > * {
+      max-height: none;
+    }
+  }
+</style>

@@ -10,6 +10,7 @@ import {
   openAddresses,
 } from "../lib/addresses";
 import { interpretKey } from "../lib/keys";
+import { windowChanges } from "../lib/signals";
 import { createWheelGate } from "../lib/wheel-gate";
 import {
   firstStepOf,
@@ -49,6 +50,8 @@ const numbers = [
 const touch = matchMedia("(max-width: 760px)");
 
 let step = 0;
+/** The layout on show, to tell the windows that come and go. */
+let shown: Layout | null = null;
 /** An unknown path booted the desktop: the not-found terminal is on show. */
 let notFound = area.dataset.notFound === "true";
 
@@ -77,6 +80,45 @@ function showNotFound(): void {
   if (missing) missing.textContent = location.pathname;
 }
 
+/**
+ * Tell the compositions: a window's slot (`[data-slot]`) gets
+ * `composition:enter` when its window comes on show and `composition:leave`
+ * when it goes, and `data-active` says which. Fired at once, as the re-tile
+ * begins.
+ */
+function signal(before: Layout | null, after: Layout): void {
+  const { entered, left } = windowChanges(before, after);
+  for (const [ids, type] of [
+    [left, "leave"],
+    [entered, "enter"],
+  ] as const) {
+    for (const id of ids) {
+      const slot = area.querySelector<HTMLElement>(
+        `.pane[data-window="${id}"] [data-slot]`,
+      );
+      if (!slot) continue;
+      slot.dataset.active = String(type === "enter");
+      slot.dispatchEvent(
+        new CustomEvent(`composition:${type}`, {
+          detail: {
+            repository: slot.dataset.composition,
+            position: Number(slot.dataset.position),
+          },
+        }),
+      );
+    }
+  }
+}
+
+/** Mark the stack's current project (`index` is 0-based; -1 for none). */
+function markStack(index: number): void {
+  for (const a of area.querySelectorAll<HTMLElement>("[data-stack] a")) {
+    if (Number(a.dataset.position) - 1 === index)
+      a.setAttribute("aria-current", "true");
+    else a.removeAttribute("aria-current");
+  }
+}
+
 /** Put the windows of a step in place; animate from where they are if asked. */
 function place(n: number, animate: boolean): void {
   const layout = layoutOf(n);
@@ -103,8 +145,11 @@ function place(n: number, animate: boolean): void {
   }
 
   showNotFound();
+  signal(shown, layout);
+  shown = layout;
 
-  const { workspace } = locate(workspaces, n);
+  const { workspace, index } = locate(workspaces, n);
+  markStack(workspaces[workspace]?.id === "projects" ? index : -1);
   area.dataset.step = String(n);
   area.dataset.workspace = String(workspace);
   for (const [i, b] of numbers.entries()) {

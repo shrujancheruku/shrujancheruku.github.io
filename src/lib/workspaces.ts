@@ -66,9 +66,9 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
         [comp]: [30, 0, 70, 100],
       },
       {
-        [copy]: [0, 0, 100, 34],
-        [comp]: [0, 34, 100, 48],
-        stack: [0, 82, 100, 18],
+        [copy]: [0, 0, 100, 32],
+        [comp]: [0, 32, 100, 44],
+        stack: [0, 76, 100, 24],
       },
     );
   });

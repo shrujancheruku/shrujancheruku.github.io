@@ -2,16 +2,23 @@
 // Every window of the desktop. Which are on show, and where, is decided by the
 // workspaces' tilings (src/lib/workspaces.ts); this file only holds them.
 // Windows other tickets build are placeholders until then.
+import { copyOf, stackOf } from "../lib/project-copy";
+import type { Project } from "../lib/projects";
+import CompositionSlot from "./CompositionSlot.astro";
 import NameWindow from "./NameWindow.astro";
 import Placeholder from "./Placeholder.astro";
+import ProjectCopy from "./ProjectCopy.astro";
+import ProjectStack from "./ProjectStack.astro";
 import Window from "./Window.astro";
 
 interface Props {
-  featured: number;
+  /** The featured projects, in order: one copy and composition window each. */
+  featured: Project[];
+  /** How many projects are in the archive. */
+  archive: number;
 }
 
-const { featured } = Astro.props;
-const projects = Array.from({ length: featured }, (_, i) => i + 1);
+const { featured, archive } = Astro.props;
 ---
 
 <!-- opening, and again on contact -->
@@ -21,14 +28,16 @@ const projects = Array.from({ length: featured }, (_, i) => i + 1);
 
 <!-- projects: one step per featured project -->
 {
-  projects.map((n) => (
+  featured.map((project, i) => (
     <>
-      <Window id={`copy-${n}`}><Placeholder ticket={37} /></Window>
-      <Window id={`comp-${n}`}><Placeholder ticket={39} /></Window>
+      <ProjectCopy n={i + 1} copy={copyOf(project, i + 1, featured.length, archive)} />
+      <Window id={`comp-${i + 1}`}>
+        <CompositionSlot repository={project.repository} position={i + 1} />
+      </Window>
     </>
   ))
 }
-<Window id="stack" label="featured"><Placeholder ticket={37} /></Window>
+<ProjectStack stack={stackOf(featured, archive)} />
 
 <!-- timeline -->
 <Window id="timeline" label="timeline" scrolls><Placeholder ticket={43} /></Window>
