@@ -32,6 +32,8 @@ test("boots on the opening workspace with its three windows", async ({
 test("wheel scrolling moves one step at a time through all five workspaces", async ({
   page,
 }) => {
+  // sixteen settles alone are 17.6 s, and each of the 112 wheel events waits for a frame
+  test.setTimeout(60_000);
   await page.mouse.move(640, 400);
   const seen: number[] = [];
   for (let i = 0; i < 4 + 4; i++) {
