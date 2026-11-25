@@ -1,0 +1,7 @@
+# The four sabbatical photo windows, grid order: 1 top left, 4 bottom right.
+# To supply a photograph: put the image in src/assets/sabbatical/, then add
+# `file: <name>` to that photo's line and set its place and date.
+- { id: "1", place: somewhere, date: "2026" }
+- { id: "2", place: somewhere, date: "2026" }
+- { id: "3", place: somewhere, date: "2026" }
+- { id: "4", place: somewhere, date: "2026" }
