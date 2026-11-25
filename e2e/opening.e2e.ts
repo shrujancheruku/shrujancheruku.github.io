@@ -55,18 +55,23 @@ test("the terminal types whoami, cat claim and cat ask, with the replies in the 
 test("~/now is a one-line teaser; clicking it jumps to sabbatical and adds a history entry", async ({
   page,
 }) => {
-  const teaser = page.locator('[data-window="now"] [data-jump]');
+  const teaser = page.locator('[data-window="now"] a.teaser');
   await expect(teaser).toHaveText(/sabbatical/);
-  const lines = await teaser.evaluate(
+  const height = await teaser.evaluate(
     (el) => el.getBoundingClientRect().height,
   );
-  expect(lines).toBeLessThan(30);
+  expect(height).toBeLessThan(30);
 
   const before = await page.evaluate(() => history.length);
   await teaser.click();
   await expect(area(page)).toHaveAttribute("data-workspace", "3");
   await expect(page).toHaveURL(/\/now\/$/);
   expect(await page.evaluate(() => history.length)).toBe(before + 1);
+
+  // Back undoes the jump: the opening is on show again at the root address
+  await page.goBack();
+  await expect(area(page)).toHaveAttribute("data-workspace", "0");
+  await expect(page).toHaveURL(/\/$/);
 });
 
 test("the name is Duo Bold at -0.02em on two lines inside its window, and scales with it", async ({
