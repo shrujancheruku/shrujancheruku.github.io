@@ -132,27 +132,91 @@ test("the clock shows on desktop", async ({ page }) => {
   await expect(page.locator("[data-clock]")).toHaveText(/\d{1,2}:\d{2}/);
 });
 
-test("on load the tooltips are written out and vanish on the first key, with the halo", async ({
+/** The first interaction of each kind, and nothing else. */
+const FIRST: [string, (page: Page) => Promise<void>][] = [
+  [
+    "pointer press",
+    async (page) => {
+      await page.mouse.move(5, 5);
+      await page.mouse.down();
+      await page.mouse.up();
+    },
+  ],
+  ["key", (page) => page.keyboard.press("Shift")],
+  [
+    "wheel",
+    async (page) => {
+      // over the status bar, and too small to step
+      await page.mouse.move(640, 10);
+      await page.mouse.wheel(0, 5);
+    },
+  ],
+];
+
+for (const [kind, interact] of FIRST) {
+  test(`on load the tooltips are written out and vanish on the first ${kind}, with the halo`, async ({
+    page,
+  }) => {
+    await ready(page);
+    const tips = page.locator(".tip");
+    await expect(tips).toHaveCount(5);
+    for (const tip of await tips.all())
+      await expect(tip).toHaveCSS("opacity", "1");
+    await expect(page.locator(".tip[data-tip]")).toContainText(
+      "workspaces 1 – 5",
+    );
+    const animation = () =>
+      page
+        .locator(".halo")
+        .evaluate((el) => getComputedStyle(el).animationName);
+    await expect.poll(animation).toBe("halo");
+    await interact(page);
+    for (const tip of await tips.all())
+      await expect(tip).toHaveCSS("opacity", "0");
+    expect(await animation()).toBe("none");
+  });
+}
+
+test("on touch the written-out tooltips vanish on the first touch", async ({
+  browser,
+}) => {
+  const page = await (
+    await browser.newContext({
+      hasTouch: true,
+      isMobile: true,
+      viewport: { width: 412, height: 915 },
+    })
+  ).newPage();
+  await ready(page);
+  const shown = page.locator(".tip:visible");
+  // the workspaces tooltip is not shown on touch
+  await expect(shown).toHaveCount(4);
+  // a touch alone, with no pointer or key event alongside it
+  await page.evaluate(() =>
+    document.body.dispatchEvent(
+      new TouchEvent("touchstart", { bubbles: true, cancelable: true }),
+    ),
+  );
+  await expect(shown).toHaveCount(0);
+});
+
+test("after the first interaction each toggle's tooltip shows on keyboard focus", async ({
   page,
 }) => {
   await ready(page);
-  await page.waitForTimeout(1500);
-  const tips = page.locator(".tip");
-  await expect(tips).toHaveCount(5);
-  for (const tip of await tips.all())
-    await expect(tip).toHaveCSS("opacity", "1");
-  await expect(page.locator(".tip[data-tip]")).toContainText(
-    "workspaces 1 – 5",
-  );
-  const animation = () =>
-    page.locator(".halo").evaluate((el) => getComputedStyle(el).animationName);
-  expect(await animation()).toBe("halo");
-  await page.mouse.move(5, 5);
-  await page.mouse.down();
-  await page.mouse.up();
-  for (const tip of await tips.all())
+  await page.mouse.click(5, 790);
+  for (const act of ["home", "contact", "crt", "theme"]) {
+    const button = page.locator(`[data-act="${act}"]`);
+    const tip = button.locator(".tip");
     await expect(tip).toHaveCSS("opacity", "0");
-  expect(await animation()).toBe("none");
+    // reach it by keyboard, so the focus is visible
+    await button.focus();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Shift+Tab");
+    await expect(button).toBeFocused();
+    await expect(tip).toHaveCSS("opacity", "1");
+    await page.keyboard.press("Tab");
+  }
 });
 
 test("with reduced motion the halo does not pulse", async ({ browser }) => {
