@@ -10,7 +10,9 @@ export interface KeyInput {
 
 export type KeyCommand =
   | { type: "workspace"; index: number }
-  | { type: "step"; direction: 1 | -1 };
+  | { type: "step"; direction: 1 | -1 }
+  | { type: "crt" }
+  | { type: "theme" };
 
 /**
  * The command a key stands for, or null. Number keys jump to the workspace
@@ -36,6 +38,20 @@ export function interpretKey(
     case "ArrowUp":
     case "PageUp":
       return { type: "step", direction: -1 };
+    case "h":
+    case "H":
+      return { type: "workspace", index: 0 };
+    case "c":
+    case "C":
+      return workspaceCount >= 5
+        ? { type: "workspace", index: workspaceCount - 1 }
+        : null;
+    case "e":
+    case "E":
+      return { type: "crt" };
+    case "t":
+    case "T":
+      return { type: "theme" };
     case " ":
       return { type: "step", direction: e.shiftKey ? -1 : 1 };
     default:

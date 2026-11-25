@@ -63,3 +63,14 @@ test("tapping a number jumps to its workspace", async ({ page }) => {
     "true",
   );
 });
+
+test("no hover tooltips and no clock on touch, before or after interaction", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
+  await page.touchscreen.tap(200, 400);
+  await expect(page.locator("[data-clock]")).toBeHidden();
+  for (const tip of await page.locator(".tip").all())
+    await expect(tip).toBeHidden();
+});

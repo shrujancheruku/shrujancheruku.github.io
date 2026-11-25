@@ -178,7 +178,7 @@ addEventListener("keydown", (e: KeyboardEvent) => {
   if (command.type === "workspace") {
     e.preventDefault();
     goTo(firstStepOf(workspaces, command.index));
-  } else if (!e.repeat) {
+  } else if (command.type === "step" && !e.repeat) {
     e.preventDefault();
     goTo(stepAfter(workspaces, step, command.direction));
   }
@@ -188,6 +188,17 @@ for (const b of numbers) {
   b.addEventListener("click", () =>
     goTo(firstStepOf(workspaces, Number(b.dataset.workspace))),
   );
+}
+
+// home and contact: jumps to the opening and the last workspace.
+// TODO(#32): these are deliberate jumps (they add a history entry); use #32's API once merged.
+for (const [act, index] of [
+  ["home", 0],
+  ["contact", workspaces.length - 1],
+] as const) {
+  document
+    .querySelector(`[data-act="${act}"]`)
+    ?.addEventListener("click", () => goTo(firstStepOf(workspaces, index)));
 }
 
 // ---- layout changes between wide and touch

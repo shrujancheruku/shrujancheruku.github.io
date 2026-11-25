@@ -30,9 +30,9 @@
 }
 
 /* A theme is one set of custom property values switched by an attribute on
-   the root. Paper is the default whatever the system preference. */
-:root,
-[data-theme="paper"] {
+   the root (the blocks are generated from src/lib/themes.ts in the layout).
+   Paper is the default whatever the system preference; this is its fallback. */
+:where(:root) {
   --bg: #f2eede;
   --fg: #222222;
   --ac: #cc3e28;
