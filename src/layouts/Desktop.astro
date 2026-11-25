@@ -87,7 +87,7 @@ const workspacePaths = workspaces.map(
     <div class="screen">
       <StatusBar workspaces={workspaces} />
       <main class="area" data-step={step} data-workspace="0" data-boot-step={step} data-not-found={notFound ? "true" : undefined}>
-        <Windows featured={featured} archive={archive.length} />
+        <Windows featured={featured} archive={archive} />
         {notFound && <NotFoundWindow workspaces={workspaces} paths={workspacePaths} />}
         <slot />
       </main>

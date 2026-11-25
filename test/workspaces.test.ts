@@ -222,3 +222,39 @@ describe("the timeline's open variant (Education & Internships)", () => {
     }
   });
 });
+
+describe("the archive's open variant (projects)", () => {
+  const ws = createWorkspaces({ featured: 4 });
+  const projects = at(ws, 1);
+
+  test("every project step squeezes into the left 42% and the archive takes the right 58%", () => {
+    for (const step of projects.steps) {
+      const closed = tilingOf(step, "desktop", false);
+      const l = tilingOf(step, "desktop", true);
+      expect(tile(l, "archive")).toEqual([42, 0, 58, 100]);
+      expect(focusOf(step, true)).toBe("archive");
+      for (const [id, [x, y, w, h]] of Object.entries(closed)) {
+        const [ox, oy, ow, oh] = tile(l, id);
+        expect([ox, oy, ow, oh].map((n) => Math.round(n * 100) / 100)).toEqual(
+          [x * 0.42, y, w * 0.42, h].map((n) => Math.round(n * 100) / 100),
+        );
+      }
+    }
+  });
+
+  test("on touch the archive takes the whole workspace", () => {
+    for (const step of projects.steps) {
+      expect(tilingOf(step, "touch", true)).toEqual({
+        archive: [0, 0, 100, 100],
+      });
+    }
+  });
+
+  test("the archive tiling fills the area", () => {
+    for (const kind of ["desktop", "touch"] as const) {
+      const l = tilingOf(at(projects.steps, 0), kind, true);
+      const area = Object.values(l).reduce((a, [, , w, h]) => a + w * h, 0);
+      expect(Math.round(area)).toBe(10000);
+    }
+  });
+});
