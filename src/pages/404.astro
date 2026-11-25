@@ -1,0 +1,17 @@
+---
+// Any path the site does not have: the desktop with a terminal that says so
+// and offers the workspaces. GitHub Pages serves this file for unknown paths.
+import Desktop from "../layouts/Desktop.astro";
+import { DESCRIPTION, notFoundTitle } from "../lib/addresses";
+import { getSite } from "../lib/site";
+
+const { featured, book } = await getSite();
+---
+
+<Desktop
+  title={notFoundTitle}
+  description={DESCRIPTION}
+  featured={featured}
+  addresses={book.data}
+  notFound
+/>
