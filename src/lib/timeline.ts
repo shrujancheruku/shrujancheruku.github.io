@@ -154,3 +154,102 @@ export const education: Education = {
 /** The cue's label: the count of earlier roles, or "hide" while open. */
 export const cueText = (e: Education, open: boolean): string =>
   open ? "hide" : `${e.roles.length} earlier roles`;
+
+// ---- the skills window: bars, languages, hobbies (#26, #20). The resume reads
+// the same data.
+
+export interface Skill {
+  name: string;
+  /** Self-rated out of 10, whole numbers. Never shown as a number. */
+  score: number;
+}
+
+/** The real bars, highest to lowest, ties in the resume's order. */
+export const skills: readonly Skill[] = [
+  { name: "Python", score: 9 },
+  { name: "React + TypeScript", score: 9 },
+  { name: "Kubernetes + Helm", score: 8 },
+  { name: "Go", score: 7 },
+];
+
+export interface Bar extends Skill {
+  /** Fraction of the track; above 1 the bar runs past the end. */
+  length: number;
+  /** Comedic Talent: the joke bar, which shoots in after the real ones. */
+  joke: boolean;
+}
+
+/** Comedic Talent's score: the highest real score plus one. Derived, never stored. */
+export const comedicScore = (real: readonly Skill[]): number =>
+  Math.max(0, ...real.map((s) => s.score)) + 1;
+
+/** The real bars followed by Comedic Talent, with their track lengths. */
+export function skillBars(real: readonly Skill[]): Bar[] {
+  const bar = (s: Skill, joke: boolean): Bar => ({
+    ...s,
+    length: s.score / 10,
+    joke,
+  });
+  return [
+    ...real.map((s) => bar(s, false)),
+    bar({ name: "Comedic Talent", score: comedicScore(real) }, true),
+  ];
+}
+
+export type LanguageLevel =
+  | "native"
+  | "proficient"
+  | "conversational"
+  | "rudimentary";
+
+export const languages: readonly { name: string; level: LanguageLevel }[] = [
+  { name: "English", level: "native" },
+  { name: "Telugu", level: "native" },
+  { name: "Hindi", level: "proficient" },
+  { name: "Japanese", level: "conversational" },
+  { name: "French", level: "rudimentary" },
+];
+
+export interface Hobby {
+  name: string;
+  /** On the resume: bold in the accent. */
+  resume: boolean;
+}
+
+/** `tree ~/hobbies`: three folders, nine hobbies. */
+export const hobbies: readonly { folder: string; items: readonly Hobby[] }[] = [
+  {
+    folder: "outdoors",
+    items: [
+      { name: "hiking", resume: true },
+      { name: "football", resume: false },
+    ],
+  },
+  {
+    folder: "making",
+    items: [
+      { name: "photography", resume: true },
+      { name: "watchmaking", resume: true },
+      { name: "cooking", resume: false },
+      { name: "guitar", resume: false },
+    ],
+  },
+  {
+    folder: "thinking",
+    items: [
+      { name: "reading", resume: true },
+      { name: "pub quizzes", resume: false },
+      { name: "chess", resume: false },
+    ],
+  },
+];
+
+/** The five hobbies off the resume, in the founder's order, football strongest,
+ *  each with its share (%) of the foreground colour over the background. */
+export const hobbyFades: readonly { name: string; fg: number }[] = [
+  "football",
+  "cooking",
+  "pub quizzes",
+  "chess",
+  "guitar",
+].map((name, i) => ({ name, fg: 92 - i * 13 }));

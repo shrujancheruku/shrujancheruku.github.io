@@ -1,5 +1,15 @@
 import { describe, expect, test } from "bun:test";
-import { cueText, education, timeline } from "../src/lib/timeline";
+import {
+  comedicScore,
+  cueText,
+  education,
+  hobbies,
+  hobbyFades,
+  languages,
+  skillBars,
+  skills,
+  timeline,
+} from "../src/lib/timeline";
 
 describe("the timeline content", () => {
   test("holds the five career entries, newest first", () => {
@@ -99,5 +109,86 @@ describe("Education & Internships content", () => {
     expect(cueText(education, false)).toBe("4 earlier roles");
     expect(cueText(education, true)).toBe("hide");
     expect(education.cueNote).toBe("teaching, internships");
+  });
+});
+
+describe("the skill bars", () => {
+  test("holds the four real bars highest to lowest, ties in the resume's order", () => {
+    expect(skills.map((s) => [s.name, s.score])).toEqual([
+      ["Python", 9],
+      ["React + TypeScript", 9],
+      ["Kubernetes + Helm", 8],
+      ["Go", 7],
+    ]);
+  });
+
+  test("Comedic Talent comes last and is the highest real score plus one", () => {
+    const bars = skillBars(skills);
+    expect(bars.map((b) => b.name)).toEqual([
+      "Python",
+      "React + TypeScript",
+      "Kubernetes + Helm",
+      "Go",
+      "Comedic Talent",
+    ]);
+    expect(bars.map((b) => b.score)).toEqual([9, 9, 8, 7, 10]);
+    expect(bars.map((b) => b.joke)).toEqual([false, false, false, false, true]);
+  });
+
+  test("Comedic Talent is never stored in the source", () => {
+    expect(skills.some((s) => /comedic/i.test(s.name))).toBe(false);
+  });
+
+  test("a bar's length is its score out of 10; the joke runs past a full track", () => {
+    expect(skillBars(skills).map((b) => b.length)).toEqual([
+      0.9, 0.9, 0.8, 0.7, 1,
+    ]);
+    const tens = skillBars([{ name: "Python", score: 10 }]);
+    expect(comedicScore([{ name: "Python", score: 10 }])).toBe(11);
+    expect(tens[1]?.length).toBeCloseTo(1.1);
+  });
+
+  test("with no real bars Comedic Talent is 1", () => {
+    expect(comedicScore([])).toBe(1);
+  });
+});
+
+describe("languages and hobbies", () => {
+  test("the five languages and their levels", () => {
+    expect(languages.map((l) => [l.name, l.level])).toEqual([
+      ["English", "native"],
+      ["Telugu", "native"],
+      ["Hindi", "proficient"],
+      ["Japanese", "conversational"],
+      ["French", "rudimentary"],
+    ]);
+  });
+
+  test("three folders and nine hobbies as on the ticket", () => {
+    expect(hobbies.map((f) => [f.folder, f.items.map((h) => h.name)])).toEqual([
+      ["outdoors", ["hiking", "football"]],
+      ["making", ["photography", "watchmaking", "cooking", "guitar"]],
+      ["thinking", ["reading", "pub quizzes", "chess"]],
+    ]);
+  });
+
+  test("the resume's four are accented, the other five fade in order", () => {
+    const all = hobbies.flatMap((f) => f.items);
+    expect(
+      all
+        .filter((h) => h.resume)
+        .map((h) => h.name)
+        .sort(),
+    ).toEqual(["hiking", "photography", "reading", "watchmaking"]);
+    expect(hobbyFades.map((h) => h.name)).toEqual([
+      "football",
+      "cooking",
+      "pub quizzes",
+      "chess",
+      "guitar",
+    ]);
+    const fg = hobbyFades.map((h) => h.fg);
+    expect([...fg].sort((a, b) => b - a)).toEqual(fg);
+    expect(new Set(fg).size).toBe(5);
   });
 });

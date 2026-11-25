@@ -5,6 +5,7 @@
 import EducationWindow from "./EducationWindow.astro";
 import NameWindow from "./NameWindow.astro";
 import Placeholder from "./Placeholder.astro";
+import SkillsWindow from "./SkillsWindow.astro";
 import TimelineWindow from "./TimelineWindow.astro";
 import Window from "./Window.astro";
 
@@ -35,7 +36,7 @@ const projects = Array.from({ length: featured }, (_, i) => i + 1);
 <!-- timeline -->
 <TimelineWindow />
 <EducationWindow />
-<Window id="skills" label="skills" scrolls><Placeholder ticket={44} /></Window>
+<SkillsWindow />
 
 <!-- sabbatical -->
 <Window id="sabbatical"><Placeholder ticket={45} /></Window>
