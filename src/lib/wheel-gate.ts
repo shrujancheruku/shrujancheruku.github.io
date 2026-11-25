@@ -3,47 +3,63 @@
 // A trackpad flick keeps sending events for a second or more after the
 // fingers lift, and on a busy page those events can arrive hundreds of ms
 // apart. A gap alone cannot tell such a tail from a new gesture, but its
-// magnitude can: a tail only decays. So after a step the gate stays shut
-// while the animation runs, then for as long as each event comes within
-// `tailMs` of the one before, the same way, and no larger. A delta that rises
-// again, turns round, or comes after a longer silence is a new gesture.
+// magnitude can: a tail only decays. So after a step, an event is the tail
+// while it comes the same way as the one before, no larger, and within
+// `tailMs` of it. A delta that rises again, turns round, or comes after a
+// longer silence is a new gesture.
 //
-// `lockMs` counts from the wheel event, but on a busy page the re-tile can
-// start late and end well after it. So the caller also holds the gate for the
-// real animation and releases it when that ends. The tail window still runs
-// from the last wheel event, not the release: a single mouse notch has no
-// tail, and the next notch a second later is a new gesture.
+// A mouse wheel sends equal notches, each a gesture of its own. Equal deltas
+// are tail only when they come close together, as momentum does; an equal
+// delta big enough to step on its own, `steadyMs` or more after the last, is
+// a new notch.
+//
+// The caller holds the gate for the real re-tile, which on a busy page can
+// start late and end well after the event that asked for it, and releases it
+// when that ends. While held, a shrinking delta is tail however long the page
+// kept it waiting. A new gesture that comes while held is not dropped: the
+// gate remembers one pending step, the latest gesture's way, and `release`
+// hands it back to be taken at once.
 
 export interface WheelGateOptions {
-  /** How long the gate stays shut after a step, in ms (the animation). */
-  lockMs: number;
   /** The longest gap between two events of one gesture's tail, in ms. */
   tailMs: number;
+  /** The shortest gap at which an equal, step-sized delta is a new notch, in ms. */
+  steadyMs: number;
   /** How much delta, summed, makes a step. */
   threshold: number;
 }
 
 export interface WheelGate {
-  /** Feed one wheel event; returns the step to take: 1, -1 or 0. */
+  /** Feed one wheel event; returns the step to take now: 1, -1 or 0. */
   feed(time: number, delta: number): 1 | -1 | 0;
   /** Keep the gate shut until `release`, however long that takes. */
   hold(): void;
-  /** The animation ended: open the gate to anything but the tail. */
-  release(): void;
+  /** The re-tile ended: open the gate, and return the step that waited for it. */
+  release(): 1 | -1 | 0;
 }
 
 export function createWheelGate({
-  lockMs,
   tailMs,
+  steadyMs,
   threshold,
 }: WheelGateOptions): WheelGate {
-  let lockedUntil = Number.NEGATIVE_INFINITY;
   let held = false;
+  /** A step asked for while held: at most one, taken at the release. */
+  let pending: 1 | -1 | 0 = 0;
   /** After a step, until a new gesture starts: the events are its tail. */
   let inTail = false;
   let last = Number.NEGATIVE_INFINITY;
   let previous = 0;
   let sum = 0;
+
+  const isTail = (gap: number, delta: number, before: number): boolean => {
+    if (Math.sign(delta) !== Math.sign(before)) return false;
+    const size = Math.abs(delta);
+    const was = Math.abs(before);
+    if (size > was) return false;
+    if (size === was && gap >= steadyMs && size >= threshold) return false;
+    return gap < tailMs || held;
+  };
 
   return {
     feed(time, delta) {
@@ -54,13 +70,8 @@ export function createWheelGate({
       last = time;
       previous = delta;
 
-      if (held || time < lockedUntil) return 0;
       if (inTail) {
-        const decaying =
-          gap < tailMs &&
-          Math.sign(delta) === Math.sign(before) &&
-          Math.abs(delta) <= Math.abs(before);
-        if (decaying) return 0;
+        if (isTail(gap, delta, before)) return 0;
         inTail = false;
         sum = 0;
       }
@@ -72,17 +83,20 @@ export function createWheelGate({
 
       const direction = sum > 0 ? 1 : -1;
       sum = 0;
-      lockedUntil = time + lockMs;
       inTail = true;
-      return direction;
+      if (!held) return direction;
+      pending = direction;
+      return 0;
     },
     hold() {
       held = true;
     },
     release() {
-      if (!held) return;
+      if (!held) return 0;
       held = false;
-      inTail = true;
+      const step = pending;
+      pending = 0;
+      return step;
     },
   };
 }

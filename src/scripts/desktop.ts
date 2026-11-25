@@ -29,11 +29,7 @@ gsap.registerPlugin(Flip, Observer);
 /** How long a re-tile takes, in seconds. */
 const RETILE = 0.85;
 /** One step per wheel gesture; held shut while a re-tile runs. */
-const gate = createWheelGate({
-  lockMs: RETILE * 1000,
-  tailMs: 500,
-  threshold: 40,
-});
+const gate = createWheelGate({ tailMs: 500, steadyMs: 150, threshold: 40 });
 
 const found = document.querySelector<HTMLElement>("main.area");
 const modelEl = document.getElementById("desktop-model");
@@ -196,10 +192,15 @@ function place(n: number, animate: boolean): void {
   }
 }
 
-/** The newest re-tile; one that a later one overwrote does not open the wheel. */
+/**
+ * The newest re-tile; one that a later one overwrote does not open the wheel.
+ * When the newest ends, a wheel gesture that came during it steps now.
+ */
 let latest: gsap.core.Timeline | null = null;
 function settled(retiling: gsap.core.Timeline): void {
-  if (retiling === latest) gate.release();
+  if (retiling !== latest) return;
+  const waiting = gate.release();
+  if (waiting) scrollStep(waiting);
 }
 
 /** Open or close the step's disclosure; the windows re-tile and listen for the event. */
