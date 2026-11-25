@@ -1,7 +1,7 @@
 <!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <!-- PROTOTYPE composition · issho: the marketing site scrolls through its six steps, and the phone in front shows
      the app screen for the step on screen. Sources are easy to swap (v2 assets are coming): one full-page capture
-     and six app-screen SVGs in light and dark.
+     in light and dark (capture-site.ts) and six app-screen SVGs in light and dark.
      Takes: A laptop and phone · B the site is the window, phone in front · C three tiled panes (site, app, steps). -->
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="kit.css">
 <style>
@@ -37,7 +37,7 @@
   #pv{aspect-ratio:404/644!important;height:auto!important}}
 </style>
 <div class="backdrop"></div>
-<div id="lap"><div id="lid"><div id="sv" class="scr"><img id="pg" src="../src/issho/site-full.png" alt=""></div></div><div id="base"></div></div>
+<div id="lap"><div id="lid"><div id="sv" class="scr"><img id="pg" alt=""></div></div><div id="base"></div></div>
 <div id="ph" class="phone"><div id="pv" class="scr"></div></div>
 <div id="steps" class="pn"></div>
 <script type="module">
@@ -46,7 +46,9 @@ import { $, sleep, still, onTheme, theme, LIGHT } from "./kit.js";
 const STOPS = [[0, "plan", null, 2200], [.142, "plan", "It starts with a plan"], [.284, "date", "Date set"], [.357, "going", "Going"], [.48, "day", "On the day"], [.596, "again", "How was it?"], [.669, "crew", "A crew"]];
 const names = ["plan", "date", "going", "day", "again", "crew"], pv = $("#pv"), pg = $("#pg");
 pv.innerHTML = names.map(n => `<img data-n="${n}" alt="">`).join("");
-const skin = t => pv.querySelectorAll("img").forEach(i => i.src = `../src/issho/${i.dataset.n}-${LIGHT.includes(t) ? "light" : "dark"}.svg`);
+// the site capture and the app screens both switch between their light and dark sets with the theme
+["light", "dark"].forEach(m => new Image().src = `../src/issho/site-${m}.png`);
+const skin = t => { const m = LIGHT.includes(t) ? "light" : "dark"; pg.src = `../src/issho/site-${m}.png`; pv.querySelectorAll("img").forEach(i => i.src = `../src/issho/${i.dataset.n}-${m}.svg`); };
 onTheme(skin); skin(theme);
 $("#steps").innerHTML = STOPS.slice(1).map(([, , k], i) => `<div data-n="${i + 1}">${k}</div>`).join("");
 let at = 0;
