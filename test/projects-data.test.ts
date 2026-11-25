@@ -140,6 +140,13 @@ describe("the GitHub request", () => {
     expect(query).toContain('r1: repository(owner: "o", name: "b")');
   });
 
+  test("asks for the newest tags first, so a repository with over 100 keeps its latest", () => {
+    // GitHub lists refs alphabetically by default and the page holds 100
+    expect(buildQuery("o", ["a"])).toContain(
+      'refs(refPrefix: "refs/tags/", first: 100, orderBy: { field: TAG_COMMIT_DATE, direction: DESC })',
+    );
+  });
+
   test("sends one POST with the token and parses the recorded answer", async () => {
     const calls: { url: string; auth: string | null }[] = [];
     const fake = (async (url: string, init: RequestInit) => {

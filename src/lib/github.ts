@@ -23,7 +23,7 @@ const fields = `
   releases(first: 30, orderBy: { field: CREATED_AT, direction: DESC }) {
     nodes { tagName url isPrerelease isDraft }
   }
-  refs(refPrefix: "refs/tags/", first: 100) { nodes { name } }`;
+  refs(refPrefix: "refs/tags/", first: 100, orderBy: { field: TAG_COMMIT_DATE, direction: DESC }) { nodes { name } }`;
 
 export function buildQuery(owner: string, names: readonly string[]): string {
   const aliases = names.map(
