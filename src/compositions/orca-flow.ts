@@ -324,6 +324,9 @@ async function play(kit: Kit): Promise<void> {
       await kit.sleep(m.wait);
       move(m);
     }
+    // the answered line replaces the question, as in the prototype
+    view.question.replaceChildren();
+    view.answer.replaceChildren();
     view.answered.textContent = QUESTION.answered;
     await kit.sleep(500);
     kit.focus(view.panes.pr);
@@ -348,10 +351,7 @@ function end(kit: Kit): void {
   kit.el("span", "stream", COORDINATOR.message, view.coordinator);
   view.question.className = "wide";
   view.question.replaceChildren();
-  const title = kit.el("b", "", QUESTION.title, view.question);
-  title.style.color = "var(--hot)";
-  view.question.append(document.createElement("br"), QUESTION.ask);
-  prompt(view.answer, QUESTION.answer);
+  view.answer.replaceChildren();
   view.answered.textContent = QUESTION.answered;
   spin = 0;
   apply(state);

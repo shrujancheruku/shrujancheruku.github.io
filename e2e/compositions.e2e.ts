@@ -80,6 +80,9 @@ test("orca-flow plays the session and holds its end state", async ({
   await expect(scene).toContainText(
     "Answered: the archive opens from the projects workspace.",
   );
+  // the answered line replaces the question and its typed answer
+  await expect(scene).not.toContainText("Question from the coordinator");
+  await expect(scene).not.toContainText("1 projects workspace");
   // it holds: nothing changes afterwards
   const before = await scene.textContent();
   await page.waitForTimeout(1500);
@@ -206,6 +209,9 @@ test("a named still frame can be shown instead: the end state, for share cards",
   await expect(scene).toContainText(
     "Answered: the archive opens from the projects workspace.",
   );
+  // the answered line replaces the question and its typed answer
+  await expect(scene).not.toContainText("Question from the coordinator");
+  await expect(scene).not.toContainText("1 projects workspace");
   await expect(scene.locator(".pr")).toHaveClass(/focus/);
   // taking the frame away plays it again from the start
   await slot(page).evaluate((el) => {
