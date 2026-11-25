@@ -5,26 +5,18 @@
  */
 import type { RepositoryFacts } from "./github";
 import { pickVersion, type Version } from "./releases";
+import type { ContentFrontmatter } from "./schemas";
 
 export interface Ordering {
   featured: string[];
   archive: string[];
 }
 
-/** What a project's `index.md` says. */
-export interface ContentFile {
-  pitch: string;
-  proof?: string[];
-  live?: string;
-  /** Replaces the repository name as the display name. */
-  name?: string;
-  /** Replaces GitHub's main language. */
-  language?: string;
-  /** Switches the release version off; it can never set one. */
-  hideVersion?: boolean;
+/** What a project's `index.md` says: its frontmatter and its Markdown body. */
+export type ContentFile = ContentFrontmatter & {
   /** The Markdown body of `index.md`. */
   body?: string;
-}
+};
 
 export interface Project {
   /** The repository name, also the project's folder. */
