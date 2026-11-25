@@ -494,7 +494,13 @@ const wheel = Observer.create({
   type: "wheel",
   onWheel: (self) => {
     const e = self.event as WheelEvent;
-    if (e.ctrlKey || scrollsInside(e.target, e.deltaY)) return;
+    if (e.ctrlKey) return;
+    // a window scrolling its own content takes the event, and the rest of
+    // that gesture stays its tail once the window reaches its end
+    if (scrollsInside(e.target, e.deltaY)) {
+      gate.absorb(e.timeStamp, e.deltaY);
+      return;
+    }
     const direction = gate.feed(e.timeStamp, e.deltaY);
     if (direction) scrollStep(direction);
   },

@@ -164,3 +164,44 @@ test("a long list scrolls inside the window", async ({ page }) => {
     .evaluate((el) => el.scrollHeight > el.clientHeight);
   expect(scrollable).toBe(true);
 });
+
+test("a flick that scrolls the archive to its end does not also step; the next flick does", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 360 });
+  await ready(page, "/archive/");
+  await settle(page);
+  const list = archive(page).locator("[data-archive]");
+  // from the top, the list is shorter than the flick: it reaches its end part way
+  await list.evaluate((el) => {
+    el.scrollTop = 0;
+  });
+  expect(
+    await list.evaluate((el) => el.scrollHeight - el.clientHeight),
+  ).toBeLessThan(400);
+  const step = await area(page).getAttribute("data-step");
+  const lb = await list.boundingBox();
+  await page.mouse.move(
+    (lb?.x ?? 0) + (lb?.width ?? 0) / 2,
+    (lb?.y ?? 0) + (lb?.height ?? 0) / 2,
+  );
+  const flick = async () => {
+    for (let d = 120; d > 4; d = Math.floor(d * 0.8)) {
+      await page.mouse.wheel(0, d);
+      await page.waitForTimeout(16);
+    }
+  };
+  await flick();
+  await expect
+    .poll(() =>
+      list.evaluate(
+        (el) => el.scrollTop + el.clientHeight >= el.scrollHeight - 1,
+      ),
+    )
+    .toBe(true);
+  await settle(page);
+  expect(await area(page).getAttribute("data-step")).toBe(step);
+
+  await flick();
+  await expect(area(page)).not.toHaveAttribute("data-step", step ?? "");
+});

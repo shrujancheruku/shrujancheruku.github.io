@@ -266,4 +266,38 @@ describe("the wheel gate", () => {
     expect(g.release()).toBe(0);
     expect(g.feed(450, 20)).toBe(0);
   });
+
+  describe("events a window's own scroll took", () => {
+    test("leave the rest of that flick as tail when the window hits its end", () => {
+      const g = gate();
+      const flick = flickAt(0, 33);
+      // the window scrolls through the first six events, then reaches its end
+      for (const [t, d] of flick.slice(0, 6)) g.absorb(t, d);
+      const steps = flick.slice(6).filter(([t, d]) => g.feed(t, d)).length;
+      expect(steps).toBe(0);
+    });
+
+    test("leave the rest of a slow flick as tail, its events far apart", () => {
+      const g = gate();
+      const flick = flickAt(0, 400);
+      for (const [t, d] of flick.slice(0, 3)) g.absorb(t, d);
+      const steps = flick.slice(3).filter(([t, d]) => g.feed(t, d)).length;
+      expect(steps).toBe(0);
+    });
+
+    test("never step themselves", () => {
+      const g = gate();
+      expect(g.absorb(0, 120)).toBeUndefined();
+      expect(g.feed(600, 120)).toBe(1);
+    });
+
+    test("leave a new flick at the end to step", () => {
+      const g = gate();
+      const flick = flickAt(0, 33);
+      for (const [t, d] of flick) g.absorb(t, d);
+      const second = flickAt(1500, 33);
+      const steps = second.filter(([t, d]) => g.feed(t, d)).length;
+      expect(steps).toBe(1);
+    });
+  });
 });

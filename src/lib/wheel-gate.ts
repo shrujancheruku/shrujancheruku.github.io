@@ -35,6 +35,12 @@ export interface WheelGateOptions {
 export interface WheelGate {
   /** Feed one wheel event; returns the step to take now: 1, -1 or 0. */
   feed(time: number, delta: number): 1 | -1 | 0;
+  /**
+   * Note a wheel event that something else used, such as a window scrolling
+   * its own content. It never steps, but the rest of its gesture is tail, so
+   * a flick that scrolls a window to its end does not carry on into a step.
+   */
+  absorb(time: number, delta: number): void;
   /** Keep the gate shut until `release`, however long that takes. */
   hold(): void;
   /** The re-tile ended: open the gate, and return the step that waited for it. */
@@ -92,6 +98,13 @@ export function createWheelGate({
       if (!held) return direction;
       pending = direction;
       return 0;
+    },
+    absorb(time, delta) {
+      if (delta === 0) return;
+      last = time;
+      previous = delta;
+      sum = 0;
+      inTail = true;
     },
     hold() {
       held = true;
