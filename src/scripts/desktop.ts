@@ -60,6 +60,13 @@ let shown: Layout | null = null;
 let open = false;
 /** An unknown path booted the desktop: the not-found terminal is on show. */
 let notFound = area.dataset.notFound === "true";
+/** The archive entered the address bar as a history entry of its own (Back closes it). */
+let archivePushed = false;
+/** An archive open that waits for a scroll to its step (touch). */
+let pendingArchive: string | null = null;
+const archiveEl = area.querySelector<HTMLElement>(
+  '.pane[data-window="archive"]',
+);
 
 const layoutOf = (n: number): Layout =>
   tilingOf(stepAt(workspaces, n), touch.matches ? "touch" : "desktop", open);
@@ -203,29 +210,117 @@ function settled(retiling: gsap.core.Timeline): void {
   if (waiting) scrollStep(waiting);
 }
 
+/** Whether the step's disclosure is the archive (the projects workspace's). */
+const inProjects = (): boolean =>
+  workspaces[locate(workspaces, step).workspace]?.id === "projects";
+
+/** Tell the page the disclosure changed: Education's cue, or the archive's openers. */
+function announce(): void {
+  const kind = inProjects() ? "archive" : "open";
+  if (kind === "archive") {
+    for (const b of document.querySelectorAll("[data-archive-open]"))
+      b.setAttribute("aria-expanded", String(open));
+  }
+  document.dispatchEvent(
+    new CustomEvent(`desktop:${kind}`, { detail: { open } }),
+  );
+}
+
 /** Open or close the step's disclosure; the windows re-tile and listen for the event. */
 function setOpen(next: boolean, animate = true): void {
   if (next === open) return;
   if (next && !stepAt(workspaces, step).open) return;
   open = next;
+  if (!open) archivePushed = false;
   area.dataset.open = String(open);
   place(step, animate);
-  document.dispatchEvent(new CustomEvent("desktop:open", { detail: { open } }));
+  announce();
 }
 
 /** Leaving a step closes its disclosure. */
 function leave(): void {
+  archivePushed = false;
   if (!open) return;
+  closeDisclosure();
+}
+
+function closeDisclosure(): void {
   open = false;
   area.dataset.open = "false";
-  document.dispatchEvent(
-    new CustomEvent("desktop:open", { detail: { open: false } }),
+  announce();
+}
+
+// ---- the archive window
+// It is the projects workspace's `open` variant: opening re-tiles the workspace
+// to the left 42% and the archive takes the right 58% (the whole workspace on
+// touch). Its address is `/archive/`, pushed as a history entry; closing goes
+// Back to the address underneath.
+
+/** Mark the entry an address opened on, and bring it into view. */
+function markEntry(slug: string): void {
+  for (const li of area.querySelectorAll<HTMLElement>("[data-entry]")) {
+    if (slug && li.dataset.entry?.toLowerCase() === slug.toLowerCase()) {
+      li.setAttribute("aria-current", "true");
+      li.scrollIntoView({ block: "nearest", behavior: "instant" });
+    } else li.removeAttribute("aria-current");
+  }
+}
+
+/** Entries stagger in as the window opens. */
+function staggerEntries(): void {
+  gsap.fromTo(
+    area.querySelectorAll("[data-entry]"),
+    { y: 12, opacity: 0 },
+    {
+      y: 0,
+      opacity: 1,
+      duration: 0.5,
+      stagger: 0.05,
+      delay: 0.35,
+      ease: "expo.out",
+      overwrite: true,
+      clearProps: "transform,opacity",
+    },
   );
 }
 
+function openArchive(slug = "", push = true): void {
+  if (!archiveEl || open || !inProjects()) return;
+  if (push) {
+    history.pushState(null, "", ARCHIVE_PATH);
+    archivePushed = true;
+  }
+  document.title = book.forPath(ARCHIVE_PATH)?.title ?? document.title;
+  setOpen(true);
+  markEntry(slug);
+  staggerEntries();
+}
+
+function closeArchive(): void {
+  if (!open || !inProjects()) return;
+  if (archivePushed) {
+    // Back to the address underneath; popstate re-tiles
+    archivePushed = false;
+    history.back();
+    return;
+  }
+  const address = book.forStep(step);
+  history.replaceState(null, "", address.path);
+  document.title = address.title;
+  setOpen(false);
+}
+
+const ARCHIVE_PATH = "/archive/";
+
 document.addEventListener("click", (e) => {
-  const cue = (e.target as Element | null)?.closest("[data-disclosure]");
+  const target = e.target as Element | null;
+  const cue = target?.closest("[data-disclosure]");
   if (cue) setOpen(!open);
+  if (target?.closest("[data-archive-open]")) {
+    if (open) closeArchive();
+    else openArchive();
+  }
+  if (target?.closest("[data-archive-close]")) closeArchive();
 });
 
 /** Move to a step: re-tile on a wide screen, scroll the page on touch. */
@@ -270,6 +365,13 @@ function restore(): void {
   document.title = address?.title ?? NOT_FOUND_TITLE;
   leave();
   step = next;
+  if (address?.archive !== undefined && archiveEl) {
+    open = true;
+    area.dataset.open = "true";
+    announce();
+    markEntry(address.archive);
+    staggerEntries();
+  }
   place(step, true);
   if (touch.matches)
     window.scrollTo({ top: step * innerHeight, behavior: "instant" });
@@ -293,6 +395,8 @@ export function jump(n: number): void {
     notFound = false;
     place(step, false);
   }
+  // a jump to the step the archive is open on closes it, with no re-tile of its own
+  if (open && next === step) setOpen(false);
   goTo(next);
 }
 
@@ -300,7 +404,19 @@ export function jump(n: number): void {
 export function jumpToPath(path: string): boolean {
   const n = book.stepFor(path);
   if (n === undefined) return false;
-  jump(n);
+  const archive = book.forPath(path)?.archive;
+  if (archive === undefined) {
+    jump(n);
+    return true;
+  }
+  // an archive address: go to its step, then open the archive on its entry
+  if (n !== step) {
+    jump(n);
+    if (touch.matches) pendingArchive = archive;
+    else openArchive(archive);
+  } else {
+    openArchive(archive);
+  }
   return true;
 }
 
@@ -344,6 +460,11 @@ addEventListener(
     step = n;
     place(step, true);
     follow(step);
+    if (pendingArchive !== null) {
+      const slug = pendingArchive;
+      pendingArchive = null;
+      openArchive(slug);
+    }
   },
   { passive: true },
 );
@@ -387,6 +508,11 @@ addEventListener("keydown", (e: KeyboardEvent) => {
     t.matches("input, textarea, select, [contenteditable]")
   )
     return;
+  if (e.key === "Escape" && open && inProjects()) {
+    e.preventDefault();
+    closeArchive();
+    return;
+  }
   const command = interpretKey(e, workspaces.length);
   if (!command) return;
   if (command.type === "workspace") {
@@ -444,6 +570,17 @@ if (touch.matches) {
   window.scrollTo({ top: step * innerHeight, behavior: "instant" });
   wheel.disable();
 }
-place(step, false);
 area.dataset.open = "false";
+// /archive/ and an archive project's address boot with the archive open
+const bootArchive = notFound
+  ? undefined
+  : book.forPath(location.pathname)?.archive;
+if (bootArchive !== undefined && archiveEl && inProjects()) {
+  open = true;
+  area.dataset.open = "true";
+  announce();
+  markEntry(bootArchive);
+  staggerEntries();
+}
+place(step, false);
 area.dataset.ready = "true";

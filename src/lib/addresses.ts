@@ -25,6 +25,11 @@ export interface Address {
   description: string;
   /** The global step this address opens. */
   step: number;
+  /**
+   * Set when the address opens the archive window on that step: "" for the
+   * window alone, else the repository of the entry it opens on.
+   */
+  archive?: string;
 }
 
 export interface FeaturedProject {
@@ -57,6 +62,39 @@ const withSlash = (path: string): string =>
 /** The address of a project: its repository name in lower case. */
 export const projectPath = (repository: string): string =>
   `/work/${repository.toLowerCase()}/`;
+
+/**
+ * The archive's addresses (#38): `/archive/` and one per archive project, all
+ * on the last featured project's step with the archive open. None if the
+ * archive is empty. Pass the result as `extra` to `createAddressBook`.
+ */
+export function archiveAddresses(
+  workspaces: readonly Workspace[],
+  archive: readonly FeaturedProject[],
+): Address[] {
+  if (archive.length === 0) return [];
+  const projects = workspaces.findIndex((w) => w.id === "projects");
+  const step =
+    firstStepOf(workspaces, projects) +
+    (workspaces[projects]?.steps.length ?? 1) -
+    1;
+  return [
+    {
+      path: "/archive/",
+      title: titleFor("Archive"),
+      description: DESCRIPTION,
+      step,
+      archive: "",
+    },
+    ...archive.map((p) => ({
+      path: projectPath(p.repository),
+      title: titleForProject(p.repository),
+      description: p.pitch,
+      step,
+      archive: p.repository,
+    })),
+  ];
+}
 
 /**
  * `featured` are the featured projects in order; project N is step
