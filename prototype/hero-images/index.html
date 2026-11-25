@@ -1,0 +1,149 @@
+<!doctype html>
+<!--
+  PROTOTYPE — throwaway. Ticket "How hero images and screenshots are made".
+  Every candidate way of making a featured project's imagery, tried on issho
+  (live site) and orca-flow (no site), shown inside a mock project window.
+  Switch with ?project=&method=, the bottom bar, ← → (method) and ↑ ↓ (project).
+  Run: bun install && bun capture.ts && bun run view   → http://localhost:4517
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE · hero images</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#1a1b26;color:#c0caf5;font:14px/1.5 'JetBrains Mono',monospace;-webkit-font-smoothing:antialiased;overflow:hidden}
+a{color:#7aa2f7}
+.desk{height:100vh;display:grid;grid-template:auto 1fr/minmax(300px,1fr) 2.1fr;gap:10px;padding:10px 10px 70px}
+.bar{grid-column:1/-1;display:flex;justify-content:space-between;padding:6px 14px;background:#2a2e44;border-radius:8px;font-size:13px}
+.bar b{color:#7aa2f7}
+.win{border:2px solid #2a2e44;border-radius:10px;overflow:hidden;position:relative;min-height:0}
+.win.focus{border-color:#7aa2f7}
+.copy{padding:26px;display:flex;flex-direction:column;gap:14px;overflow:auto}
+.copy h1{font-size:clamp(34px,4vw,60px);font-weight:800;letter-spacing:-.05em;line-height:1}
+.copy em{font:italic 400 clamp(20px,1.9vw,28px)/1.2 'Instrument Serif',serif;color:#7aa2f7}
+.copy hr{border:0;border-top:1px dashed #414868;margin:6px 0}
+.copy h2{font-size:13px;color:#e0af68;text-transform:uppercase;letter-spacing:.08em}
+.copy p{font-size:13px}
+table{font-size:12px;border-collapse:collapse;width:100%}
+td{padding:3px 8px 3px 0;vertical-align:top;border-bottom:1px solid #2a2e44}
+td:first-child{color:#737aa2;white-space:nowrap}
+.yes{color:#9ece6a}.no{color:#f7768e}.meh{color:#e0af68}
+.hero{background:#16161e}
+.hero>img,.hero>video,.hero>iframe{position:absolute;inset:0;width:100%;height:100%;border:0;object-fit:cover;object-position:top}
+.hero>img.contain{object-fit:contain;object-position:center}
+.hero .pan{position:absolute;inset:0;overflow:hidden}
+.hero .pan img{width:100%;display:block;animation:pan 26s ease-in-out infinite alternate}
+@keyframes pan{to{transform:translateY(calc(-100% + 100vh - 110px))}}
+.term{position:absolute;inset:0;padding:28px 32px;font-size:clamp(11px,1.15vw,17px);line-height:1.7;white-space:pre;overflow:hidden}
+.term .cur{display:inline-block;width:.6em;height:1.1em;background:#c0caf5;vertical-align:text-bottom;animation:bl 1s steps(1) infinite}
+@keyframes bl{50%{opacity:0}}
+.tag{position:absolute;right:10px;top:10px;background:#000a;padding:3px 8px;border-radius:5px;font-size:11px;z-index:2}
+/* switcher: not part of the design */
+#sw{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:6px;background:#111;color:#fff;border:1px solid #555;border-radius:999px;padding:6px 8px;font:500 13px/1 system-ui,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+#sw button{all:unset;cursor:pointer;white-space:nowrap;min-width:28px;height:28px;border-radius:14px;text-align:center;line-height:28px;background:#2a2a2a;padding:0 6px}
+#sw button:hover,#sw button.on{background:#ffd400;color:#000}
+#sw span{padding:0 10px;white-space:nowrap;min-width:330px;text-align:center}
+#sw i{width:1px;height:20px;background:#555;margin:0 4px}
+@media(max-width:800px){body{overflow:auto}.desk{height:auto;grid-template:auto auto 60vh/1fr}#sw span{min-width:0}}
+</style>
+</head>
+<body>
+<div class="desk">
+  <div class="bar"><span><b>2</b> projects · <span id="bslug"></span></span><span>PROTOTYPE · hero images</span></div>
+  <div class="win copy" id="copy"></div>
+  <div class="win focus hero" id="hero"></div>
+</div>
+<div id="sw">
+  <button data-p="issho">issho</button><button data-p="orca-flow">orca-flow</button><button data-p="unmacos">unmacos</button><button data-p="rapid-radiology">rapid-radiology</button><i></i>
+  <button id="prev">←</button><span id="lab"></span><button id="next">→</button>
+</div>
+<script>
+const Y='<b class="yes">yes</b>',N='<b class="no">no</b>',M=t=>`<b class="meh">${t}</b>`;
+const P={
+ issho:{pitch:"Find your people through the things you already love.",methods:[
+  {k:"comp",n:"Composition, designed for this project",comp:"compositions/issho.html",how:"A small HTML scene written for this project, built from a shared kit of device frames and fed by captured sources. Shown live; the same scene is baked to a 1200×630 share card.",auto:M("scene written once by hand, sources and card automatic"),rep:M("each new project needs its own scene"),note:"The marketing site on a laptop (full page, panning) with the app on a phone in front (six real screens, cycling)."},
+  {k:"social",n:"Reuse the social preview",f:"social-github.png",contain:1,how:"Download GitHub's image for the repository.",auto:Y,rep:Y,note:"issho has no custom social preview, so this is GitHub's generated card: light, generic, 1200×600."},
+  {k:"live",n:"Screenshot of the live site",f:"live-desktop.png",how:"Playwright opens the live address at 1440×900 @2x and saves the first screen.",auto:Y,rep:Y,note:"Sharp and true to the product. Light page inside a dark desktop."},
+  {k:"full",n:"Full-page screenshot, panned",f:"live-full.png",pan:1,how:"Playwright scrolls the whole page once, saves one tall image; the window pans it.",auto:Y,rep:Y,note:"Shows the whole landing page. Motion comes from the window, not the file."},
+  {k:"video",n:"Recorded scroll, looped video",f:"live-scroll.webm",video:1,how:"Playwright records an eased scroll of the live page to a .webm.",auto:Y,rep:Y,note:"Real page motion and animations. 2 MB, 1280×800, visibly softer than a screenshot."},
+  {k:"frame",n:"The live site itself, in the window",frame:"https://joinissho.com",how:"No image. The window embeds the live address.",auto:Y,rep:M("only if the site allows framing"),note:"Always current, fully interactive. Depends on a third-party page at view time."},
+  {k:"baked",n:"The composition baked to a share card",f:"comp-card.png",contain:1,how:"Playwright opens the composition with ?card=1 at 1200×630 and saves it.",auto:Y,rep:Y,note:"What a shared link to /work/issho/ would show."},
+  {k:"card",n:"Generated card, text only",f:"card.png",contain:1,how:"Name, pitch and language rendered from an HTML template to 1200×630.",auto:Y,rep:Y,note:"The fallback when nothing can be screenshotted. Also a share card."},
+ ]},
+ "orca-flow":{pitch:"Turn a backlog of issues into reviewed, merged pull requests.",methods:[
+  {k:"comp",n:"Composition, designed for this project",comp:"compositions/orca-flow.html",how:"A small HTML scene written for this project, built from a shared kit of device frames and fed by captured sources. Shown live; the same scene is baked to a 1200×630 share card.",auto:M("scene written once by hand, sources and card automatic"),rep:M("each new project needs its own scene"),note:"One monitor, one terminal, a build running as live text."},
+  {k:"baked",n:"The composition baked to a share card",f:"comp-card.png",contain:1,how:"Playwright opens the composition with ?card=1 at 1200×630 and saves it.",auto:Y,rep:Y,note:"What a shared link to /work/orca-flow/ would show."},
+  {k:"social",n:"Reuse the social preview",f:"social-github.png",contain:1,how:"Download GitHub's image for the repository.",auto:Y,rep:Y,note:"No custom social preview, so GitHub's generated card."},
+  {k:"readme",n:"Reuse the README's own art",f:"readme-hero.png",contain:1,how:"Render docs/images/hero.svg from the repository to PNG.",auto:Y,rep:M("only if the repository has art"),note:"Already designed for this project, in its own brand rather than the portfolio's."},
+  {k:"console",n:"README console art",f:"readme-console.png",contain:1,how:"Render docs/images/console.svg to PNG.",auto:Y,rep:M("only if the repository has art"),note:"A drawn terminal in mac-window chrome."},
+  {k:"term",n:"Terminal capture, static",f:"terminal.png",how:"A transcript file is rendered in the portfolio's own terminal style and saved as PNG.",auto:M("transcript written by hand, render automatic"),rep:Y,note:"Matches the desktop exactly. The transcript is curated, not a recording."},
+  {k:"replay",n:"Terminal replay, live text",term:1,how:"No image. The same transcript is typed out as real text in the window.",auto:M("transcript written by hand"),rep:Y,note:"Sharp at any size, follows the colour theme, selectable, animates. A few KB."},
+  {k:"pr",n:"Screenshot of a real pull request",f:"pull-request.png",how:"Playwright opens a public pull request built by flow (issho #628) and hides GitHub's header.",auto:Y,rep:Y,note:"The proof: 108 commits, 17 tickets closed, merged. GitHub's light page."},
+  {k:"profile",n:"Screenshot of the cost profile viewer",f:"readme-profile.png",contain:1,how:"The repository's own screenshot of viewer/profile.html.",auto:M("needs a real run's data"),rep:N,note:"A real product screen, specific to this project."},
+  {k:"card",n:"Generated card, text only",f:"card.png",contain:1,how:"Name, pitch and language rendered from an HTML template to 1200×630.",auto:Y,rep:Y,note:"The fallback. Also the share card for /work/orca-flow/."},
+ ]},
+ unmacos:{pitch:"A keyboard-first desktop for macOS, installed with one command.",methods:[
+  {k:"comp",n:"Composition, designed for this project",comp:"compositions/unmacos.html",how:"A small HTML scene written by hand for this project: live text and shapes, no captured video. The same scene is baked to a 1200×630 share card.",auto:M("scene written once by hand, card automatic"),rep:M("each new project needs its own scene"),note:"Terminals within a terminal. Windows spawn from the launcher, tile, move and close from the keyboard, and the theme switches live. Every tile is hand-written text."},
+  {k:"baked",n:"The composition baked to a share card",f:"comp-card.png",contain:1,how:"Playwright opens the composition with ?card=1 at 1200×630 and saves it.",auto:Y,rep:Y,note:"What a shared link to /work/unmacos/ would show."},
+ ]},
+ "rapid-radiology":{pitch:"Turn a radiologist's shorthand findings into a finished report, in their own words.",methods:[
+  {k:"comp",n:"Composition, designed for this project",comp:"compositions/rapid-radiology.html",how:"A small HTML scene written by hand for this project: live text and shapes, no captured video. The same scene is baked to a 1200×630 share card.",auto:M("scene written once by hand, card automatic"),rep:M("each new project needs its own scene"),note:"The flow from the repository's recording, redrawn: pick a report type, type shorthand findings, generate, two reports land. Changed lines are in the accent colour."},
+  {k:"baked",n:"The composition baked to a share card",f:"comp-card.png",contain:1,how:"Playwright opens the composition with ?card=1 at 1200×630 and saves it.",auto:Y,rep:Y,note:"What a shared link to /work/rapid-radiology/ would show."},
+ ]}};
+const q=new URLSearchParams(location.search);
+let proj=P[q.get("project")]?q.get("project"):"issho", mi=Math.max(0,P[proj].methods.findIndex(m=>m.k===q.get("method")));
+let transcript=[],timer;
+fetch("out/transcript.json").then(r=>r.json()).then(t=>{transcript=t;render()}).catch(()=>{});
+const $=s=>document.querySelector(s);
+async function render(){
+  clearTimeout(timer);
+  const p=P[proj],m=p.methods[mi],src=m.f&&`${m.dir||"out/"+proj}/${m.f}`,hero=$("#hero");
+  history.replaceState(null,"",`?project=${proj}&method=${m.k}`);
+  $("#bslug").textContent=`~/work/${proj}`;
+  $("#lab").innerHTML=`${String.fromCharCode(65+mi)} · ${m.n} <small style="opacity:.55">${mi+1}/${p.methods.length}</small>`;
+  document.querySelectorAll("#sw [data-p]").forEach(b=>b.classList.toggle("on",b.dataset.p===proj));
+  hero.innerHTML=m.video?`<video src="${src}" autoplay loop muted playsinline></video>`
+    :m.frame||m.comp?`<iframe src="${m.frame||m.comp}"></iframe>`
+    :m.term?`<div class="term" id="term"></div>`
+    :m.pan?`<div class="pan"><img src="${src}"></div>`
+    :`<img src="${src}" class="${m.contain?"contain":""}">`;
+  if(m.term) replay();
+  let dim="live DOM",size="—";
+  if(src){
+    size=await fetch(src,{method:"HEAD"}).then(r=>Math.round(r.headers.get("content-length")/1024)+" KB").catch(()=>"?");
+    const el=hero.querySelector("img,video");
+    await new Promise(r=>{if(el.naturalWidth||el.videoWidth)r();else el.onload=el.onloadedmetadata=r});
+    dim=`${el.naturalWidth||el.videoWidth}×${el.naturalHeight||el.videoHeight}`;
+  }
+  $("#copy").innerHTML=`<h1>${proj}</h1><em>${p.pitch}</em><hr>
+   <h2>${String.fromCharCode(65+mi)} · ${m.n}</h2><p>${m.note}</p>
+   <table><tr><td>how</td><td>${m.how}</td></tr><tr><td>file</td><td>${src?`<a href="${src}" target="_blank">${m.f}</a>`:"none"}</td></tr>
+   <tr><td>size</td><td>${dim} · ${size}</td></tr><tr><td>automatic</td><td>${m.auto}</td></tr><tr><td>works for a new project</td><td>${m.rep}</td></tr></table>`;
+}
+function replay(){
+  const el=$("#term");let li=0,ci=0;el.innerHTML="";
+  (function tick(){
+    if(!el.isConnected)return;
+    if(li>=transcript.length){timer=setTimeout(replay,5000);return}
+    const [c,b,t]=transcript[li];
+    if(ci===0)el.insertAdjacentHTML("beforeend",`<div style="color:${c};font-weight:${b?700:400}"> </div>`);
+    const typed=li===0; // the command is typed; output arrives a line at a time
+    ci=typed?ci+1:t.length;
+    el.lastChild.innerHTML=(t.slice(0,ci)||" ")+(typed&&ci<t.length?'<span class="cur"></span>':"");
+    if(ci>=t.length){li++;ci=0;timer=setTimeout(tick,typed?600:t?170:60)}else timer=setTimeout(tick,55);
+  })();
+}
+const step=d=>{const n=P[proj].methods.length;mi=(mi+d+n)%n;render()};
+const flip=d=>{const k=Object.keys(P);proj=k[(k.indexOf(proj)+d+k.length)%k.length];mi=0;render()};
+$("#prev").onclick=()=>step(-1);$("#next").onclick=()=>step(1);
+document.querySelectorAll("#sw [data-p]").forEach(b=>b.onclick=()=>{proj=b.dataset.p;mi=0;render()});
+addEventListener("keydown",e=>{if(e.target.matches("input,textarea,[contenteditable]"))return;
+  if(e.key==="ArrowLeft")step(-1);if(e.key==="ArrowRight")step(1);if(e.key==="ArrowUp"||e.key==="ArrowDown"){e.preventDefault();flip(e.key==="ArrowUp"?-1:1)}});
+render();
+</script>
+</body>
+</html>

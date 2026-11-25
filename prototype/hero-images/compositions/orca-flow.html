@@ -1,0 +1,16 @@
+<!doctype html><meta charset="utf-8">
+<!-- PROTOTYPE composition · orca-flow: one monitor, one terminal, a build running. -->
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="kit.css">
+<style>
+body{background:radial-gradient(80% 80% at 50% 35%,#16223a,#0b1220 75%)}
+.monitor{left:calc(50% - 40*var(--u));top:calc(50% - 27*var(--u))}
+.monitor .screen{box-shadow:inset 0 0 calc(6*var(--u)) #38d6f014}
+.term{font-size:calc(1.24*var(--u));line-height:1.55}
+.desk{position:absolute;left:0;right:0;top:calc(50% + 26.4*var(--u));bottom:0;background:linear-gradient(#131c30,#0b1220)}
+</style>
+<div class="desk"></div>
+<div class="monitor"><div class="bezel"><div class="screen"><div class="term" id="t"></div></div></div><div class="neck"></div><div class="foot"></div></div>
+<script type="module">
+import { replay } from "./kit.js";
+replay(document.getElementById("t"), await (await fetch("../out/transcript.json")).json());
+</script>

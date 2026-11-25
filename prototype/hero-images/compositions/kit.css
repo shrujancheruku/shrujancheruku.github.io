@@ -1,0 +1,28 @@
+/* PROTOTYPE kit shared by the per-project compositions: device frames + terminal text.
+   --u is the scene unit, so a composition fills any window or a 1200x630 card. */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{--u:min(1vw,1.72vh);--bg:#1a1b26;--fg:#c0caf5;--ac:#7aa2f7;--dim:#2a2e44;background:var(--bg);color:var(--fg);
+  font-family:'JetBrains Mono',monospace;-webkit-font-smoothing:antialiased;position:relative}
+.screen{position:relative;overflow:hidden;background:#000}
+.screen>img,.screen>video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top}
+/* laptop */
+.laptop{position:absolute;width:calc(66*var(--u))}
+.laptop .lid{background:#0c0d13;border:calc(.25*var(--u)) solid #3b3f55;border-bottom:0;border-radius:calc(1.6*var(--u)) calc(1.6*var(--u)) 0 0;padding:calc(1.1*var(--u)) calc(1.1*var(--u)) calc(1.4*var(--u))}
+.laptop .screen{aspect-ratio:16/10;border-radius:calc(.5*var(--u))}
+.laptop .base{height:calc(1.5*var(--u));margin:0 calc(-5*var(--u));background:linear-gradient(#4a4f6a,#23263a);border-radius:calc(.3*var(--u)) calc(.3*var(--u)) calc(1.6*var(--u)) calc(1.6*var(--u));position:relative}
+.laptop .base::after{content:"";position:absolute;left:50%;top:0;width:calc(10*var(--u));height:calc(.6*var(--u));transform:translateX(-50%);background:#171925;border-radius:0 0 calc(.6*var(--u)) calc(.6*var(--u))}
+/* phone */
+.phone{position:absolute;width:calc(17*var(--u));background:#0c0d13;border:calc(.25*var(--u)) solid #4a4f6a;border-radius:calc(2.6*var(--u));padding:calc(.7*var(--u));box-shadow:0 calc(2*var(--u)) calc(5*var(--u)) #000b}
+.phone .screen{aspect-ratio:404/700;border-radius:calc(2*var(--u))}
+.phone::after{content:"";position:absolute;left:50%;top:calc(1.3*var(--u));width:calc(4.6*var(--u));height:calc(1.1*var(--u));transform:translateX(-50%);background:#0c0d13;border-radius:99px;z-index:3}
+/* monitor */
+.monitor{position:absolute;width:calc(80*var(--u))}
+.monitor .bezel{background:#0c0d13;border:calc(.25*var(--u)) solid #3b3f55;border-radius:calc(1.2*var(--u));padding:calc(1*var(--u)) calc(1*var(--u)) calc(2.2*var(--u))}
+.monitor .screen{aspect-ratio:16/9;border-radius:calc(.4*var(--u));background:var(--bg)}
+.monitor .neck{width:calc(9*var(--u));height:calc(5*var(--u));margin:0 auto;background:linear-gradient(90deg,#23263a,#4a4f6a,#23263a)}
+.monitor .foot{width:calc(26*var(--u));height:calc(1.1*var(--u));margin:0 auto;background:#3b3f55;border-radius:calc(1*var(--u)) calc(1*var(--u)) calc(.2*var(--u)) calc(.2*var(--u))}
+/* terminal text */
+.term{position:absolute;inset:0;padding:calc(2.2*var(--u)) calc(2.6*var(--u));font-size:calc(1.36*var(--u));line-height:1.62;white-space:pre;overflow:hidden}
+.cur{display:inline-block;width:.6em;height:1.1em;background:currentColor;vertical-align:text-bottom;animation:bl 1s steps(1) infinite}
+@keyframes bl{50%{opacity:0}}

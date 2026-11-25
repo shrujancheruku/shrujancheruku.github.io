@@ -1,0 +1,40 @@
+<!doctype html><meta charset="utf-8">
+<!-- PROTOTYPE composition · rapid-radiology: the flow from the repository's recording, redrawn as live text.
+     Pick a Report Type, type shorthand Findings, generate, two Reports land side by side. -->
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="kit.css">
+<style>
+body{--bg:#121212;--fg:#d4d4d4;--ac:#e8894f;--dim:#2b2b2b;display:grid;grid-template:auto auto 1fr/1fr 1fr;gap:calc(1.2*var(--u));padding:calc(2*var(--u)) calc(4*var(--u));font-size:calc(1.3*var(--u));line-height:1.6}
+.p{border:calc(.15*var(--u)) solid var(--dim);border-radius:calc(1.2*var(--u));padding:calc(1.4*var(--u)) calc(1.8*var(--u));background:#161616;overflow:hidden;min-height:0}
+.w{grid-column:1/-1}
+h3{font-size:calc(1.4*var(--u));margin-bottom:calc(.8*var(--u))}h3::before{content:"▪ ";color:var(--ac)}
+.types{display:flex;gap:calc(.8*var(--u));flex-wrap:wrap}
+.types span{border:calc(.15*var(--u)) solid var(--dim);border-radius:calc(.6*var(--u));padding:calc(.3*var(--u)) calc(1.2*var(--u));transition:.3s}
+.types span.on{border-color:var(--ac);color:var(--ac)}
+#f{white-space:pre;min-height:calc(1.3*1.6*4*var(--u))}
+.btn{display:inline-block;margin-top:calc(.8*var(--u));background:var(--ac);color:#121212;font-weight:700;border-radius:calc(.6*var(--u));padding:calc(.4*var(--u)) calc(1.4*var(--u));transition:transform .15s,filter .15s}
+.btn.press{transform:scale(.94);filter:brightness(1.3)}
+.r div{opacity:0;transform:translateY(.4em);transition:.35s}.r div.in{opacity:1;transform:none}
+.r div.new{color:var(--ac)}
+</style>
+<div class="p w"><h3>Report Type</h3><div class="types" id="ty"></div></div>
+<div class="p w"><h3>Enter Findings</h3><div id="f"></div><span class="btn" id="go">Generate Reports</span></div>
+<div class="p"><h3>OpenAI Report</h3><div class="r" id="a"></div></div>
+<div class="p"><h3>Gemini Report</h3><div class="r" id="b"></div></div>
+<script type="module">
+import { card } from "./kit.js";
+const $ = s => document.querySelector(s), sleep = ms => card ? 0 : new Promise(r => setTimeout(r, ms));
+const types = ["CT Chest", "CT Abdomen and Pelvis", "MRI Knee", "MRI Brain", "US Abdomen"];
+const findings = "dilated appendix 11mm with periappendiceal fat stranding, appendicolith at base\nsmall volume free fluid in right iliac fossa\n6mm simple cyst segment 7 liver";
+// [changed?, text] — unchanged lines are the radiologist's own Normal Template, word for word
+const A = [[0,"No previous imaging available for comparison."],[0,"The liver has a smooth contour."],[1,"6 mm simple cyst in segment 7 of the liver."],[0,"No other focal liver lesions."],[0,"The gallbladder is thin-walled."],[0,"Normal spleen, pancreas and adrenals."],[1,"The appendix is dilated to 11 mm with periappendiceal fat stranding."],[1,"There is an appendicolith at its base."],[1,"Small volume of free fluid in the right iliac fossa."]];
+const B = [[0,"No previous imaging available for comparison."],[0,"The liver has a smooth contour."],[1,"6mm simple cyst in liver segment 7."],[0,"No other focal liver lesions."],[0,"The gallbladder is thin-walled."],[0,"Normal spleen, pancreas and adrenals."],[1,"Dilated appendix 11mm with periappendiceal fat stranding,"],[1,"appendicolith at base."],[1,"Small volume free fluid in right iliac fossa."]];
+const fill = (el, L) => el.innerHTML = L.map(([n, t]) => `<div class="${n ? "new" : ""}">${t}</div>`).join("");
+do {
+  $("#ty").innerHTML = types.map(t => `<span>${t}</span>`).join(""); $("#f").textContent = ""; fill($("#a"), A); fill($("#b"), B);
+  await sleep(900); $("#ty").children[1].classList.add("on"); await sleep(700);
+  for (let i = 1; i <= findings.length; i++) { $("#f").innerHTML = findings.slice(0, i) + '<span class="cur"></span>'; await sleep(findings[i - 1] === "\n" ? 260 : 22); }
+  $("#f").textContent = findings; await sleep(500); $("#go").classList.add("press"); await sleep(220); $("#go").classList.remove("press"); await sleep(500);
+  for (let i = 0; i < A.length; i++) { $("#a").children[i].classList.add("in"); await sleep(120); $("#b").children[i].classList.add("in"); await sleep(200); }
+  await sleep(6000);
+} while (!card);
+</script>

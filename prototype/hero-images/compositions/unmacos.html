@@ -1,0 +1,102 @@
+<!doctype html><meta charset="utf-8">
+<!-- PROTOTYPE composition · unmacos: terminals within a terminal. No device and no recordings: every tile is
+     hand-written text. Windows spawn, tile, move and close from the keyboard, and the theme switches live. -->
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="kit.css">
+<style>
+body{transition:background .6s,color .6s}
+.sb{position:absolute;left:calc(1*var(--u));right:calc(1*var(--u));top:calc(1*var(--u));height:calc(3*var(--u));display:flex;align-items:center;justify-content:space-between;
+  font-size:calc(1.15*var(--u));padding:0 calc(1.2*var(--u));background:var(--dim);border-radius:calc(.7*var(--u));transition:background .6s}
+.sb b,.a{color:var(--ac);transition:color .6s}.d{opacity:.5}
+#desk{position:absolute;left:calc(1*var(--u));right:calc(.2*var(--u));top:calc(4.8*var(--u));bottom:calc(.2*var(--u))}
+.tile{position:absolute;border:calc(.22*var(--u)) solid var(--dim);border-radius:calc(.8*var(--u));background:var(--bg);overflow:hidden;padding:calc(1.2*var(--u)) calc(1.4*var(--u));
+  font-size:calc(1.15*var(--u));line-height:1.6;white-space:pre;
+  transition:left .5s cubic-bezier(.2,.9,.2,1),top .5s cubic-bezier(.2,.9,.2,1),width .5s cubic-bezier(.2,.9,.2,1),height .5s cubic-bezier(.2,.9,.2,1),opacity .3s,transform .3s,border-color .3s,background .6s}
+.tile.focus{border-color:var(--ac)}
+.tile.out{opacity:0;transform:scale(.9)}
+.bar{display:inline-block;height:.7em;background:var(--ac);border-radius:2px;vertical-align:middle;transition:width .8s,background .6s}
+.menu{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%) scale(.96);width:calc(40*var(--u));background:var(--bg);border:calc(.22*var(--u)) solid var(--ac);border-radius:calc(.8*var(--u));
+  box-shadow:0 calc(2*var(--u)) calc(6*var(--u)) #000a;padding:calc(1.2*var(--u)) calc(1.5*var(--u));font-size:calc(1.3*var(--u));line-height:1.65;white-space:pre;opacity:0;transition:opacity .18s,transform .18s,background .6s,border-color .6s;z-index:5}
+.menu.on{opacity:1;transform:translate(-50%,-50%)}
+.menu .sel{background:var(--dim);border-radius:3px}
+.keys{position:absolute;left:50%;bottom:calc(2.4*var(--u));transform:translateX(-50%);z-index:6;background:#000d;color:#fff;padding:calc(.5*var(--u)) calc(1.4*var(--u));border-radius:99px;font-size:calc(1.25*var(--u));opacity:0;transition:opacity .2s;white-space:nowrap}
+.keys.on{opacity:1}.keys kbd{font:inherit;border:1px solid #777;border-radius:4px;padding:0 .4em;margin:0 .15em}
+</style>
+<div class="sb"><span><b>1</b> <span class="d">2 3 4 5</span></span><span id="clock"><span class="a" id="tn">tokyo-night</span> · 23 themes</span></div>
+<div id="desk"></div><div class="menu" id="menu"></div><div class="keys" id="keys"></div>
+<script type="module">
+import { card } from "./kit.js";
+const $ = s => document.querySelector(s), desk = $("#desk"), sleep = ms => new Promise(r => setTimeout(r, ms));
+const THEMES = { "tokyo-night": ["#1a1b26","#c0caf5","#7aa2f7","#2a2e44"], everforest: ["#272e33","#d3c6aa","#a7c080","#414b50"], "rose-pine": ["#191724","#e0def4","#ebbcba","#2a2740"], gruvbox: ["#282828","#ebdbb2","#fabd2f","#3c3836"] };
+const theme = n => { const [bg, fg, ac, dim] = THEMES[n]; Object.entries({ bg, fg, ac, dim }).forEach(([k, v]) => document.body.style.setProperty("--" + k, v)); $("#tn").textContent = n; };
+const APPS = {
+  nvim: `<span class="d"> 1 </span><span class="a">local</span> path = vim.fn.expand(<span class="a">"~/.local/state/unmacos/theme"</span>)
+<span class="d"> 2 </span>
+<span class="d"> 3 </span><span class="d">-- re-apply when the theme is switched</span>
+<span class="d"> 4 </span>vim.api.nvim_create_autocmd(<span class="a">"VimEnter"</span>, {
+<span class="d"> 5 </span>  once = <span class="a">true</span>,
+<span class="d"> 6 </span>  callback = <span class="a">function</span>()
+<span class="d"> 7 </span>    <span class="a">local</span> w = vim.uv.new_fs_event()
+<span class="d"> 8 </span>    w:start(path, {}, apply)
+<span class="d"> 9 </span>  <span class="a">end</span>,
+<span class="d">10 </span>})
+
+<b class="a"> NORMAL </b> <span class="d"> main  colourscheme.lua</span>`,
+  btop: `<b>cpu</b> <span class="d">M1 Pro</span>
+C0 <i class="bar" style="width:52%"></i> 52%
+C1 <i class="bar" style="width:38%"></i> 38%
+C2 <i class="bar" style="width:41%"></i> 41%
+C3 <i class="bar" style="width:19%"></i> 19%
+
+<b>mem</b> <span class="d">16.0 GiB</span>
+   <i class="bar" style="width:44%"></i> 6.7`,
+  spotify_player: `<b class="a">▶ Playback</b>
+Harrison Lesser · <span class="a">The Reytons</span>
+<span class="d">Alcopops &amp; Charity Shops</span>
+
+<i class="bar" style="width:38%"></i> <span class="d">1:19/3:14</span>`,
+  lazygit: `<b>Files</b>
+<span class="a"> M</span> home/dot_config/rift/config.toml
+<span class="a"> A</span> themes/ristretto.toml
+
+<b>Commits</b>
+<span class="d">7d9573e</span> feat(setup): add the wizard
+<span class="d">a3f1c20</span> feat(themes): ristretto`,
+};
+let tiles = [], focus = null;
+function layout() { // dwindle: each window splits what is left, alternating direction
+  let r = { x: 0, y: 0, w: 100, h: 100 };
+  tiles.forEach((t, i) => {
+    let me = r;
+    if (i < tiles.length - 1) { if (i % 2 === 0) { me = { ...r, w: r.w * (i ? .5 : .56) }; r = { ...r, x: r.x + me.w, w: r.w - me.w }; } else { me = { ...r, h: r.h / 2 }; r = { ...r, y: r.y + me.h, h: r.h - me.h }; } }
+    Object.assign(t.style, { left: me.x + "%", top: me.y + "%", width: `calc(${me.w}% - .8*var(--u))`, height: `calc(${me.h}% - .8*var(--u))` });
+    t.classList.toggle("focus", t === focus);
+  });
+}
+function spawn(app, instant) { const t = document.createElement("div"); t.className = "tile out"; t.innerHTML = APPS[app]; desk.append(t); tiles.push(t); focus = t; const tr = t.style.transition; t.style.transition = "none"; layout(); t.offsetWidth; t.style.transition = tr; if (instant) t.classList.remove("out"); else requestAnimationFrame(() => t.classList.remove("out")); }
+async function close() { const t = focus; t.classList.add("out"); await sleep(250); t.remove(); tiles = tiles.filter(x => x !== t); focus = tiles.at(-1); layout(); }
+async function keys(html, ms = 900) { $("#keys").innerHTML = html; $("#keys").classList.add("on"); await sleep(ms); }
+const k = (...ks) => ks.map(x => `<kbd>${x}</kbd>`).join("+");
+async function menu(title, items, query, pick) {
+  const m = $("#menu"), draw = q => { const f = items.filter(i => i.includes(q)); m.innerHTML = `<span class="a">${title}</span> <span class="d">${f.length} / ${items.length}</span>\n<b>❯ ${q}</b><span class="cur"></span>\n` + f.slice(0, 6).map(i => `<div class="${i === pick ? "sel" : ""}"> ${i === pick ? "<b class='a'>●</b>" : " "} ${i}</div>`).join(""); };
+  draw(""); m.classList.add("on"); await sleep(500);
+  for (let i = 1; i <= query.length; i++) { draw(query.slice(0, i)); await sleep(170); }
+  await sleep(450); m.classList.remove("on"); await sleep(150);
+}
+const apps = ["btop", "firefox", "ghostty", "lazygit", "nvim", "orca", "spotify_player"], themes = ["catppuccin", "everforest", "gruvbox", "kanagawa", "nord", "rose-pine", "tokyo-night"];
+// Starts with the desktop already in use. Every beat moves a window AND switches the theme, so both read at once;
+// one window opens and closes inside the cycle. Nothing resets, so the loop has no visible seam.
+["nvim", "btop", "spotify_player"].forEach(a => spawn(a, true)); focus = tiles[0]; layout();
+const order = Object.keys(THEMES); let ti = 0;
+const beat = async key => { // move + theme together
+  await keys(`${k("alt", "shift", key)} move · ${k("alt", "ctrl", "shift", "space")} theme`, 350);
+  const [a, b, c, ...rest] = tiles; tiles = [c, a, b, ...rest]; focus = c; layout();
+  theme(order[ti = (ti + 1) % order.length]); await sleep(1900);
+};
+if (!card) { await sleep(900); for (;;) {
+  await beat("h");
+  await keys(`${k("alt", "space")} launch an app`, 400); await menu("apps", apps, "laz", "lazygit"); spawn("lazygit"); await sleep(1300);
+  await beat("j");
+  focus = tiles.at(-1); layout(); await keys(`${k("alt", "w")} close the window`, 700); await close(); focus = tiles[0]; layout(); await sleep(900);
+  await beat("l");
+} }
+</script>
