@@ -1,7 +1,9 @@
 ---
+import { compositions, PENDING } from "../compositions/registry";
 // Every window of the desktop. Which are on show, and where, is decided by the
 // workspaces' tilings (src/lib/workspaces.ts); this file only holds them.
 // Windows other tickets build are placeholders until then.
+import { missingCompositions } from "../lib/composition-rules";
 import { copyOf, stackOf } from "../lib/project-copy";
 import type { Project } from "../lib/projects";
 import CompositionSlot from "./CompositionSlot.astro";
@@ -26,6 +28,23 @@ interface Props {
 }
 
 const { featured, archive } = Astro.props;
+// the ticket that writes each pending composition, for its placeholder
+const PENDING_TICKETS: Record<string, number> = {
+  issho: 40,
+  unmacos: 41,
+  "rapid-radiology": 42,
+};
+
+// the build fails when a featured project has no composition
+const missing = missingCompositions(
+  featured.map((p) => p.repository),
+  Object.keys(compositions),
+  PENDING,
+);
+if (missing.length > 0)
+  throw new Error(
+    `featured project without a composition: ${missing.join(", ")}. Write one in src/compositions and add it to registry.ts.`,
+  );
 ---
 
 <!-- opening, and again on contact -->
@@ -47,7 +66,7 @@ const { featured, archive } = Astro.props;
     <>
       <ProjectCopy n={i + 1} copy={copyOf(project, i + 1, featured.length, archive)} />
       <Window id={`comp-${i + 1}`}>
-        <CompositionSlot repository={project.repository} position={i + 1} />
+        <CompositionSlot repository={project.repository} position={i + 1} ticket={PENDING_TICKETS[project.repository]} />
       </Window>
     </>
   ))
