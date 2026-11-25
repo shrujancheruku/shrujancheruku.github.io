@@ -16,13 +16,12 @@ export async function getStaticPaths() {
 }
 
 const { address } = Astro.props;
-const { featured, book } = await getSite();
+const { book } = await getSite();
 ---
 
 <Desktop
   title={address.title}
   description={address.description}
-  featured={featured}
   addresses={book.data}
   step={address.step}
 />

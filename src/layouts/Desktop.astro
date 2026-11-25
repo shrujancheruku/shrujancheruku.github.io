@@ -4,6 +4,7 @@ import NotFoundWindow from "../components/NotFoundWindow.astro";
 import StatusBar from "../components/StatusBar.astro";
 import Windows from "../components/Windows.astro";
 import type { AddressData } from "../lib/addresses";
+import { getArchive, getFeatured } from "../lib/projects";
 import {
   CRT_KEY,
   DEFAULT_THEME,
@@ -16,8 +17,6 @@ import { createWorkspaces, firstStepOf, stepCount } from "../lib/workspaces";
 interface Props {
   title: string;
   description: string;
-  /** How many featured projects there are: one scroll step each. A placeholder until #37 reads the content. */
-  featured?: number;
   /** Every address of the site, for the script to follow (src/lib/addresses.ts). */
   addresses: AddressData;
   /** The step this entry page opens on (default: the first). */
@@ -29,12 +28,13 @@ interface Props {
 const {
   title,
   description,
-  featured = 4,
   addresses,
   step = 0,
   notFound = false,
 } = Astro.props;
-const workspaces = createWorkspaces({ featured });
+const featured = await getFeatured();
+const archive = await getArchive();
+const workspaces = createWorkspaces({ featured: featured.length });
 const steps = stepCount(workspaces);
 const themeCss = THEME_NAMES.map(
   (n) =>
@@ -87,7 +87,7 @@ const workspacePaths = workspaces.map(
     <div class="screen">
       <StatusBar workspaces={workspaces} />
       <main class="area" data-step={step} data-workspace="0" data-boot-step={step} data-not-found={notFound ? "true" : undefined}>
-        <Windows featured={featured} />
+        <Windows featured={featured} archive={archive.length} />
         {notFound && <NotFoundWindow workspaces={workspaces} paths={workspacePaths} />}
         <slot />
       </main>

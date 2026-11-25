@@ -32,6 +32,8 @@ test("boots on the opening workspace with its three windows", async ({
 test("wheel scrolling moves one step at a time through all five workspaces", async ({
   page,
 }) => {
+  // sixteen settles alone are 17.6 s, and each of the 112 wheel events waits for a frame
+  test.setTimeout(60_000);
   await page.mouse.move(640, 400);
   const seen: number[] = [];
   for (let i = 0; i < 4 + 4; i++) {
@@ -54,6 +56,24 @@ test("wheel scrolling moves one step at a time through all five workspaces", asy
     await settle(page);
   }
   expect(await current(page)).toEqual({ step: 0, workspace: 0 });
+});
+
+test("mouse notches that come during a re-tile each still move a step", async ({
+  page,
+}) => {
+  // over the status bar, so no window's own content takes the wheel
+  const bar = await page.locator("header.bar").boundingBox();
+  await page.mouse.move(640, (bar?.y ?? 0) + (bar?.height ?? 0) / 2);
+  // 700 ms apart, inside the 850 ms re-tile: each waits for the one before
+  for (let i = 0; i < 3; i++) {
+    await page.mouse.wheel(0, 120);
+    await page.waitForTimeout(700);
+  }
+  await expect(area(page)).toHaveAttribute("data-step", "3", {
+    timeout: 3000,
+  });
+  await settle(page);
+  expect((await current(page)).step).toBe(3);
 });
 
 test("keyboard scrolling moves one step at a time", async ({ page }) => {

@@ -1,0 +1,163 @@
+---
+// The copy window of a featured project: where it sits among the featured,
+// the name in the title face, the pitch, the proof lines, the facts and links.
+import type { Copy } from "../lib/project-copy";
+import Window from "./Window.astro";
+
+interface Props {
+  /** 1-based position among the featured: the window is `copy-<n>`. */
+  n: number;
+  copy: Copy;
+}
+
+const { n, copy } = Astro.props;
+---
+
+<Window id={`copy-${n}`}>
+  <article class="copy">
+    <p class="kick">{copy.counter}</p>
+    <h2>{copy.name}</h2>
+    <p class="pitch">{copy.pitch}</p>
+    <ul class="proof">
+      {copy.proof.map((line) => <li>{line}</li>)}
+    </ul>
+    <p class="facts">
+      {copy.facts.language && <span class="language">{copy.facts.language}</span>}
+      {
+        copy.facts.version && (
+          <a class="version" href={copy.facts.version.href} rel="noopener">
+            {copy.facts.version.label}
+          </a>
+        )
+      }
+    </p>
+    <p class="links">
+      {copy.links.map((link) => <a href={link.href} rel="noopener">{link.label} ↗</a>)}
+    </p>
+    {
+      copy.archiveMore && (
+        <button type="button" class="more" id="archive-more" data-archive-open>
+          {copy.archiveMore}
+        </button>
+      )
+    }
+  </article>
+</Window>
+
+<style>
+  .copy {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    /* if a tight screen still cannot fit it all, the window scrolls */
+    overflow-y: auto;
+    scrollbar-width: none;
+    padding: 28px 24px 22px 5cqw;
+  }
+
+  @container (max-height: 460px) {
+    .copy {
+      gap: 6px;
+      padding-top: 18px;
+      padding-bottom: 14px;
+    }
+
+    h2 {
+      font-size: clamp(28px, 10cqw, 38px);
+    }
+
+    .pitch {
+      font-size: 15px;
+      line-height: 1.4;
+    }
+
+    .proof {
+      font-size: 12px;
+      line-height: 1.5;
+    }
+  }
+
+  .kick {
+    font: 400 12px var(--mono);
+    opacity: 0.55;
+  }
+
+  h2 {
+    font: 700 clamp(28px, 13cqw, 52px) / 1 var(--title);
+    letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
+  }
+
+  .pitch {
+    font: 500 16px / 1.45 var(--mono);
+  }
+
+  .proof {
+    list-style: none;
+    font: 400 13px / 1.6 var(--mono);
+  }
+
+  .proof li::before {
+    content: "+ ";
+    color: var(--ac);
+  }
+
+  .facts {
+    margin-top: auto;
+    font: 400 12px var(--mono);
+    display: flex;
+    gap: 1ch;
+  }
+
+  .facts span {
+    opacity: 0.55;
+  }
+
+  .facts .language + .version::before {
+    content: "· ";
+    opacity: 0.55;
+  }
+
+  .facts a {
+    color: var(--ac);
+  }
+
+  .links {
+    display: flex;
+    gap: 1.4em;
+    flex-wrap: wrap;
+    font: 500 13px var(--mono);
+  }
+
+  .links a,
+  .more {
+    color: var(--ac);
+  }
+
+  .links a:hover,
+  .more:hover {
+    text-decoration: underline;
+  }
+
+  .more {
+    align-self: flex-start;
+    font: 500 13px var(--mono);
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  @media (max-width: 760px) {
+    .copy {
+      padding: 18px 16px 14px;
+      gap: 8px;
+    }
+
+    /* the window is a third of the screen: the proof lines give way */
+    .proof {
+      display: none;
+    }
+  }
+</style>

@@ -10,6 +10,7 @@ import {
   openAddresses,
 } from "../lib/addresses";
 import { interpretKey } from "../lib/keys";
+import { windowChanges } from "../lib/signals";
 import { createWheelGate } from "../lib/wheel-gate";
 import {
   firstStepOf,
@@ -27,6 +28,8 @@ gsap.registerPlugin(Flip, Observer);
 
 /** How long a re-tile takes, in seconds. */
 const RETILE = 0.85;
+/** One step per wheel gesture; held shut while a re-tile runs. */
+const gate = createWheelGate({ tailMs: 500, steadyMs: 150, threshold: 40 });
 
 const found = document.querySelector<HTMLElement>("main.area");
 const modelEl = document.getElementById("desktop-model");
@@ -51,6 +54,8 @@ const numbers = [
 const touch = matchMedia("(max-width: 760px)");
 
 let step = 0;
+/** The layout on show, to tell the windows that come and go. */
+let shown: Layout | null = null;
 /** The current step's disclosure (Education & Internships) is open. */
 let open = false;
 /** An unknown path booted the desktop: the not-found terminal is on show. */
@@ -79,6 +84,45 @@ function showNotFound(): void {
   if (missing) missing.textContent = location.pathname;
 }
 
+/**
+ * Tell the compositions: a window's slot (`[data-slot]`) gets
+ * `composition:enter` when its window comes on show and `composition:leave`
+ * when it goes, and `data-active` says which. Fired at once, as the re-tile
+ * begins.
+ */
+function signal(before: Layout | null, after: Layout): void {
+  const { entered, left } = windowChanges(before, after);
+  for (const [ids, type] of [
+    [left, "leave"],
+    [entered, "enter"],
+  ] as const) {
+    for (const id of ids) {
+      const slot = area.querySelector<HTMLElement>(
+        `.pane[data-window="${id}"] [data-slot]`,
+      );
+      if (!slot) continue;
+      slot.dataset.active = String(type === "enter");
+      slot.dispatchEvent(
+        new CustomEvent(`composition:${type}`, {
+          detail: {
+            repository: slot.dataset.composition,
+            position: Number(slot.dataset.position),
+          },
+        }),
+      );
+    }
+  }
+}
+
+/** Mark the stack's current project (`index` is 0-based; -1 for none). */
+function markStack(index: number): void {
+  for (const a of area.querySelectorAll<HTMLElement>("[data-stack] a")) {
+    if (Number(a.dataset.position) - 1 === index)
+      a.setAttribute("aria-current", "true");
+    else a.removeAttribute("aria-current");
+  }
+}
+
 /** Put the windows of a step in place; animate from where they are if asked. */
 function place(n: number, animate: boolean): void {
   const layout = layoutOf(n);
@@ -105,8 +149,11 @@ function place(n: number, animate: boolean): void {
   }
 
   showNotFound();
+  signal(shown, layout);
+  shown = layout;
 
-  const { workspace } = locate(workspaces, n);
+  const { workspace, index } = locate(workspaces, n);
+  markStack(workspaces[workspace]?.id === "projects" ? index : -1);
   area.dataset.step = String(n);
   area.dataset.workspace = String(workspace);
   for (const [i, b] of numbers.entries()) {
@@ -115,13 +162,18 @@ function place(n: number, animate: boolean): void {
   }
 
   if (state) {
-    Flip.from(state, {
+    // the wheel stays shut for the whole re-tile, which on a busy page starts
+    // late and ends well after the wheel event that asked for it
+    gate.hold();
+    const retiling = Flip.from(state, {
       targets: panes,
       duration: RETILE,
       ease: "expo.out",
       // animate width and height, so text is re-set rather than stretched
       scale: false,
       overwrite: true,
+      onComplete: () => settled(retiling),
+      onInterrupt: () => settled(retiling),
       onEnter: (els) =>
         gsap.fromTo(
           els,
@@ -136,7 +188,19 @@ function place(n: number, animate: boolean): void {
           ease: "expo.out",
         }),
     });
+    latest = retiling;
   }
+}
+
+/**
+ * The newest re-tile; one that a later one overwrote does not open the wheel.
+ * When the newest ends, a wheel gesture that came during it steps now.
+ */
+let latest: gsap.core.Timeline | null = null;
+function settled(retiling: gsap.core.Timeline): void {
+  if (retiling !== latest) return;
+  const waiting = gate.release();
+  if (waiting) scrollStep(waiting);
 }
 
 /** Open or close the step's disclosure; the windows re-tile and listen for the event. */
@@ -284,12 +348,7 @@ addEventListener(
   { passive: true },
 );
 
-// ---- wide: one step per wheel gesture, through Observer
-const gate = createWheelGate({
-  lockMs: RETILE * 1000,
-  quietMs: 120,
-  threshold: 40,
-});
+// ---- wide: one step per wheel gesture, through Observer (the gate is above)
 
 /** True if the wheel is over a window whose own content can still scroll that way. */
 function scrollsInside(target: EventTarget | null, dy: number): boolean {

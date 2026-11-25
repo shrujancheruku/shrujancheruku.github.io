@@ -1,0 +1,46 @@
+---
+// The place a featured project's composition mounts (#39). It fills the
+// window's body, which is a size container, so a composition can use container
+// units. The desktop script tells it when its step comes on show and goes:
+// it sets `data-active` and fires `composition:enter` / `composition:leave` on
+// this element (detail: `{ repository, position }`). Until a composition is
+// mounted it holds a placeholder in the site's theme.
+import Placeholder from "./Placeholder.astro";
+
+interface Props {
+  repository: string;
+  /** 1-based among the featured. */
+  position: number;
+}
+
+const { repository, position } = Astro.props;
+---
+
+<div
+  class="slot"
+  data-slot
+  data-composition={repository}
+  data-position={position}
+>
+  <p class="who">{repository}</p>
+  <Placeholder ticket={39} />
+</div>
+
+<style>
+  .slot {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--dim) 35%, var(--bg));
+    color: var(--fg);
+  }
+
+  .who {
+    font: 700 clamp(24px, 8cqw, 64px) / 1 var(--title);
+    letter-spacing: -0.02em;
+    color: var(--ac);
+    opacity: 0.35;
+  }
+</style>
