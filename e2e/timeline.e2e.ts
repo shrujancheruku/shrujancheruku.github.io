@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
+import { framesOf, ready, settle } from "./helpers";
 
-const settle = (page: Page) => page.waitForTimeout(1300);
 const rect = (page: Page, id: string) =>
   page.$eval(`[data-window="${id}"]`, (e) => {
     const area = document.querySelector("main.area")?.getBoundingClientRect();
@@ -21,8 +21,7 @@ const visible = (page: Page, id: string) =>
   );
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
+  await ready(page);
   await page.keyboard.press("3");
   await settle(page);
 });
@@ -55,12 +54,14 @@ test("the timeline scrolls inside its window on a short screen", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 420 });
-  await page.waitForTimeout(300);
-  const scroll = await page.$eval(
-    '[data-window="timeline"] .body',
-    (e) => e.scrollHeight > e.clientHeight,
-  );
-  expect(scroll).toBe(true);
+  await expect
+    .poll(() =>
+      page.$eval(
+        '[data-window="timeline"] .body',
+        (e) => e.scrollHeight > e.clientHeight,
+      ),
+    )
+    .toBe(true);
 });
 
 test("Education & Internships shows the degree and the cue, roles hidden", async ({
@@ -83,15 +84,17 @@ test("opening re-tiles to 46 / 54, drops skills, staggers the roles in; closing 
   page,
 }) => {
   const cue = page.locator("[data-disclosure=education]");
-  await cue.click();
-  await page.waitForTimeout(900);
-  // mid stagger: some roles are only part-way in
-  const opacities = await page.$$eval("#education-roles > article", (els) =>
-    els.map((e) => Number(getComputedStyle(e).opacity)),
+  const frames = await framesOf(
+    page,
+    "#education-roles > article",
+    "opacity",
+    () => cue.click(),
   );
-  expect(opacities).toHaveLength(4);
-  expect(opacities.some((o) => o < 1)).toBe(true);
-  await settle(page);
+  // staggered: on some frame an earlier role is further in than the last
+  const staggered = frames.filter(
+    (f) => f.length === 4 && (f[0] ?? 0) > (f[3] ?? 0),
+  );
+  expect(staggered.length).toBeGreaterThan(0);
 
   const t = await rect(page, "timeline");
   const e = await rect(page, "education");

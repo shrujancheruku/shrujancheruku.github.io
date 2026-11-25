@@ -1,8 +1,8 @@
 import { expect, type Page, test } from "@playwright/test";
+import { area, framesOf, settle } from "./helpers";
 
 const NAMES = ["opening", "projects", "timeline", "sabbatical", "contact"];
 
-const area = (page: Page) => page.locator("main.area");
 const current = async (page: Page) => ({
   step: Number(await area(page).getAttribute("data-step")),
   workspace: Number(await area(page).getAttribute("data-workspace")),
@@ -15,7 +15,6 @@ const shown = (page: Page) =>
       .map((e) => (e as HTMLElement).dataset.window)
       .sort(),
   );
-const settle = (page: Page) => page.waitForTimeout(1100);
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -145,26 +144,22 @@ test("the status bar lists the numbers with names and marks the current workspac
 });
 
 test("windows animate between tilings, not cut", async ({ page }) => {
-  const left = () =>
-    page.$eval('[data-window="name"]', (e) => e.getBoundingClientRect().left);
-  const before = await left();
-  await page.keyboard.press("5");
-  await page.waitForTimeout(150);
-  const mid = await left();
-  await settle(page);
-  const after = await left();
-  expect(before).toBeLessThan(mid);
-  expect(mid).toBeLessThan(after);
+  const frames = await framesOf(page, '[data-window="name"]', "left", () =>
+    page.keyboard.press("5"),
+  );
+  const lefts = frames.map(([l]) => l ?? 0);
+  const before = lefts[0] ?? 0;
+  const after = lefts[lefts.length - 1] ?? 0;
+  expect(before).toBeLessThan(after);
+  // it passes through the places between, frame by frame
+  expect(lefts.some((l) => l > before + 1 && l < after - 1)).toBe(true);
 });
 
 test("windows arriving fade in rather than appearing", async ({ page }) => {
-  await page.keyboard.press("ArrowDown");
-  await page.waitForTimeout(120);
-  const opacity = await page.$eval('[data-window="comp-1"]', (e) =>
-    Number(getComputedStyle(e).opacity),
+  const frames = await framesOf(page, '[data-window="comp-1"]', "opacity", () =>
+    page.keyboard.press("ArrowDown"),
   );
-  expect(opacity).toBeGreaterThan(0);
-  expect(opacity).toBeLessThan(1);
+  expect(frames.some(([o = 0]) => o > 0 && o < 1)).toBe(true);
 });
 
 test("windows have the decided gap, border, radius and focus gradient", async ({

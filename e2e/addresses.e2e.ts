@@ -1,14 +1,9 @@
 import { expect, type Page, test } from "@playwright/test";
+import { area, ready as boot, settle } from "./helpers";
 
 const DESCRIPTION = "I design and build. Give me a problem, not a spec.";
-const area = (page: Page) => page.locator("main.area");
-const boot = async (page: Page, path: string) => {
-  await page.goto(path);
-  await expect(area(page)).toHaveAttribute("data-ready", "true");
-};
 const workspace = async (page: Page) =>
   Number(await area(page).getAttribute("data-workspace"));
-const settle = (page: Page) => page.waitForTimeout(1100);
 const flick = async (page: Page, dy: number) => {
   for (let d = dy; Math.abs(d) > 4; d = Math.trunc(d * 0.8)) {
     await page.mouse.wheel(0, d);

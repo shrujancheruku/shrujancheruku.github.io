@@ -1,15 +1,10 @@
 import { expect, type Page, test } from "@playwright/test";
+import { ready, settle } from "./helpers";
 
 // the session takes about 17 s and some tests play it twice
 test.describe.configure({ timeout: 90_000 });
 
-const area = (page: Page) => page.locator("main.area");
 const slot = (page: Page) => page.locator('[data-composition="orca-flow"]');
-const ready = async (page: Page, path = "/") => {
-  await page.goto(path);
-  await expect(area(page)).toHaveAttribute("data-ready", "true");
-};
-const settle = (page: Page) => page.waitForTimeout(1100);
 /** The session takes about 17 s; allow for a busy machine. */
 const HELD = { timeout: 45_000 };
 
@@ -207,13 +202,11 @@ test("it follows the site theme live", async ({ page }) => {
   await page.evaluate(() => {
     document.documentElement.dataset.theme = "paper";
   });
-  await page.waitForTimeout(700);
-  expect(await bg()).toBe("rgb(242, 238, 222)");
+  await expect.poll(bg).toBe("rgb(242, 238, 222)");
   await page.evaluate(() => {
     document.documentElement.dataset.theme = "tokyo-night";
   });
-  await page.waitForTimeout(700);
-  expect(await bg()).toBe("rgb(26, 27, 38)");
+  await expect.poll(bg).toBe("rgb(26, 27, 38)");
 });
 
 test("a named still frame can be shown instead: the end state, for share cards", async ({

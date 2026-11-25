@@ -172,6 +172,8 @@ function place(n: number, animate: boolean): void {
     // the wheel stays shut for the whole re-tile, which on a busy page starts
     // late and ends well after the wheel event that asked for it
     gate.hold();
+    // for the page and its tests: a re-tile is running until `settled`
+    area.dataset.retiling = "true";
     const retiling = Flip.from(state, {
       targets: panes,
       duration: RETILE,
@@ -206,6 +208,7 @@ function place(n: number, animate: boolean): void {
 let latest: gsap.core.Timeline | null = null;
 function settled(retiling: gsap.core.Timeline): void {
   if (retiling !== latest) return;
+  area.dataset.retiling = "false";
   const waiting = gate.release();
   if (waiting) scrollStep(waiting);
 }
@@ -589,4 +592,5 @@ if (bootArchive !== undefined && archiveEl && inProjects()) {
   staggerEntries();
 }
 place(step, false);
+area.dataset.retiling ??= "false";
 area.dataset.ready = "true";
