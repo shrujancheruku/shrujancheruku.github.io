@@ -141,7 +141,13 @@ body.idle .tip::before{display:none}
 .il-body{overflow:hidden} .il-body .te{grid-template-columns:16ch 1fr}
 .sk{display:grid;grid-template-columns:auto 1fr;gap:6px 1.5ch;align-items:center;font:400 12.5px var(--mono)}
 .sk i{display:block;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--ac),var(--hot));transform-origin:left}
-.sk-more{font:400 12.5px/1.7 var(--mono);margin-top:14px} .sk-more b{font-weight:500;opacity:.55;display:inline-block;width:10ch}
+.sk-more{font:400 12.5px/1.7 var(--mono);margin-top:14px}
+/* status-dot list: the dot leads on the left, the status trails on the right (same as the launch cities in the issho composition) */
+.dl>div{display:flex;align-items:center;gap:1.2ch}.dl i{flex:none;width:9px;height:9px;border-radius:50%;border:2px solid var(--ac);box-sizing:border-box}
+.dl em{margin-left:auto;font-style:normal;font-size:11.5px;opacity:.6}
+.dl .native i{background:var(--ac)}.dl .native em{color:var(--ac);opacity:1;font-weight:700}
+.dl .proficient i{background:linear-gradient(90deg,var(--ac) 50%,transparent 50%)}
+.dl .rudimentary{opacity:.6}.dl .rudimentary i{border-color:var(--line)} .sk-more b{font-weight:500;opacity:.55;display:inline-block;width:10ch}
 .b-tl{position:absolute;inset:0;overflow:auto;padding:38px 24px 8px 5cqw;scrollbar-width:thin}
 .b-il,.b-sk{position:absolute;inset:0;overflow:auto;padding:38px 22px 16px;scrollbar-width:thin}
 .sc .b-copy{justify-content:flex-end}
@@ -317,7 +323,7 @@ const IL=[
   {roles:[['Mar – May 2013','Web Design Intern']],org:'EiQ Networks',tag:'Internship',desc:'Helped redesign the company website, front end and back end.',tech:['HTML','CSS','PHP','MySQL','Git','SVN']},
 ];
 const SKILLS=[['Python',.92],['React + TypeScript',.86],['Kubernetes + Helm',.8],['Go',.7],['Comedic Talent',1]];
-const LANGS='English (native), Telugu (native), Hindi (proficient), Japanese (conversational), French (rudimentary)';
+const LANGS=[['English','native'],['Telugu','native'],['Hindi','proficient'],['Japanese','conversational'],['French','rudimentary']];
 const HOBBIES='reading, photography, hiking, watchmaking';
 const SAB={when:'Nov 2025 → Now',lines:['travelling the world','time with family','helping friends launch their products'],joke:'10/10 would recommend to a friend.'};
 const CONTACT=['Feel free to get in touch. I always love hearing what people are building, and whether I can help.',' ',
@@ -334,7 +340,7 @@ const entry=e=>`<div class="te${e.now?' now':''}">${e.roles.map(([d,t])=>`<div c
 const ilHead=`<div class="il-h"><div class="deg">${ILH.deg}</div><div class="uni">${ILH.uni} · ${ILH.yrs}</div><div class="sub">${ILH.sub}</div></div>`;
 const cue=`<button class="cue" data-act="il"><span class="chev">▸</span><span class="cl">4 earlier roles</span><span class="dimt d" style="color:inherit">· teaching, internships</span></button>`;
 const skills=`<div class="sk">${SKILLS.map(([n,v])=>`<span>${n}</span><i style="width:${v*100}%"></i>`).join('')}</div>
-  <div class="sk-more"><div><b>languages</b>${LANGS}</div><div><b>hobbies</b>${HOBBIES}</div></div>`;
+  <div class="sk-more"><div><b>languages</b></div><div class="dl">${LANGS.map(([n,l])=>`<div class="${l}"><i></i><span>${n}</span><em>${l}</em></div>`).join('')}</div><div style="margin-top:12px"><b>hobbies</b>${HOBBIES}</div></div>`;
 const photo=i=>`<div class="photo"><span class="pi">photo ${i} · placeholder</span><div class="cap"><span>somewhere · 2026</span><span>${i}</span></div></div>`;
 const copy=p=>`<div class="b-copy"><div class="kick">featured ${p.n} / ${NFEAT}</div><h2>${p.slug}</h2><p class="pitch">${p.pitch}</p>
   <ul>${p.proof.map(x=>`<li>${x}</li>`).join('')}</ul><div class="meta">${p.meta}</div><div class="links">${p.links.map(l=>`<a href="#">${l} ↗</a>`).join('')}</div>

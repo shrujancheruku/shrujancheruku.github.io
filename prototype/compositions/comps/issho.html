@@ -85,11 +85,11 @@
 .tC #pv{aspect-ratio:auto;height:100%;border-radius:0}
 .tC #steps{display:block;padding:calc(1.4*var(--u)) calc(1.8*var(--u));font-size:calc(1.25*var(--u));line-height:1.75}
 #steps .lbl{display:block;margin-bottom:.3em}
-#steps div{display:flex;align-items:center;gap:1ch}#steps div b{font-weight:500}
-#steps div span{margin-left:auto;display:flex;align-items:center;gap:.9ch;font-size:calc(1.1*var(--u))}
-#steps div span::before{content:"";width:.75em;height:.75em;border-radius:50%;border:.16em solid var(--line)}
-#steps .live span{color:var(--ac);font-weight:700}#steps .live span::before{background:var(--ac);border-color:var(--ac)}
-#steps .next span::before{border-color:var(--hot);animation:ping 1.6s ease-in-out infinite}
+#steps div{display:flex;align-items:center;gap:1.2ch}#steps div b{font-weight:500}
+#steps div span{margin-left:auto;font-size:calc(1.1*var(--u))}
+#steps div i{flex:none;width:.7em;height:.7em;border-radius:50%;border:.16em solid var(--line)}
+#steps .live span{color:var(--ac);font-weight:700}#steps .live i{background:var(--ac);border-color:var(--ac)}
+#steps .next i{border-color:var(--hot);animation:ping 1.6s ease-in-out infinite}
 #steps .plan{opacity:.55}
 @keyframes ping{50%{box-shadow:0 0 0 .35em color-mix(in srgb,var(--hot) 30%,transparent)}}
 /* touch: every take reads as the site with the phone in front */
@@ -152,7 +152,7 @@ pg.innerHTML = `${LOGO}<div class="hero"><h1>Find your people through the things
 pv.innerHTML = `<div class="apphd">${LOGO}<i></i></div>` + CARDS.map(c => `<div class="scrn"><div class="c">${c}</div></div>`).join("");
 // launch cities: [city, status]
 const CITIES = [["Tokyo", "live", "launched"], ["Da Nang / Hoi An", "live", "launched"], ["London", "next", "up next"], ["Mumbai", "plan", "planned"]];
-$("#steps").innerHTML = `<span class="lbl">launch cities</span>` + CITIES.map(([c, k, t]) => `<div class="${k}"><b>${c}</b><span>${t}</span></div>`).join("");
+$("#steps").innerHTML = `<span class="lbl">launch cities</span>` + CITIES.map(([c, k, t]) => `<div class="${k}"><i></i><b>${c}</b><span>${t}</span></div>`).join("");
 // The six steps are one cycle. The site and the app are half a cycle apart, so they never show the same step:
 // while the site is on step k (with the next steps in view below it), the app shows step k+3.
 const OFFSET = 3, secs = [...pg.querySelectorAll(".sec")];
