@@ -80,23 +80,19 @@ test("other keys mean nothing here", () => {
 });
 
 describe("toggle keys", () => {
-  test("h and c are deliberate jumps to opening and contact, in either case", () => {
+  test("h and c are deliberate jumps to opening and contact", () => {
     expect(key("h")).toEqual({ type: "workspace", index: 0 });
-    expect(key("H", { shiftKey: true })).toEqual({
-      type: "workspace",
-      index: 0,
-    });
     expect(key("c")).toEqual({ type: "workspace", index: 4 });
   });
 
   test("e toggles the crt effect and t cycles the theme", () => {
     expect(key("e")).toEqual({ type: "crt" });
     expect(key("t")).toEqual({ type: "theme" });
-    expect(key("T", { shiftKey: true })).toEqual({ type: "theme" });
   });
 
-  test("with ctrl, meta or alt held they are left to the browser", () => {
-    for (const k of ["h", "c", "e", "t"]) {
+  test("with shift, ctrl, meta or alt held they are left to the browser", () => {
+    for (const k of ["h", "c", "e", "t", "H", "C", "E", "T"]) {
+      expect(key(k, { shiftKey: true })).toBeNull();
       expect(key(k, { ctrlKey: true })).toBeNull();
       expect(key(k, { metaKey: true })).toBeNull();
       expect(key(k, { altKey: true })).toBeNull();

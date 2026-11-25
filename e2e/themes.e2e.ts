@@ -214,3 +214,32 @@ test("Back after H returns to the previous place, and C is a jump too", async ({
     "2",
   );
 });
+
+test("after the first interaction the workspaces tooltip shows on hover and on keyboard focus", async ({
+  page,
+}) => {
+  await ready(page);
+  await page.mouse.click(5, 790);
+  const tip = page.locator(".ws .tip");
+  await expect(tip).toHaveCSS("opacity", "0");
+  await page.locator(".ws button").first().hover();
+  await expect(tip).toHaveCSS("opacity", "1");
+  await page.mouse.move(640, 500);
+  await expect(tip).toHaveCSS("opacity", "0");
+  await page.locator(".ws button").nth(1).focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(tip).toHaveCSS("opacity", "1");
+});
+
+test("shortcuts with shift held are ignored", async ({ page }) => {
+  await ready(page);
+  for (const k of ["Shift+T", "Shift+E", "Shift+C"])
+    await page.keyboard.press(k);
+  await expect(root(page)).toHaveAttribute("data-theme", "paper");
+  await expect(root(page)).toHaveAttribute("data-crt", "on");
+  await expect(page.locator("main.area")).toHaveAttribute(
+    "data-workspace",
+    "0",
+  );
+});

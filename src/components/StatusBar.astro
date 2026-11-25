@@ -259,7 +259,9 @@ const { workspaces } = Astro.props;
   }
 
   .ib:hover .tip,
-  .ib:focus-visible .tip {
+  .ib:focus-visible .tip,
+  .ws:hover .tip,
+  .ws:has(:focus-visible) .tip {
     opacity: 1;
     transform: none;
     transition-delay: 0.25s;
@@ -313,8 +315,13 @@ const { workspaces } = Astro.props;
     }
   }
 
+  /* on touch: the four without key labels, and no workspaces tip (no keys there) */
   @media (hover: none) {
     :global(body.idle) .tip kbd {
+      display: none;
+    }
+
+    :global(body.idle) .ws .tip {
       display: none;
     }
   }
