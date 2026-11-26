@@ -28,6 +28,10 @@ _Avoid_: Screen, slide; never the desktop or a workspace
 The order a step's windows are tiled in, set by hand for each step rather than read off where they sit. Windows leave and arrive in this order when the desktop changes workspace.
 _Avoid_: Reading order, z-order, DOM order
 
+**Re-tiling**:
+Windows on show in both of two steps moving and resizing straight to their new tiles, all at once, while the step changes around them. It is what neighbours do when a window opens or closes beside them.
+_Avoid_: Reflow, rearranging, layout change
+
 **Opening a window**:
 A window coming on show in a step while its neighbours stay: it slides out of the edge of the desktop on the far side from the neighbours that give up their space to it, and they give it up as it comes, sharing one moving border with it.
 _Avoid_: Fade in, pop in, launch; "the opening" (that is the first workspace)
