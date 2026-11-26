@@ -163,36 +163,40 @@ test("the logo is at the top of the drawn site and in the app header, in the the
     await page.evaluate((t) => {
       document.documentElement.dataset.theme = t;
     }, theme);
-    await page.waitForTimeout(700);
-    const colours = await page.evaluate(() => {
-      const named = (v: string) => {
-        const el = document.createElement("i");
-        el.style.color = `var(--${v})`;
-        document.body.append(el);
-        const c = getComputedStyle(el).color;
-        el.remove();
-        return c;
-      };
-      const logoEl = document.querySelector(
-        '[data-composition="issho"] .site svg.logo',
-      );
-      const fill = (hex: string) => {
-        const p = logoEl?.querySelector(`[fill="${hex}"]`);
-        return p ? getComputedStyle(p).fill : null;
-      };
-      const stroke = (hex: string) => {
-        const p = logoEl?.querySelector(`[stroke="${hex}"]`);
-        return p ? getComputedStyle(p).stroke : null;
-      };
-      return {
-        navy: [fill("#131B40"), named("fg")],
-        gold: [fill("#DEA92C"), named("ac")],
-        sun: [fill("#DA4528"), named("hot")],
-        outline: [stroke("#131B40"), named("bg")],
-      };
-    });
-    for (const [what, [got, want]] of Object.entries(colours))
-      expect(got, `${what} on ${theme}`).toBe(want);
+    // the colours ease over .45 s; poll till they land, however slowly a busy
+    // machine draws its frames (a fixed 700 ms sleep read them part way)
+    const colours = () =>
+      page.evaluate(() => {
+        const named = (v: string) => {
+          const el = document.createElement("i");
+          el.style.color = `var(--${v})`;
+          document.body.append(el);
+          const c = getComputedStyle(el).color;
+          el.remove();
+          return c;
+        };
+        const logoEl = document.querySelector(
+          '[data-composition="issho"] .site svg.logo',
+        );
+        const fill = (hex: string) => {
+          const p = logoEl?.querySelector(`[fill="${hex}"]`);
+          return p ? getComputedStyle(p).fill : null;
+        };
+        const stroke = (hex: string) => {
+          const p = logoEl?.querySelector(`[stroke="${hex}"]`);
+          return p ? getComputedStyle(p).stroke : null;
+        };
+        const pairs = {
+          navy: [fill("#131B40"), named("fg")],
+          gold: [fill("#DEA92C"), named("ac")],
+          sun: [fill("#DA4528"), named("hot")],
+          outline: [stroke("#131B40"), named("bg")],
+        };
+        return Object.entries(pairs)
+          .filter(([, [got, want]]) => got !== want)
+          .map(([what, [got, want]]) => `${what}: ${got}, want ${want}`);
+      });
+    await expect.poll(colours, `colours on ${theme}`).toEqual([]);
   }
 });
 
@@ -221,13 +225,12 @@ test("it follows the site theme live", async ({ page }) => {
   await page.evaluate(() => {
     document.documentElement.dataset.theme = "paper";
   });
-  await page.waitForTimeout(700);
-  expect(await bg()).toBe("rgb(242, 238, 222)");
+  // the background eases over .45 s: poll till it lands, not a fixed sleep
+  await expect.poll(bg).toBe("rgb(242, 238, 222)");
   await page.evaluate(() => {
     document.documentElement.dataset.theme = "tokyo-night";
   });
-  await page.waitForTimeout(700);
-  expect(await bg()).toBe("rgb(26, 27, 38)");
+  await expect.poll(bg).toBe("rgb(26, 27, 38)");
 });
 
 test("the availability screen reads 'The stronger the colour, the more people are free.'", async ({

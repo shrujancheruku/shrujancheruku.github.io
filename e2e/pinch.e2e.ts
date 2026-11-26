@@ -3,17 +3,25 @@ import {
   area,
   isOneScreen,
   pinch,
+  pinchZoomWorks,
   ready,
   SWIPES,
   settle,
   swipe,
   swipeScreen,
+  twoFingerSpread,
   warmUpTouch,
 } from "./helpers";
 
 // Pinch-zoom on a phone stays the browser's: a pinch zooms the page and never
 // moves a step, a drag on the zoomed page pans it and moves no step, and at
 // scale 1 one swipe still moves exactly one step. Taps still click.
+//
+// Chromium on Linux (the CI runner) never zooms on a synthesized pinch, not
+// even on a bare page (pinchZoomWorks), so there the zoom itself cannot be
+// seen: the tests still check that the page leaves pinch-zoom to the browser
+// and that a two-finger gesture moves no step, and skip only what needs the
+// page to be zoomed in. Where the browser zooms (macOS) they check it all.
 
 test.setTimeout(60_000);
 
@@ -36,10 +44,33 @@ for (const phone of PHONES) {
       await warmUpTouch(page);
     });
 
+    const zoomable = async (page: Page) => {
+      const works = await pinchZoomWorks(page);
+      if (!works)
+        test.info().annotations.push({
+          type: "skip",
+          description:
+            "this browser does not pinch-zoom (synthesized pinch leaves scale 1): zoom assertions skipped",
+        });
+      return works;
+    };
+
     test("a pinch zooms the page and moves no step", async ({ page }) => {
       expect(await zoom(page)).toBe(1);
+      // the page leaves pinch-zoom to the browser
+      for (const el of ["html", "body"])
+        expect(
+          await page
+            .locator(el)
+            .evaluate((e) => getComputedStyle(e).touchAction),
+          `${el} touch-action`,
+        ).toContain("pinch-zoom");
+      // two fingers, as the page sees them, move no step
+      await twoFingerSpread(page);
+      await page.waitForTimeout(300);
+      expect(await stepOf(page)).toBe(0);
       const scale = await pinch(page, 2);
-      expect(scale).toBeGreaterThan(1.5);
+      if (await zoomable(page)) expect(scale).toBeGreaterThan(1.5);
       await page.waitForTimeout(300);
       expect(await stepOf(page)).toBe(0);
     });
@@ -47,11 +78,15 @@ for (const phone of PHONES) {
     test("on a zoomed-in page a drag moves no step; zoomed back out, one swipe is one step", async ({
       page,
     }) => {
-      expect(await pinch(page, 2)).toBeGreaterThan(1.5);
-      for (const s of SWIPES) {
-        await swipe(page, 1, s);
-        await page.waitForTimeout(300);
-        expect(await stepOf(page), `${s.name} drag while zoomed`).toBe(0);
+      if (await zoomable(page)) {
+        expect(await pinch(page, 2)).toBeGreaterThan(1.5);
+        for (const s of SWIPES) {
+          await swipe(page, 1, s);
+          await page.waitForTimeout(300);
+          expect(await stepOf(page), `${s.name} drag while zoomed`).toBe(0);
+        }
+      } else {
+        await pinch(page, 2);
       }
       // one synthesized pinch spans only so far: pinch out till it is back to 1
       for (let i = 0; i < 6 && (await zoom(page)) > 1.01; i++)
