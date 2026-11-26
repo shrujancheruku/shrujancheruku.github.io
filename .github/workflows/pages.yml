@@ -13,8 +13,10 @@ permissions:
   contents: read
 
 # One run per ref at a time. A newer commit on a pull request cancels that PR's
-# older run; every other event (master push, schedule, dispatch) deploys, so it
-# is never cancelled and a newer one queues behind it.
+# older run. Every other event (master push, schedule, dispatch) deploys, so a
+# running one is never cancelled. GitHub keeps only one pending run per group,
+# though: a newer pending master run replaces an older pending one, so the
+# newest commit still deploys but a queued schedule run can be dropped.
 concurrency:
   group: pages-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -90,7 +92,7 @@ jobs:
           name: dist
           path: dist
       - name: End-to-end tests (shard ${{ matrix.shard }} of 4, against the production build)
-        run: bunx playwright test --shard=${{ matrix.shard }}/4 --workers=2
+        run: bun run test:e2e --shard=${{ matrix.shard }}/4 --workers=2
 
   deploy:
     needs: [build, e2e]
