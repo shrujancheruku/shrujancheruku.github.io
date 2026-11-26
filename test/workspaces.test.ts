@@ -299,8 +299,8 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
     expect(tile(second ?? {}, "stack")[3]).toBeGreaterThanOrEqual(40);
   });
 
-  test("the timeline workspace is the timeline, then education, then skills, each whole", () => {
-    expect(ids(touch(2))).toEqual([["timeline"], ["education"], ["skills"]]);
+  test("the timeline workspace is the timeline over education, then skills", () => {
+    expect(ids(touch(2))).toEqual([["timeline", "education"], ["skills"]]);
   });
 
   test("the sabbatical is its copy, then the four photos in a 2 x 2 grid", () => {
