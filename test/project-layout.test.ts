@@ -20,13 +20,12 @@ describe("the projects workspace holds for 3, 4, 5 and 6 featured projects", () 
         expect(comp?.[2]).toBe(70);
         expect(copy?.[1] ?? 0).toBeLessThan(stack?.[1] ?? 0);
         expect(area(step.desktop)).toBeCloseTo(100);
-        expect(area(step.touch)).toBeCloseTo(100);
-        // touch: copy, composition, stack, top to bottom
-        expect(step.touch[`copy-${i + 1}`]?.[1]).toBeLessThan(
-          step.touch[`comp-${i + 1}`]?.[1] ?? 0,
-        );
-        expect(step.touch[`comp-${i + 1}`]?.[1]).toBeLessThan(
-          step.touch.stack?.[1] ?? 0,
+        // touch: the copy, then the composition above the stack
+        for (const screen of step.touch) expect(area(screen)).toBeCloseTo(100);
+        const [first, second] = step.touch;
+        expect(Object.keys(first ?? {})).toEqual([`copy-${i + 1}`]);
+        expect(second?.[`comp-${i + 1}`]?.[1]).toBeLessThan(
+          second?.stack?.[1] ?? 0,
         );
       }
     });
@@ -44,9 +43,10 @@ test("a featured step's tilings are the prototype's, to the percent", () => {
     stack: [0, 62, 30, 38],
     "comp-2": [30, 0, 70, 100],
   });
-  expect(step?.touch).toEqual({
-    "copy-2": [0, 0, 100, 34],
-    "comp-2": [0, 34, 100, 48],
-    stack: [0, 82, 100, 18],
-  });
+  // touch is no longer the prototype's single tiling: a phone screen cannot
+  // hold the three windows, so a project is two screens (#83)
+  expect(step?.touch).toEqual([
+    { "copy-2": [0, 0, 100, 100] },
+    { "comp-2": [0, 0, 100, 60], stack: [0, 60, 100, 40] },
+  ]);
 });

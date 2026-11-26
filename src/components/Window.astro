@@ -94,5 +94,17 @@ const { id, label, scrolls = false } = Astro.props;
     .scrolls .body {
       overflow: hidden;
     }
+
+    /* A paged window (src/scripts/paged.ts): the room the pages have, which
+       is the window's body. */
+    .body :global([data-paged-root]) {
+      height: 100%;
+      overflow: hidden;
+    }
+  }
+
+  /* an entry on another page */
+  :global([data-paged] > [hidden]) {
+    display: none !important;
   }
 </style>
