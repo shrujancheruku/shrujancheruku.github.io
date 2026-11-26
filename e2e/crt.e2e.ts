@@ -59,6 +59,31 @@ test("the canvas stops while the tab is hidden and resumes after", async ({
   await expect.poll(() => frames(page)).toBeGreaterThan(stopped);
 });
 
+test("a browser without WebGL 2 gets no brightness lift", async ({ page }) => {
+  await ready(page);
+  await expect(page.locator("#crt-canvas")).toHaveCSS(
+    "backdrop-filter",
+    /brightness/,
+  );
+  await page.addInitScript(() => {
+    const real = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (
+      this: HTMLCanvasElement,
+      id: string,
+      ...rest: unknown[]
+    ) {
+      if (id === "webgl2") return null;
+      return (real as (...a: unknown[]) => unknown).call(this, id, ...rest);
+    } as typeof real;
+  });
+  await ready(page);
+  await expect(page.locator("html")).toHaveAttribute("data-crt", "on");
+  await expect(page.locator("#crt-canvas")).toHaveCSS(
+    "backdrop-filter",
+    "none",
+  );
+});
+
 test("with reduced motion the overlay still draws", async ({ browser }) => {
   const page = await (
     await browser.newContext({ reducedMotion: "reduce" })

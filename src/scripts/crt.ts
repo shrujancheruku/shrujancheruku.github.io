@@ -26,14 +26,6 @@ function compile(type: number, source: string): WebGLShader | null {
   return shader;
 }
 
-if (canvas) {
-  // The overlay can only darken, so it lifts the screen behind it first (a
-  // backdrop filter, so the page itself is never redrawn or transformed).
-  const lift = `brightness(${brightnessLift()})`;
-  canvas.style.setProperty("backdrop-filter", lift);
-  canvas.style.setProperty("-webkit-backdrop-filter", lift);
-}
-
 if (canvas && gl) {
   const program = gl.createProgram();
   const vs = compile(gl.VERTEX_SHADER, VERTEX);
@@ -42,8 +34,25 @@ if (canvas && gl) {
     gl.attachShader(program, vs);
     gl.attachShader(program, fs);
     gl.linkProgram(program);
-    gl.useProgram(program);
   }
+  if (vs && fs && gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    gl.useProgram(program);
+    // The overlay can only darken, so it lifts the screen behind it first (a
+    // backdrop filter, so the page itself is never redrawn or transformed).
+    // Only once the program linked: without the mask on top the lift would
+    // wash the page out.
+    const lift = `brightness(${brightnessLift()})`;
+    canvas.style.setProperty("backdrop-filter", lift);
+    canvas.style.setProperty("-webkit-backdrop-filter", lift);
+    start(canvas, gl, program);
+  }
+}
+
+function start(
+  canvas: HTMLCanvasElement,
+  gl: WebGL2RenderingContext,
+  program: WebGLProgram,
+): void {
   const uni = (name: string) => gl.getUniformLocation(program, name);
   const uR = uni("R");
   const uT = uni("T");
