@@ -33,6 +33,14 @@ import {
 } from "../lib/workspaces";
 import { addresses, model } from "./page-data";
 import { measurePages, type Paged, pagedOf, showPage } from "./paged";
+// PROTOTYPE (ticket #126): how the windows first appear, dev only
+import {
+  launchOn,
+  onReplay,
+  runLaunch,
+  stopLaunch,
+  wheelWaitsForLaunch,
+} from "./prototype-first-appear";
 
 gsap.registerPlugin(Flip, Observer);
 
@@ -194,6 +202,9 @@ function markStack(index: number): void {
 
 /** Put the windows of a step in place; animate from where they are if asked. */
 function place(n: number, animate: boolean): void {
+  // PROTOTYPE (#126): a step stops a launch where it is; a re-measure (fonts
+  // arriving) lets it run on to the same tiles
+  if (animate) stopLaunch(panes);
   const screens = screensAt(n, open);
   screen = Math.max(0, Math.min(screens.length - 1, screen));
   const { layout, pages } = screens[screen] ?? { layout: {}, pages: {} };
@@ -780,4 +791,20 @@ if (bootArchive !== undefined && archiveEl && inProjects()) {
 }
 place(step, false);
 area.dataset.retiling ??= "false";
+// PROTOTYPE (#126): bring the windows on
+function launch(): void {
+  if (!launchOn() || touch.matches || !shown) return;
+  place(step, false);
+  const waits = wheelWaitsForLaunch();
+  if (waits) {
+    gate.hold();
+    area.dataset.retiling = "true";
+  }
+  const tl = runLaunch(area, panes, shown, () => {
+    if (waits) settled(tl);
+  });
+  if (waits) latest = tl;
+}
+onReplay(launch);
+launch();
 area.dataset.ready = "true";
