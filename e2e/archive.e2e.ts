@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { area, ready, settle } from "./helpers";
+import { area, flick, ready, settle } from "./helpers";
 
 const shown = (page: Page) =>
   page.$$eval(".pane", (els) =>
@@ -176,17 +176,11 @@ test("a flick that scrolls the archive to its end does not also step; the next f
   ).toBeLessThan(400);
   const step = await area(page).getAttribute("data-step");
   const lb = await list.boundingBox();
-  await page.mouse.move(
-    (lb?.x ?? 0) + (lb?.width ?? 0) / 2,
-    (lb?.y ?? 0) + (lb?.height ?? 0) / 2,
-  );
-  const flick = async () => {
-    for (let d = 120; d > 4; d = Math.floor(d * 0.8)) {
-      await page.mouse.wheel(0, d);
-      await page.waitForTimeout(16);
-    }
+  const over = {
+    x: (lb?.x ?? 0) + (lb?.width ?? 0) / 2,
+    y: (lb?.y ?? 0) + (lb?.height ?? 0) / 2,
   };
-  await flick();
+  await flick(page, over);
   await expect
     .poll(() =>
       list.evaluate(
@@ -197,6 +191,6 @@ test("a flick that scrolls the archive to its end does not also step; the next f
   await settle(page);
   expect(await area(page).getAttribute("data-step")).toBe(step);
 
-  await flick();
+  await flick(page, over);
   await expect(area(page)).not.toHaveAttribute("data-step", step ?? "");
 });

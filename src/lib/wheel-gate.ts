@@ -4,12 +4,20 @@
 // fingers lift, and on a busy page those events can arrive hundreds of ms
 // apart. A gap alone cannot tell such a tail from a new gesture, but its
 // magnitude can: a tail decays. So after a step, an event is the tail while
-// it comes the same way as the one before, no more than twice its size, and
-// within `tailMs` of it. A tail may rise that far: on a busy page Chromium
-// coalesces queued wheel events into one and sums their deltas, so two tail
-// events arrive as one larger one. A delta that more than doubles and is
-// big enough to step, turns round, or comes after a longer silence is a new
-// gesture.
+// it comes the same way as the one before, does not rise past it, and comes
+// within `tailMs` of it. A delta that turns round, comes after a longer
+// silence, or rises (more than doubles, is big enough to step, and is more
+// per event than the one before) is a new gesture.
+//
+// On a busy page Chromium coalesces queued wheel events into one: it sums
+// their deltas and keeps the latest one's time. Events queue only while the
+// page is busy, so the caller says how long it was (`stall`, the longest
+// stretch without a frame since the event before), and an event that comes
+// after such a stall, where the events had been coming `cadence` apart,
+// stands for about stall / cadence of them: a tail's merged sum can be
+// several times the event before. Per event it still does not rise, and a
+// new flick out of a decayed tail does. A silence with the page idle merges
+// nothing, so a new flick after one is judged on its size alone.
 //
 // A mouse wheel sends equal notches, each a gesture of its own. Equal deltas
 // are tail only when they come close together, as momentum does; an equal
@@ -33,8 +41,12 @@ export interface WheelGateOptions {
 }
 
 export interface WheelGate {
-  /** Feed one wheel event; returns the step to take now: 1, -1 or 0. */
-  feed(time: number, delta: number): 1 | -1 | 0;
+  /**
+   * Feed one wheel event; returns the step to take now: 1, -1 or 0. `stall`
+   * is the longest the page went without a frame since the event before, in
+   * ms: how long events could have queued to be merged into this one.
+   */
+  feed(time: number, delta: number, stall?: number): 1 | -1 | 0;
   /**
    * Note a wheel event that something else used, such as a window scrolling
    * its own content. It never steps, but the rest of its gesture is tail, so
@@ -46,6 +58,12 @@ export interface WheelGate {
   /** The re-tile ended: open the gate, and return the step that waited for it. */
   release(): 1 | -1 | 0;
 }
+
+/**
+ * The shortest cadence a gap is measured against, in ms: events closer
+ * together than this (a burst, or a 240 Hz device) count as this far apart.
+ */
+const MIN_CADENCE_MS = 8;
 
 export function createWheelGate({
   tailMs,
@@ -59,30 +77,56 @@ export function createWheelGate({
   let inTail = false;
   let last = Number.NEGATIVE_INFINITY;
   let previous = 0;
+  /**
+   * The cadence the device sends at: the last gap shorter than `tailMs`,
+   * kept across silences. Until one is seen, the shortest: a step's own
+   * re-tile can merge the rest of its flick into the very next event.
+   */
+  let cadence = MIN_CADENCE_MS;
   let sum = 0;
 
-  const isTail = (gap: number, delta: number, before: number): boolean => {
+  const isTail = (
+    gap: number,
+    delta: number,
+    before: number,
+    stall: number,
+  ): boolean => {
     if (Math.sign(delta) !== Math.sign(before)) return false;
     const size = Math.abs(delta);
     const was = Math.abs(before);
-    // a coalesced pair at most doubles; a new flick out of a decayed tail
-    // jumps well past that
-    if (size > 2 * was && size >= threshold) return false;
+    // how many events this one may be, coalesced while the page was busy: a
+    // tail's merged sum can be many times the event before, but never more
+    // per event
+    const merged = Math.max(1, Math.min(gap, stall) / cadence);
+    if (size > 2 * was && size >= threshold && size / merged > was)
+      return false;
     if (size === was && gap >= steadyMs && size >= threshold) return false;
     return gap < tailMs || held;
   };
 
+  /** Note an event's time and delta; returns its gap and the delta before. */
+  const note = (time: number, delta: number) => {
+    const gap = time - last;
+    const before = previous;
+    last = time;
+    previous = delta;
+    return { gap, before };
+  };
+  /** After an event is judged: its gap, if short, is the device's cadence. */
+  const keep = (gap: number) => {
+    if (gap < tailMs) cadence = Math.max(gap, MIN_CADENCE_MS);
+  };
+
   return {
-    feed(time, delta) {
+    feed(time, delta, stall = 0) {
       // horizontal-only events carry no vertical delta: they are not ours
       if (delta === 0) return 0;
-      const gap = time - last;
-      const before = previous;
-      last = time;
-      previous = delta;
+      const { gap, before } = note(time, delta);
+      const tail = inTail && isTail(gap, delta, before, stall);
+      keep(gap);
 
       if (inTail) {
-        if (isTail(gap, delta, before)) return 0;
+        if (tail) return 0;
         inTail = false;
         sum = 0;
       }
@@ -101,8 +145,7 @@ export function createWheelGate({
     },
     absorb(time, delta) {
       if (delta === 0) return;
-      last = time;
-      previous = delta;
+      keep(note(time, delta).gap);
       sum = 0;
       inTail = true;
     },

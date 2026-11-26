@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { area, framesOf, settle } from "./helpers";
+import { area, flick, framesOf, settle } from "./helpers";
 
 const NAMES = ["opening", "projects", "timeline", "sabbatical", "contact"];
 
@@ -31,25 +31,22 @@ test("boots on the opening workspace with its three windows", async ({
 test("wheel scrolling moves one step at a time through all five workspaces", async ({
   page,
 }) => {
-  // sixteen settles alone are 17.6 s, and each of the 112 wheel events waits for a frame
+  // sixteen settles alone are 17.6 s
   test.setTimeout(60_000);
-  await page.mouse.move(640, 400);
+  // over the status bar, not the timeline window, which scrolls its own
+  // content first: how far a flick's tail scrolled it would decide the next
+  const bar = await page.locator("header.bar").boundingBox();
+  const over = { x: 640, y: (bar?.y ?? 0) + (bar?.height ?? 0) / 2 };
   const seen: number[] = [];
   for (let i = 0; i < 4 + 4; i++) {
-    // a trackpad-like flick: a burst of events that tails off
-    for (let d = 120; d > 4; d = Math.floor(d * 0.8)) {
-      await page.mouse.wheel(0, d);
-      await page.waitForTimeout(16);
-    }
+    await flick(page, over);
     await settle(page);
     seen.push((await current(page)).workspace);
   }
   // 4 featured projects + 4 other workspaces = 8 steps; the last flick has nowhere to go
   expect(seen).toEqual([1, 1, 1, 1, 2, 3, 4, 4]);
 
-  // over the status bar, not the timeline window, which scrolls its own content first
-  const bar = await page.locator("header.bar").boundingBox();
-  await page.mouse.move(640, (bar?.y ?? 0) + (bar?.height ?? 0) / 2);
+  await page.mouse.move(over.x, over.y);
   for (let i = 0; i < 8; i++) {
     await page.mouse.wheel(0, -120);
     await settle(page);

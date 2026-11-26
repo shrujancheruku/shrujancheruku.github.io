@@ -492,11 +492,49 @@ function scrollsInside(target: EventTarget | null, dy: number): boolean {
   return false;
 }
 
+/**
+ * How long the page was busy: the longest stretch without a frame since the
+ * last wheel event. Frames are counted from each wheel event until a second
+ * of quiet, so the wheel gate can tell events Chromium merged while the page
+ * was busy from a silence while it was idle.
+ */
+const stalls = (() => {
+  let lastBeat = 0;
+  let longest = 0;
+  let lastWheel = Number.NEGATIVE_INFINITY;
+  let counting = false;
+  const beat = () => {
+    const now = performance.now();
+    longest = Math.max(longest, now - lastBeat);
+    lastBeat = now;
+    counting = now - lastWheel < 1000;
+    if (counting) requestAnimationFrame(beat);
+  };
+  return (): number => {
+    const now = performance.now();
+    const stall = counting ? Math.max(longest, now - lastBeat) : 0;
+    longest = 0;
+    lastBeat = now;
+    lastWheel = now;
+    if (!counting) {
+      counting = true;
+      requestAnimationFrame(beat);
+    }
+    return stall;
+  };
+})();
+
 const wheel = Observer.create({
   target: window,
   type: "wheel",
+  // every event, as it comes: debounced, Observer calls onWheel once a frame
+  // with that frame's last event, so on a busy page a whole flick could reach
+  // the gate as its last tiny delta (no step), and an event that came while a
+  // re-tile held the gate was judged after its release
+  debounce: false,
   onWheel: (self) => {
     const e = self.event as WheelEvent;
+    const stall = stalls();
     if (e.ctrlKey) return;
     // a window scrolling its own content takes the event, and the rest of
     // that gesture stays its tail once the window reaches its end
@@ -504,7 +542,7 @@ const wheel = Observer.create({
       gate.absorb(e.timeStamp, e.deltaY);
       return;
     }
-    const direction = gate.feed(e.timeStamp, e.deltaY);
+    const direction = gate.feed(e.timeStamp, e.deltaY, stall);
     if (direction) scrollStep(direction);
   },
 });

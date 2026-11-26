@@ -72,3 +72,38 @@ export async function framesOf(
     return w.__frames;
   });
 }
+
+/**
+ * A trackpad-like flick at `at`: wheel events from `from` decaying by 0.8 to
+ * 5, stamped 16 ms apart as a trackpad sends them, and sent without waiting
+ * for the page. `page.mouse.wheel` waits for the page to handle each event
+ * and stamps the next when it is sent, so on a busy machine one flick became
+ * events half a second apart: to the page, separate pushes, not one flick. A
+ * busy machine now does to these what it does to a visitor's: delivers them
+ * late, and merges those that queue up.
+ */
+export async function flick(
+  page: Page,
+  at: { x: number; y: number },
+  from = 120,
+): Promise<void> {
+  const cdp = await page.context().newCDPSession(page);
+  const start = Date.now();
+  const sent: Promise<unknown>[] = [];
+  for (let d = from, i = 0; Math.abs(d) > 4; d = Math.trunc(d * 0.8), i++) {
+    const time = start + i * 16;
+    const wait = time - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    sent.push(
+      cdp.send("Input.dispatchMouseEvent", {
+        type: "mouseWheel",
+        ...at,
+        deltaX: 0,
+        deltaY: d,
+        timestamp: time / 1000,
+      }),
+    );
+  }
+  await Promise.all(sent);
+  await cdp.detach();
+}

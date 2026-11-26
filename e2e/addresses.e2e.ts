@@ -1,16 +1,9 @@
 import { expect, type Page, test } from "@playwright/test";
-import { area, ready as boot, settle } from "./helpers";
+import { area, ready as boot, flick, settle } from "./helpers";
 
 const DESCRIPTION = "I design and build. Give me a problem, not a spec.";
 const workspace = async (page: Page) =>
   Number(await area(page).getAttribute("data-workspace"));
-const flick = async (page: Page, dy: number) => {
-  for (let d = dy; Math.abs(d) > 4; d = Math.trunc(d * 0.8)) {
-    await page.mouse.wheel(0, d);
-    await page.waitForTimeout(16);
-  }
-  await settle(page);
-};
 
 const ADDRESSES: [string, number, string][] = [
   ["/", 0, "Shrujan Cheruku — Product Engineer"],
@@ -50,11 +43,12 @@ test("scrolling changes address and title and adds no history entry", async ({
 }) => {
   await boot(page, "/");
   const before = await page.evaluate(() => history.length);
-  await page.mouse.move(640, 400);
-  await flick(page, 120);
+  await flick(page, { x: 640, y: 400 });
+  await settle(page);
   expect(new URL(page.url()).pathname).toBe("/work/");
   await expect(page).toHaveTitle("Projects — Shrujan Cheruku");
-  await flick(page, 120);
+  await flick(page, { x: 640, y: 400 });
+  await settle(page);
   expect(new URL(page.url()).pathname).toBe("/work/unmacos/");
   await expect(page).toHaveTitle("unmacos — Shrujan Cheruku");
   await page.keyboard.press("ArrowUp");
