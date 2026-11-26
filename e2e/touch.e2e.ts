@@ -86,16 +86,11 @@ test("no hover tooltips and no clock on touch, before or after interaction", asy
 }) => {
   await page.goto("/");
   await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
-  // before any interaction: the four are written out without key labels, the fifth is not shown
+  // before any interaction: no tooltip is written out on a phone, none has keys to name
   await page.waitForTimeout(1200);
-  const four = page.locator(".tg .tip");
-  await expect(four).toHaveCount(4);
-  for (const tip of await four.all()) {
-    await expect(tip).toBeVisible();
-    await expect(tip).toHaveCSS("opacity", "1");
-    await expect(tip.locator("kbd")).toBeHidden();
-  }
-  await expect(page.locator(".ws .tip")).toBeHidden();
+  await expect(page.locator(".tg .tip")).toHaveCount(4);
+  for (const tip of await page.locator(".tip").all())
+    await expect(tip).toBeHidden();
   await page.touchscreen.tap(200, 400);
   await expect(page.locator("[data-clock]")).toBeHidden();
   for (const tip of await page.locator(".tip").all())
