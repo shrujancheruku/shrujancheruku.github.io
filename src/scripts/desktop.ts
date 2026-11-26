@@ -33,6 +33,8 @@ import {
 } from "../lib/workspaces";
 import { addresses, model } from "./page-data";
 import { measurePages, type Paged, pagedOf, showPage } from "./paged";
+// PROTOTYPE (ticket #138): acting mid-motion, dev only
+import * as Mid from "./prototype-mid-motion";
 
 gsap.registerPlugin(Flip, Observer);
 
@@ -192,13 +194,27 @@ function markStack(index: number): void {
   }
 }
 
+/** PROTOTYPE: the step and disclosure last placed, to tell the motion. */
+let placedStep = -1;
+let placedOpen = false;
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+const protoOn = (): boolean =>
+  import.meta.env.DEV && !touch.matches && !reducedMotion.matches;
+
 /** Put the windows of a step in place; animate from where they are if asked. */
 function place(n: number, animate: boolean): void {
+  const fromWhere = { step: placedStep, open: placedOpen };
+  placedStep = n;
+  placedOpen = open;
+  const before = shown;
+  const useProto =
+    animate && protoOn() && before !== null && fromWhere.step >= 0;
+  if (!animate) Mid.abort();
   const screens = screensAt(n, open);
   screen = Math.max(0, Math.min(screens.length - 1, screen));
   const { layout, pages } = screens[screen] ?? { layout: {}, pages: {} };
   const focus = focusAmong(layout, focusOf(stepAt(workspaces, n), open));
-  const state = animate ? Flip.getState(panes) : null;
+  const state = animate && !useProto ? Flip.getState(panes) : null;
 
   let z = 1;
   for (const pane of panes) {
@@ -246,7 +262,33 @@ function place(n: number, animate: boolean): void {
     else b.removeAttribute("aria-current");
   }
 
-  if (state) {
+  if (useProto && before) {
+    const fromWs = locate(workspaces, fromWhere.step).workspace;
+    const projects = (k: number) =>
+      workspaces[locate(workspaces, k).workspace]?.id === "projects";
+    const kind: Mid.Kind =
+      fromWs !== workspace
+        ? "workspace"
+        : fromWhere.step !== n && projects(fromWhere.step) && projects(n)
+          ? "roll"
+          : "retile";
+    if (Mid.holdsWheel()) gate.hold();
+    area.dataset.retiling = "true";
+    // a motion still running is the policy's (turned back): leave its tweens
+    if (!Mid.running()) gsap.killTweensOf(panes);
+    latest = Mid.start({
+      kind,
+      before,
+      after: layout,
+      dir:
+        Math.sign(
+          kind === "workspace" ? workspace - fromWs : n - fromWhere.step,
+        ) || 1,
+      from: fromWhere,
+      to: { step: n, open },
+      onDone: (tl) => settled(tl),
+    });
+  } else if (state) {
     // the wheel stays shut for the whole re-tile, which on a busy page starts
     // late and ends well after the wheel event that asked for it
     gate.hold();
@@ -288,7 +330,15 @@ function settled(retiling: gsap.core.Timeline): void {
   if (retiling !== latest) return;
   area.dataset.retiling = "false";
   const waiting = gate.release();
-  if (waiting) moveOneScreen(waiting);
+  const queued = Mid.takePending();
+  if (queued) queued();
+  else if (waiting) moveOneScreen(waiting);
+}
+
+/** PROTOTYPE: every input that moves the windows goes through the mid-motion policy. */
+function act(to: { step: number; open: boolean }, run: () => void): void {
+  if (protoOn()) Mid.act(to, run);
+  else run();
 }
 
 /** Whether the step's disclosure is the archive (the projects workspace's). */
@@ -406,13 +456,16 @@ const ARCHIVE_PATH = "/archive/";
 
 document.addEventListener("click", (e) => {
   const target = e.target as Element | null;
+  const toggle = { step, open: !open };
   const cue = target?.closest("[data-disclosure]");
-  if (cue) setOpen(!open);
-  if (target?.closest(ARCHIVE_OPENERS)) {
-    if (open) closeArchive();
-    else openArchive();
-  }
-  if (target?.closest("[data-archive-close]")) closeArchive();
+  if (cue) act(toggle, () => setOpen(!open));
+  if (target?.closest(ARCHIVE_OPENERS))
+    act(toggle, () => {
+      if (open) closeArchive();
+      else openArchive();
+    });
+  if (target?.closest("[data-archive-close]"))
+    act({ step, open: false }, closeArchive);
 });
 
 /** Move to a step, and a screen of it, and re-tile (wide screen and touch alike). */
@@ -468,7 +521,11 @@ function restore(): void {
   }
   place(step, true);
 }
-addEventListener("popstate", restore);
+addEventListener("popstate", () => {
+  const n = book.stepFor(location.pathname) ?? 0;
+  const archive = book.forPath(location.pathname)?.archive !== undefined;
+  act({ step: n, open: archive }, restore);
+});
 
 /**
  * A deliberate jump to a step: adds a history entry (unless it is where we
@@ -476,6 +533,11 @@ addEventListener("popstate", restore);
  * keys, and links use this.
  */
 export function jump(n: number): void {
+  const next = Math.max(0, Math.min(steps - 1, n));
+  act({ step: next, open: false }, () => jumpNow(n));
+}
+
+function jumpNow(n: number): void {
   const next = Math.max(0, Math.min(steps - 1, n));
   const here = !notFound && book.stepFor(location.pathname) === next;
   if (!here) {
@@ -497,13 +559,15 @@ export function jumpToPath(path: string): boolean {
   const n = book.stepFor(path);
   if (n === undefined) return false;
   const archive = book.forPath(path)?.archive;
-  if (archive === undefined) {
-    jump(n);
-    return true;
-  }
-  // an archive address: go to its step, then open the archive on its entry
-  if (n !== step) jump(n);
-  openArchive(archive);
+  act({ step: n, open: archive !== undefined }, () => {
+    if (archive === undefined) {
+      jumpNow(n);
+      return;
+    }
+    // an archive address: go to its step, then open the archive on its entry
+    if (n !== step) jumpNow(n);
+    openArchive(archive);
+  });
   return true;
 }
 
@@ -512,6 +576,18 @@ export function jumpToPath(path: string): boolean {
  * step. Follows the address without a history entry.
  */
 export function moveOneScreen(direction: 1 | -1): void {
+  const to = moveBy(
+    { step, screen },
+    direction,
+    (n) => screensAt(n, n === step && open).length,
+    steps,
+  );
+  act({ step: to.step, open: to.step === step && open }, () =>
+    moveNow(direction),
+  );
+}
+
+function moveNow(direction: 1 | -1): void {
   const next = moveBy(
     { step, screen },
     direction,
@@ -693,7 +769,7 @@ addEventListener("keydown", (e: KeyboardEvent) => {
   if (e.key === " " && t instanceof HTMLElement && t.closest(".tgl")) return;
   if (e.key === "Escape" && open && inProjects()) {
     e.preventDefault();
-    closeArchive();
+    act({ step, open: false }, closeArchive);
     return;
   }
   const command = interpretKey(e, workspaces.length);
@@ -779,5 +855,10 @@ if (bootArchive !== undefined && archiveEl && inProjects()) {
   staggerEntries();
 }
 place(step, false);
+Mid.mount({ area, panes, shown: () => shown });
+Mid.addBursts({
+  move: moveOneScreen,
+  workspace: (i) => jump(firstStepOf(workspaces, i)),
+});
 area.dataset.retiling ??= "false";
 area.dataset.ready = "true";
