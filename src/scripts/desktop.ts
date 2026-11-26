@@ -6,10 +6,7 @@
 import { gsap } from "gsap";
 import { Flip } from "gsap/Flip";
 import { Observer } from "gsap/Observer";
-import {
-  notFoundTitle as NOT_FOUND_TITLE,
-  openAddresses,
-} from "../lib/addresses";
+import { notFoundTitle as NOT_FOUND_TITLE } from "../lib/addresses";
 import { interpretKey } from "../lib/keys";
 import {
   anchorOf,
@@ -34,6 +31,7 @@ import {
   tilingOf,
   type Workspace,
 } from "../lib/workspaces";
+import { addresses, model } from "./page-data";
 import { measurePages, type Paged, pagedOf, showPage } from "./paged";
 
 gsap.registerPlugin(Flip, Observer);
@@ -44,15 +42,13 @@ const RETILE = 0.85;
 const gate = createWheelGate({ tailMs: 500, steadyMs: 150, threshold: 40 });
 
 const found = document.querySelector<HTMLElement>("main.area");
-const modelEl = document.getElementById("desktop-model");
-if (!found || !modelEl) throw new Error("the desktop is missing its markup");
+if (!found || !model) throw new Error("the desktop is missing its markup");
 const area: HTMLElement = found;
 
-const addressEl = document.getElementById("desktop-addresses");
-if (!addressEl) throw new Error("the desktop is missing its addresses");
-const book = openAddresses(JSON.parse(addressEl.textContent ?? "{}"));
+if (!addresses) throw new Error("the desktop is missing its addresses");
+const book = addresses;
 
-const workspaces: Workspace[] = JSON.parse(modelEl.textContent ?? "[]");
+const workspaces: Workspace[] = model;
 const steps = stepCount(workspaces);
 const notFoundPane = area.querySelector<HTMLElement>(
   '.pane[data-window="notfound"]',
@@ -296,6 +292,9 @@ function settled(retiling: gsap.core.Timeline): void {
 }
 
 /** Whether the step's disclosure is the archive (the projects workspace's). */
+/** What opens the archive: the projects' opener, and its phone screen's. */
+const ARCHIVE_OPENERS = "[data-archive-open], [data-archive-phone]";
+
 const inProjects = (): boolean =>
   workspaces[locate(workspaces, step).workspace]?.id === "projects";
 
@@ -303,9 +302,7 @@ const inProjects = (): boolean =>
 function announce(): void {
   const kind = inProjects() ? "archive" : "open";
   if (kind === "archive") {
-    for (const b of document.querySelectorAll(
-      "[data-archive-open], [data-archive-phone]",
-    ))
+    for (const b of document.querySelectorAll(ARCHIVE_OPENERS))
       b.setAttribute("aria-expanded", String(open));
   }
   document.dispatchEvent(
@@ -411,7 +408,7 @@ document.addEventListener("click", (e) => {
   const target = e.target as Element | null;
   const cue = target?.closest("[data-disclosure]");
   if (cue) setOpen(!open);
-  if (target?.closest("[data-archive-open], [data-archive-phone]")) {
+  if (target?.closest(ARCHIVE_OPENERS)) {
     if (open) closeArchive();
     else openArchive();
   }
