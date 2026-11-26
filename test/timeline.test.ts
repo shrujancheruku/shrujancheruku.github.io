@@ -162,7 +162,7 @@ describe("languages and hobbies", () => {
   test("three folders and nine hobbies as on the ticket", () => {
     expect(hobbies.map((f) => [f.folder, f.items.map((h) => h.name)])).toEqual([
       ["outdoors", ["hiking", "football"]],
-      ["making", ["photography", "watchmaking", "cooking", "guitar"]],
+      ["making", ["photography", "cooking", "watchmaking", "guitar"]],
       ["thinking", ["reading", "pub quizzes", "chess"]],
     ]);
   });
@@ -174,10 +174,10 @@ describe("languages and hobbies", () => {
         .filter((h) => h.resume)
         .map((h) => h.name)
         .sort(),
-    ).toEqual(["hiking", "photography", "reading", "watchmaking"]);
+    ).toEqual(["cooking", "hiking", "photography", "reading"]);
     expect(hobbyFades.map((h) => h.name)).toEqual([
       "football",
-      "cooking",
+      "watchmaking",
       "pub quizzes",
       "chess",
       "guitar",
