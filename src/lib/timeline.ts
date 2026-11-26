@@ -199,6 +199,26 @@ export function skillBars(real: readonly Skill[]): Bar[] {
   ];
 }
 
+/** The joke bar's ease, GSAP's back.out(JOKE_BACK): how far it overshoots. */
+export const JOKE_BACK = 2.2;
+
+/**
+ * The most back.out(s) reaches, as a multiple of where it rests: with
+ * u = t - 1 it is 1 + (s + 1)u³ + su², highest at u = -2s / (3(s + 1)).
+ */
+export function backOutPeak(s: number): number {
+  const u = (-2 * s) / (3 * (s + 1));
+  return 1 + (s + 1) * u ** 3 + s * u ** 2;
+}
+
+/**
+ * The share of its column a phone gives a track: at the joke bar's peak the
+ * longest bar ends 1% short of the column's edge, so its overshoot shows whole
+ * and never widens the window (#127).
+ */
+export const phoneTrack = (bars: readonly Bar[]): number =>
+  0.99 / (Math.max(1, ...bars.map((b) => b.length)) * backOutPeak(JOKE_BACK));
+
 export type LanguageLevel =
   | "native"
   | "proficient"

@@ -4,10 +4,30 @@ import { expect, type Page } from "@playwright/test";
 // window must fit its box: these read the windows on show and return what is
 // cut off, as strings, none when all of it shows.
 
+/**
+ * Waits until the skill bars rest. They grow in for about two seconds after a
+ * re-tile ends, the joke bar overshooting its track, so a window read part way
+ * is read at a width it only has for a moment.
+ */
+export const barsRest = (page: Page) =>
+  expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            !document.querySelector(
+              '[data-window="skills"][data-bars="growing"]',
+            ),
+        ),
+      { timeout: 10_000 },
+    )
+    .toBe(true);
+
 /** What is cut off in every window on show: strings, none when all fits. */
 export const cutOff = async (page: Page) => {
   // widths depend on the web fonts: read them once they have all loaded
   await page.evaluate(() => document.fonts.ready);
+  await barsRest(page);
   return page.evaluate(() => {
     const problems: string[] = [];
     for (const pane of document.querySelectorAll<HTMLElement>(".pane")) {

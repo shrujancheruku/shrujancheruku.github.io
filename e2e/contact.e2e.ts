@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
+import { devices, expect, type Page, test } from "@playwright/test";
 import { area, SWIPES, settle, swipe, warmUpTouch } from "./helpers";
 
 const win = (page: Page, id: string) => page.locator(`[data-window="${id}"]`);
@@ -104,31 +104,45 @@ test("returning to contact after leaving shows the command at once, without typi
   });
 });
 
-test("on touch, contact is one screen: the terminal, and a forward swipe stays put", async ({
-  browser,
-}) => {
-  const context = await browser.newContext({
-    viewport: { width: 390, height: 844 },
+const PHONES = {
+  "Pixel 7": devices["Pixel 7"],
+  "iPhone 14": devices["iPhone 14"],
+  "375x667": {
+    viewport: { width: 375, height: 667 },
     hasTouch: true,
     isMobile: true,
+    deviceScaleFactor: 2,
+  },
+} as const;
+
+for (const [name, emulation] of Object.entries(PHONES))
+  test(`${name}: contact is one screen under the status bar: the terminal, and a forward swipe stays put`, async ({
+    browser,
+  }) => {
+    const { defaultBrowserType: _engine, ...phone } = emulation as {
+      defaultBrowserType?: string;
+    };
+    const context = await browser.newContext(phone);
+    const page = await context.newPage();
+    await page.goto("/contact/");
+    await expect(area(page)).toHaveAttribute("data-ready", "true");
+    // contact is the last step and one screen: no second screen for the name
+    await expect(area(page)).toHaveAttribute("data-screens", "1");
+    await expect(area(page)).toHaveAttribute("data-screen", "0");
+    expect(await box(page, "contact")).not.toBeNull();
+    expect(await box(page, "name")).toBeNull();
+    expect(await box(page, "term")).toBeNull();
+    // the status bar stays on show above it (#93)
+    await expect(page.locator("header.bar")).toBeVisible();
+    await warmUpTouch(page);
+    // a forward swipe on the last screen stays put
+    await swipe(page, 1, SWIPES[0] as (typeof SWIPES)[number]);
+    await settle(page);
+    await expect(area(page)).toHaveAttribute("data-screen", "0");
+    await expect(area(page)).toHaveAttribute("data-workspace", "5");
+    expect(await box(page, "contact")).not.toBeNull();
+    expect(await box(page, "name")).toBeNull();
+    expect(new URL(page.url()).pathname).toBe("/contact/");
+    await expect(page.locator("header.bar")).toBeVisible();
+    await context.close();
   });
-  const page = await context.newPage();
-  await page.goto("/contact/");
-  await expect(area(page)).toHaveAttribute("data-ready", "true");
-  // contact is the last step and one screen: no second screen for the name
-  await expect(area(page)).toHaveAttribute("data-screens", "1");
-  await expect(area(page)).toHaveAttribute("data-screen", "0");
-  expect(await box(page, "contact")).not.toBeNull();
-  expect(await box(page, "name")).toBeNull();
-  expect(await box(page, "term")).toBeNull();
-  await warmUpTouch(page);
-  // a forward swipe on the last screen stays put
-  await swipe(page, 1, SWIPES[0] as (typeof SWIPES)[number]);
-  await settle(page);
-  await expect(area(page)).toHaveAttribute("data-screen", "0");
-  await expect(area(page)).toHaveAttribute("data-workspace", "5");
-  expect(await box(page, "contact")).not.toBeNull();
-  expect(await box(page, "name")).toBeNull();
-  expect(new URL(page.url()).pathname).toBe("/contact/");
-  await context.close();
-});

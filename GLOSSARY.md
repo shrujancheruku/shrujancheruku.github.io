@@ -17,7 +17,7 @@ One stop in the desktop's story, a single arrangement of windows within a worksp
 _Avoid_: Stop, scroll position, workspace
 
 **Screen**:
-What a phone shows of a step at once. On a phone every step is one screen except the timeline step, which is two: the timeline, then Education & Internships over Skills. A window with more entries than fit one screen adds screens of its own (the archive). One swipe moves one screen. On a wide screen, each step is a single screen.
+What a phone shows of a step at once. On a phone every step is one screen except the timeline step, which is two: the timeline, then Education & Internships over Skills. A window with more entries than fit one screen adds screens of its own (the archive, and Education's roles or Skills if they are too long for their screen). One swipe moves one screen. On a wide screen, each step is a single screen.
 _Avoid_: Slide, view, workspace, page
 
 **Page**:

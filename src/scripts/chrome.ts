@@ -11,6 +11,7 @@ import {
   saveTheme,
   type ThemeName,
 } from "../lib/themes";
+import { addresses } from "./page-data";
 
 const root = document.documentElement;
 const store = (() => {
@@ -119,16 +120,7 @@ const cue = document.querySelector<HTMLElement>("[data-cue]");
 const cueText = cue?.querySelector<HTMLElement>("[data-cue-text]");
 const area = document.querySelector<HTMLElement>("main.area");
 const swiping = matchMedia("(hover: none) and (max-width: 760px)");
-const lastStep: number = (() => {
-  try {
-    const book = JSON.parse(
-      document.getElementById("desktop-addresses")?.textContent ?? "{}",
-    );
-    return (book.byStep?.length ?? 1) - 1;
-  } catch {
-    return 0;
-  }
-})();
+const lastStep: number = (addresses?.data.byStep.length ?? 1) - 1;
 
 function showCue(): void {
   if (!cue || !area) return;

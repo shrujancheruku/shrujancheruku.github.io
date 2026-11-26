@@ -51,13 +51,13 @@ const exchanges = [{ command: "contact", replies: [] as string[] }];
 
 <script>
   import { COPIED_LINE } from "../lib/contact";
+  import { model } from "../scripts/page-data";
   import { playTerminal } from "../scripts/terminal";
 
   // the contact workspace's number comes from the model, not from here
-  const model: { id: string }[] = JSON.parse(
-    document.getElementById("desktop-model")?.textContent ?? "[]",
+  const CONTACT_WORKSPACE = String(
+    (model ?? []).findIndex((w) => w.id === "contact"),
   );
-  const CONTACT_WORKSPACE = String(model.findIndex((w) => w.id === "contact"));
   const area = document.querySelector<HTMLElement>("main.area");
   const term = document.querySelector<HTMLElement>(
     '[data-window="contact"] .term',

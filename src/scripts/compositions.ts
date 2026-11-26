@@ -4,11 +4,10 @@
 
 import { compositions } from "../compositions/registry";
 import { shouldLoad } from "../lib/composition-rules";
+import { model } from "./page-data";
 
 const area = document.querySelector<HTMLElement>("main.area");
-const modelEl = document.getElementById("desktop-model");
-if (area && modelEl) {
-  const model: { id: string }[] = JSON.parse(modelEl.textContent ?? "[]");
+if (area && model) {
   const projects = model.findIndex((w) => w.id === "projects");
   const slots = [...document.querySelectorAll<HTMLElement>("[data-slot]")];
   const started = new Set<HTMLElement>();

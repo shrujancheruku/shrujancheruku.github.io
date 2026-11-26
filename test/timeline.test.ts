@@ -1,11 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import {
+  backOutPeak,
   comedicScore,
   cueText,
   education,
   hobbies,
   hobbyFades,
+  JOKE_BACK,
   languages,
+  phoneTrack,
   skillBars,
   skills,
   timeline,
@@ -141,6 +144,29 @@ describe("the skill bars", () => {
     const tens = skillBars([{ name: "Python", score: 10 }]);
     expect(comedicScore([{ name: "Python", score: 10 }])).toBe(11);
     expect(tens[1]?.length).toBeCloseTo(1.1);
+  });
+
+  test("back.out's peak is the highest the ease reaches", () => {
+    // sample GSAP's back.out(s): 1 + (s + 1)u³ + su², u = t - 1
+    const ease = (t: number, s: number) =>
+      1 + (s + 1) * (t - 1) ** 3 + s * (t - 1) ** 2;
+    for (const s of [1.70158, JOKE_BACK, 3]) {
+      let most = 0;
+      for (let i = 0; i <= 10_000; i++)
+        most = Math.max(most, ease(i / 10_000, s));
+      expect(backOutPeak(s)).toBeCloseTo(most, 6);
+    }
+    expect(backOutPeak(JOKE_BACK)).toBeCloseTo(1.154, 3);
+  });
+
+  test("on a phone the joke bar's peak ends inside its column", () => {
+    for (const real of [skills, [{ name: "Python", score: 10 }]]) {
+      const bars = skillBars(real);
+      const longest = Math.max(...bars.map((b) => b.length));
+      const peak = phoneTrack(bars) * longest * backOutPeak(JOKE_BACK);
+      expect(peak).toBeLessThan(1);
+      expect(peak).toBeGreaterThan(0.98);
+    }
   });
 
   test("with no real bars Comedic Talent is 1", () => {

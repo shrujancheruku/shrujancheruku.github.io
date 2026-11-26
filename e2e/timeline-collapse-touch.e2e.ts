@@ -16,6 +16,15 @@ const PHONES = {
   },
 } as const;
 
+// The screens the step has with Education & Internships open: as many as on
+// master before #108 (measured there: 2, 4 and 4), never more. The roles page
+// on the two smaller phones.
+const EDUCATION_OPEN_SCREENS: Record<keyof typeof PHONES, number> = {
+  "Pixel 7": 2,
+  "iPhone 14": 4,
+  "375x667": 4,
+};
+
 const shown = (page: Page, id: string) =>
   page
     .locator(`[data-window="${id}"]`)
@@ -77,33 +86,60 @@ for (const [name, emulation] of Object.entries(PHONES)) {
     }) => {
       await ready(page, "/timeline/");
       await warmUpTouch(page);
-      await page.keyboard.press("ArrowDown");
-      await settle(page);
       // widths depend on the web fonts: read them once all have loaded
       await page.evaluate(() => document.fonts.ready);
       // sample every frame of the bars' entry (the joke bar overshoots its
-      // track) with the window 8px narrower than it is: nothing may overflow
-      const over = await page.evaluate(
+      // track) with the window 8px narrower than it is, from before the step
+      // until the bars rest: nothing may overflow. Nothing clips the bars, so
+      // an overshoot that leaves the column widens the window and shows here.
+      const sampled = page.evaluate(
         () =>
-          new Promise<number>((done) => {
-            const sk = document.querySelector<HTMLElement>(".sk");
-            if (!sk) return done(Number.POSITIVE_INFINITY);
-            const SLACK = 8;
-            const room = sk.clientWidth;
-            sk.style.width = `${room - SLACK}px`;
-            let worst = 0;
-            const t0 = performance.now();
-            const tick = () => {
-              worst = Math.max(worst, sk.scrollWidth - sk.clientWidth);
-              if (performance.now() - t0 < 3500) requestAnimationFrame(tick);
-              else {
-                sk.style.width = "";
-                done(worst);
-              }
-            };
-            tick();
-          }),
+          new Promise<{ over: number; frames: number; peak: number }>(
+            (done) => {
+              const sk = document.querySelector<HTMLElement>(".sk");
+              const pane = sk?.closest<HTMLElement>(".pane");
+              const joke = sk?.querySelector<HTMLElement>(".fill.joke");
+              if (!sk || !pane || !joke)
+                return done({
+                  over: Number.POSITIVE_INFINITY,
+                  frames: 0,
+                  peak: 0,
+                });
+              const SLACK = 8;
+              let worst = 0;
+              let frames = 0;
+              let peak = 0;
+              let started = false;
+              const t0 = performance.now();
+              const tick = () => {
+                if (getComputedStyle(pane).display !== "none") {
+                  if (!sk.style.width)
+                    sk.style.width = `${sk.clientWidth - SLACK}px`;
+                  worst = Math.max(worst, sk.scrollWidth - sk.clientWidth);
+                  frames++;
+                  peak = Math.max(
+                    peak,
+                    new DOMMatrix(getComputedStyle(joke).transform).a,
+                  );
+                  started ||= pane.dataset.bars === "growing";
+                }
+                const done_ = started && pane.dataset.bars === "rest";
+                if (!done_ && performance.now() - t0 < 10_000)
+                  requestAnimationFrame(tick);
+                else {
+                  sk.style.width = "";
+                  done({ over: worst, frames, peak });
+                }
+              };
+              tick();
+            },
+          ),
       );
+      await page.keyboard.press("ArrowDown");
+      const { over, frames, peak } = await sampled;
+      // the sampling saw the joke bar overshoot, not just its rest
+      expect(frames).toBeGreaterThan(10);
+      expect(peak).toBeGreaterThan(1.05);
       expect(over).toBeLessThanOrEqual(1);
     });
 
@@ -145,6 +181,36 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       expect(await whereOf(page)).toEqual(before);
     });
 
+    test("each toggle is named by its entry: the organisation and title, or the title alone", async ({
+      page,
+    }) => {
+      await ready(page, "/timeline/");
+      const names = await toggles(page).evaluateAll((els) =>
+        els.map((e) => e.getAttribute("aria-label")),
+      );
+      expect(names[0]).toBe("Sabbatical");
+      expect(names.slice(1).every((n) => /^[^:]+: [^:]+$/.test(n ?? ""))).toBe(
+        true,
+      );
+    });
+
+    test("Space on an entry's toggle opens and closes it, and never moves a step", async ({
+      page,
+    }) => {
+      await ready(page, "/timeline/");
+      await warmUpTouch(page);
+      const before = await whereOf(page);
+      await toggles(page).nth(2).focus();
+      await page.keyboard.press("Space");
+      await settle(page);
+      expect((await expanded(page))[2]).toBe("true");
+      expect(await whereOf(page)).toEqual(before);
+      await page.keyboard.press("Space");
+      await settle(page);
+      expect((await expanded(page))[2]).toBe("false");
+      expect(await whereOf(page)).toEqual(before);
+    });
+
     test("the resume download stays at the top, and Education & Internships still opens whole", async ({
       page,
     }) => {
@@ -167,6 +233,11 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       expect(await shown(page, "skills")).toBe(false);
       expect(await shown(page, "education")).toBe(true);
       expect(await unseen(page)).toEqual([]);
+      // open, Education's roles page no more than before #108 (#108)
+      await expect(area(page)).toHaveAttribute(
+        "data-screens",
+        String(EDUCATION_OPEN_SCREENS[name as keyof typeof PHONES]),
+      );
       await page.locator("[data-disclosure=education]").tap();
       await settle(page);
       expect(await shown(page, "education")).toBe(true);
