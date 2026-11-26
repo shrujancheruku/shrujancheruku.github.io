@@ -8,7 +8,8 @@ import { area, ready, SWIPES, settle, swipe, warmUpTouch } from "./helpers";
 // timeline, the archive and Education & Internships are reachable whole and in
 // order, and that the address stays the step's.
 
-test.setTimeout(240_000);
+// a walk over every screen both ways takes 3 to 4 minutes on the CI runner
+test.setTimeout(420_000);
 
 const PHONES = {
   "Pixel 7": devices["Pixel 7"],
