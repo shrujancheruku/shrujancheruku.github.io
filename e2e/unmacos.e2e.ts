@@ -51,7 +51,7 @@ test("it does not change the site's own theme", async ({ page }) => {
     getComputedStyle(document.documentElement).getPropertyValue("--bg").trim(),
   );
   expect(body).toBe("#2e3440");
-  // the demo's own colours are on the scene alone
+  // the composition's own colours are on the scene alone
   const scenePaints = await scene(page).evaluate((el) => el.style.length > 0);
   expect(scenePaints).toBe(true);
 });

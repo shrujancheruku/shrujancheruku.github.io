@@ -1,7 +1,7 @@
 // The `unmacos` composition (#41): a tiling desktop of terminal apps, each
 // drawn as its real TUI. A window moves and the theme switches on each beat;
 // one window opens from the launcher and closes again, and the loop has no
-// seam. It demos its own theme switching on the scene only: the site's theme
+// seam. It shows its own theme switching on the scene only: the site's theme
 // is never touched. The rules and numbers are in unmacos-session.ts.
 import { THEMES, type ThemeName } from "../lib/themes";
 import type { Composition, Kit } from "./kit";
@@ -352,7 +352,7 @@ function build(kit: Kit): void {
   const menu = el("div", "menu", "", root);
   const keys = el("div", "keys", "", root);
   view = { tn, desk, menu, keys };
-  // a visitor who switches theme sees the demo carry on from theirs
+  // a visitor who switches theme sees the composition carry on from theirs
   kit.onTheme((name) => {
     if (!playing) return;
     paint(name);

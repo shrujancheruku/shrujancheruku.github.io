@@ -33,7 +33,7 @@ describe("segments", () => {
   });
 });
 
-describe("the CT Chest demo", () => {
+describe("the repository's CT Chest demo data", () => {
   test("is the first of five report types, and four lines of shorthand", () => {
     expect(REPORT_TYPES).toHaveLength(5);
     expect(REPORT_TYPES[0]).toBe("CT Chest");

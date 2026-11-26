@@ -2,7 +2,7 @@
 // the theme cycle, the tiling, the beats and the numbers that move.
 import { isThemeName, nextTheme, THEME_NAMES } from "../lib/themes";
 
-/** The theme the demo switches to after `current`; a name the site lacks starts at the first. */
+/** The theme the composition switches to after `current`; a name the site lacks starts at the first. */
 export function themeAfter(current: string): string {
   return isThemeName(current) ? nextTheme(current) : (THEME_NAMES[0] as string);
 }
@@ -89,7 +89,7 @@ export function actionTimes(count: number): number[] {
   });
 }
 
-/** The desktop the demo starts with, in tiling order. */
+/** The desktop the composition starts with, in tiling order. */
 export const START_WINDOWS: readonly string[] = [
   "nvim",
   "btop",
