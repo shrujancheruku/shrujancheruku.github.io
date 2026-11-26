@@ -1,5 +1,6 @@
 import { devices, expect, test } from "@playwright/test";
 import {
+  area,
   atEnd,
   isOneScreen,
   ready,
@@ -91,29 +92,64 @@ for (const phone of PHONES) {
       expect(scrollers).toEqual([]);
     });
 
-    for (const path of [
-      "/",
-      "/work/",
-      "/timeline/",
-      "/now/",
-      "/contact/",
-      "/archive/",
-    ]) {
+    // Each address and the step it must open, worked out from the workspace
+    // model and the project windows rather than the address book the desktop
+    // itself reads. A featured project's step is its window's position; an
+    // archive project opens on the last featured step with the archive open.
+    const OPENS = [
+      ["/", "opening", 0],
+      ["/work/", "projects", 0],
+      ["/work/unmacos/", "projects", "unmacos"],
+      ["/work/claude-orchestrate/", "projects", "last"],
+      ["/timeline/", "timeline", 0],
+      ["/now/", "sabbatical", 0],
+      ["/contact/", "contact", 0],
+      ["/archive/", "projects", "last"],
+    ] as const;
+    for (const [path, workspace, within] of OPENS) {
       test(`${path} opens on its step with the status bar intact`, async ({
         page,
       }) => {
         await ready(page, path);
         await page.waitForTimeout(400);
         const bar = await page.locator("header.bar").boundingBox();
-        const vis = await page.evaluate(() => ({
-          y: scrollY,
-          h: innerHeight,
-          step: document.querySelector("main.area")?.getAttribute("data-step"),
-        }));
+        const vis = await page.evaluate(
+          ([id, at]) => {
+            const model: { id: string; steps: unknown[] }[] = JSON.parse(
+              document.getElementById("desktop-model")?.textContent ?? "[]",
+            );
+            const index = model.findIndex((w) => w.id === id);
+            const first = model
+              .slice(0, index)
+              .reduce((n, w) => n + w.steps.length, 0);
+            const count = model[index]?.steps.length ?? 0;
+            const position = [
+              ...document.querySelectorAll<HTMLElement>(
+                '[data-window^="comp-"] [data-slot]',
+              ),
+            ].find((s) => s.dataset.composition === at)?.dataset.position;
+            const offset =
+              at === "last"
+                ? count - 1
+                : typeof at === "number"
+                  ? at
+                  : Number(position) - 1;
+            return {
+              want: first + offset,
+              step: Number(
+                document.querySelector("main.area")?.getAttribute("data-step"),
+              ),
+            };
+          },
+          [workspace, within] as const,
+        );
         expect(bar?.y ?? -1).toBeGreaterThanOrEqual(0);
         expect(bar?.height).toBe(40);
         expect(new URL(page.url()).pathname).toBe(path);
-        expect(vis.step).not.toBeNull();
+        expect(Number.isInteger(vis.want)).toBe(true);
+        expect(vis.step).toBe(vis.want);
+        if (within === "last")
+          await expect(area(page)).toHaveAttribute("data-open", "true");
       });
     }
   });
