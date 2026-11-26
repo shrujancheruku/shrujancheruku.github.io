@@ -45,7 +45,7 @@ How the desktop moves from one workspace to another. Nothing opens or closes: th
 _Avoid_: Page transition, slide, scroll, swipe
 
 **First appearance**:
-How a step's windows come on show when the desktop loads, at any address. Each window slides out of the edge of the desktop its tile sits on (right, else bottom, left, top) straight into its tile, one after another in tiling order; nothing re-tiles. The wheel waits until every window is in. With reduced motion the step is simply there.
+How a step's windows come on show when the desktop loads, at any address. Each window slides out of the edge of the desktop its tile sits on (right, else bottom, left, top) straight into its tile, one after another in tiling order; nothing re-tiles. On a phone, where every tile spans the width, the windows come from the right and left edges by turns, the first from the right. The wheel waits until every window is in. With reduced motion the step is simply there.
 _Avoid_: Launch, boot animation, intro, power-on; "opening a window" (that has neighbours giving up space)
 
 **Turning back**:
