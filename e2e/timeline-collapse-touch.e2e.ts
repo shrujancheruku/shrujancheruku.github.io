@@ -16,6 +16,15 @@ const PHONES = {
   },
 } as const;
 
+// The screens the step has with Education & Internships open: as many as on
+// master before #108 (measured there: 2, 4 and 4), never more. The roles page
+// on the two smaller phones.
+const EDUCATION_OPEN_SCREENS: Record<keyof typeof PHONES, number> = {
+  "Pixel 7": 2,
+  "iPhone 14": 4,
+  "375x667": 4,
+};
+
 const shown = (page: Page, id: string) =>
   page
     .locator(`[data-window="${id}"]`)
@@ -224,6 +233,11 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       expect(await shown(page, "skills")).toBe(false);
       expect(await shown(page, "education")).toBe(true);
       expect(await unseen(page)).toEqual([]);
+      // open, Education's roles page no more than before #108 (#108)
+      await expect(area(page)).toHaveAttribute(
+        "data-screens",
+        String(EDUCATION_OPEN_SCREENS[name as keyof typeof PHONES]),
+      );
       await page.locator("[data-disclosure=education]").tap();
       await settle(page);
       expect(await shown(page, "education")).toBe(true);
