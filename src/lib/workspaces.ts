@@ -195,12 +195,9 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
           name: [58, 0, 42, 62],
           term: [58, 62, 42, 38],
         },
-        // the contact terminal, then the opening's name over its terminal: a
-        // phone has no room for both terminals typed out in full
-        [
-          { contact: [0, 0, 100, 100] },
-          { name: [0, 0, 100, 62], term: [0, 62, 100, 38] },
-        ],
+        // the contact terminal alone: contact is the last step, and the
+        // opening's name and whoami windows add nothing a phone needs here
+        [{ contact: [0, 0, 100, 100] }],
       ),
     ],
   };
