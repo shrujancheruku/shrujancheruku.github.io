@@ -3,7 +3,7 @@
 // only on touch). Right: four icon toggles (home, contact, crt effect, theme)
 // and a clock on desktop. Each toggle carries a tooltip that shows on hover or
 // focus, and is written out as a staircase until the first interaction.
-import { THEME_NAMES } from "../lib/themes";
+import { swatch, THEME_NAMES, THEMES } from "../lib/themes";
 import type { Workspace } from "../lib/workspaces";
 
 interface Props {
@@ -56,6 +56,7 @@ const { workspaces } = Astro.props;
           role="menuitemradio"
           aria-checked="false"
           data-theme-set={name}
+          style={`--swatch:${swatch(THEMES[name])}`}
         >
           <i />
           {name}
