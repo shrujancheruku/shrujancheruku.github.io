@@ -1,6 +1,6 @@
 // Re-records test/fixtures/github-projects.json from the live API with
 // your `gh` login. Run by hand, never in the build: bun scripts/record-github.ts
-import { buildQuery } from "../src/lib/github";
+import { buildQuery, owner } from "../src/lib/github";
 
 const names = [
   "issho",
@@ -12,7 +12,7 @@ const names = [
   "aidan-landing-page",
   "deleted-example",
 ];
-const query = buildQuery("shrujancheruku", names);
+const query = buildQuery(owner(), names);
 const proc = Bun.spawn(["gh", "api", "graphql", "--field", `query=${query}`], {
   stdout: "pipe",
   stderr: "inherit",

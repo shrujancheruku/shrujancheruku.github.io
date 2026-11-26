@@ -1,6 +1,7 @@
 // Runs after `astro build`: fails the build when a composition's JS plus assets
 // (its chunk and the chunks it needs) is over 60 KB (src/lib/composition-rules.ts).
 import { readdir, readFile, stat } from "node:fs/promises";
+import { join } from "node:path";
 import { compositions } from "../src/compositions/registry";
 import {
   type Chunk,
@@ -10,13 +11,14 @@ import {
   overCompositionBudget,
   staticImports,
 } from "../src/lib/composition-rules";
+import { DIST } from "./serve-dist";
 
-const dir = new URL("../dist/_astro/", import.meta.url);
+const dir = `${DIST}_astro/`;
 const files = (await readdir(dir)).filter((f) => f.endsWith(".js"));
 
 const chunks: Record<string, Chunk> = {};
 for (const name of files) {
-  const url = new URL(name, dir);
+  const url = join(dir, name);
   chunks[name] = {
     bytes: (await stat(url)).size,
     imports: staticImports(await readFile(url, "utf8")),
@@ -24,10 +26,7 @@ for (const name of files) {
 }
 
 // what the first load already has: the scripts of the opening page and what they import
-const page = await readFile(
-  new URL("../dist/index.html", import.meta.url),
-  "utf8",
-);
+const page = await readFile(`${DIST}index.html`, "utf8");
 const firstLoad = new Set<string>();
 const loadFrom = (name: string): void => {
   if (firstLoad.has(name) || !chunks[name]) return;

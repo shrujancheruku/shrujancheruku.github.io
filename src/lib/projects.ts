@@ -9,8 +9,7 @@
  */
 
 import { getCollection } from "astro:content";
-import { execFileSync } from "node:child_process";
-import { fetchFacts } from "./github";
+import { fetchFacts, githubToken, owner } from "./github";
 import {
   buildProjects,
   type ContentFile,
@@ -21,21 +20,9 @@ import {
 export type { Project } from "./projects-core";
 export type { Version } from "./releases";
 
-const owner = process.env.GITHUB_REPOSITORY_OWNER ?? "shrujancheruku";
-
 function token(): string {
-  const fromEnv = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
-  if (fromEnv) return fromEnv;
-  // Locally, borrow the `gh` login; the workflow passes its own token.
-  try {
-    const out = execFileSync("gh", ["auth", "token"], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-    if (out) return out;
-  } catch {
-    // fall through to the message below
-  }
+  const found = githubToken();
+  if (found) return found;
   throw new Error(
     "No GitHub token: set GITHUB_TOKEN or sign in with `gh auth login`",
   );
@@ -58,7 +45,7 @@ async function load(): Promise<Project[]> {
   }
 
   const names = [...ordering.featured, ...ordering.archive];
-  const facts = await fetchFacts(owner, names, token());
+  const facts = await fetchFacts(owner(), names, token());
   return buildProjects({ ordering, contents, facts });
 }
 

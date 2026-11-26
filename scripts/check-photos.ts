@@ -1,18 +1,20 @@
 // Runs after `astro build`: fails the build when a built photo is over 150 KB
 // (see src/lib/budgets.ts). Photos are the raster images in dist/_astro/.
 import { readdir, stat } from "node:fs/promises";
+import { join } from "node:path";
 import {
   type BuiltFile,
   overPhotoBudget,
   PHOTO_BUDGET_BYTES,
 } from "../src/lib/budgets";
+import { DIST } from "./serve-dist";
 
-const dir = new URL("../dist/_astro/", import.meta.url);
+const dir = `${DIST}_astro/`;
 const names = await readdir(dir);
 
 const files: BuiltFile[] = [];
 for (const name of names) {
-  const info = await stat(new URL(name, dir));
+  const info = await stat(join(dir, name));
   if (info.isFile()) files.push({ name: `_astro/${name}`, bytes: info.size });
 }
 

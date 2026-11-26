@@ -2,7 +2,30 @@
  * The one GraphQL request of the build (#36, #15): for each selected
  * repository, its link, main language, releases and tags.
  */
+import { execFileSync } from "node:child_process";
 import type { Release } from "./releases";
+
+/** Whose repositories the site lists: the workflow's owner, else the site's. */
+export const owner = (): string =>
+  process.env.GITHUB_REPOSITORY_OWNER ?? "shrujancheruku";
+
+/**
+ * A GitHub token from the environment, or locally the `gh` login; undefined
+ * when there is neither. The workflow passes its own token.
+ */
+export function githubToken(): string | undefined {
+  const fromEnv = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+  if (fromEnv) return fromEnv;
+  try {
+    const out = execFileSync("gh", ["auth", "token"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    return out || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export interface RepositoryFacts {
   /** The name GitHub returned, which must equal the one requested. */

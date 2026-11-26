@@ -12,8 +12,9 @@ import {
   PDF_TITLE,
   RESUME_PATH,
 } from "../src/lib/resume";
+import { DIST } from "./serve-dist";
 
-const outDir = new URL("../dist/", import.meta.url).pathname;
+const outDir = DIST;
 
 // serve dist/ the way Pages does: a directory serves its index.html
 const server = Bun.serve({

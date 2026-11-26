@@ -2,21 +2,20 @@
 // matches a Pages-enabled repository of the owner (see src/lib/collisions.ts).
 import { readdir } from "node:fs/promises";
 import { findCollisions, type Repository } from "../src/lib/collisions";
-
-const owner = process.env.GITHUB_REPOSITORY_OWNER ?? "shrujancheruku";
-const outDir = new URL("../dist/", import.meta.url);
+import { githubToken, owner } from "../src/lib/github";
+import { DIST } from "./serve-dist";
 
 async function ownerRepositories(): Promise<Repository[]> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
   };
-  const token = process.env.GITHUB_TOKEN;
+  const token = githubToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const repos: Repository[] = [];
   for (let page = 1; ; page++) {
-    const url = `https://api.github.com/users/${owner}/repos?type=owner&per_page=100&page=${page}`;
+    const url = `https://api.github.com/users/${owner()}/repos?type=owner&per_page=100&page=${page}`;
     const res = await fetch(url, { headers });
     if (!res.ok) {
       throw new Error(`GitHub answered ${res.status} for ${url}`);
@@ -27,7 +26,7 @@ async function ownerRepositories(): Promise<Repository[]> {
   }
 }
 
-const outputNames = await readdir(outDir);
+const outputNames = await readdir(DIST);
 
 if (outputNames.some((name) => name.toLowerCase() === "legacy")) {
   console.error("✗ legacy/ is in the build output; it must not be published");
@@ -37,7 +36,7 @@ if (outputNames.some((name) => name.toLowerCase() === "legacy")) {
 const collisions = findCollisions(
   outputNames,
   await ownerRepositories(),
-  owner,
+  owner(),
 );
 if (collisions.length > 0) {
   for (const { output, repository } of collisions) {
