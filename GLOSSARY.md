@@ -61,15 +61,15 @@ The one-line claim Shrujan writes for a project. Every project has one, and it i
 _Avoid_: Description, tagline, blurb
 
 **Proof line**:
-A short statement of fact under a featured project's pitch that backs the pitch up. A featured project has two to five, each one true when a visitor checks it against the project, and none repeating the pitch.
-_Avoid_: Bullet, feature, highlight
+A full sentence in Shrujan's own voice under a featured project's pitch, saying something he did or decided on that project. A featured project has two to four: at least one says what his part was and who it was for, at least one says where the project stands or what it achieved, and the rest are decisions he made. Each is true when a visitor checks it against the project; none repeats the pitch or sells the project to its users.
+_Avoid_: Bullet, feature, highlight, selling point
 
 **Claim**:
-The one statement the portfolio makes about Shrujan himself: that he takes a product from the problem to production on his own. It never appears without its evidence beside it. A project's statement is its pitch, not a claim.
+The one statement the portfolio makes about Shrujan himself: give him a problem, not a spec, and what comes back is designs in a day, a prototype in a week and something shipped in a month. It sits on the opening, in his own voice, with no career achievement beside it. A project's statement is its pitch, not a claim.
 _Avoid_: Tagline, slogan, headline, value proposition
 
 **Positioning line**:
-The claim, the role title and the scope that backs it, in one sentence that can be reused off the portfolio. It names no domain and says nothing about availability.
+The role title and the claim in one sentence that can be reused off the portfolio. It names no domain and no career achievement, and says nothing about availability.
 _Avoid_: Bio, elevator pitch, summary
 
 **Hero image**:
@@ -89,7 +89,7 @@ The image GitHub serves for a repository when its link is shared. It is not a he
 _Avoid_: OG image, card
 
 **Timeline**:
-The portfolio's presentation of Shrujan's career, newest first, starting with the sabbatical. Each employer is one entry; a title progression at one employer stays inside that entry. Earlier work belongs to Education & Internships, not the timeline.
+The portfolio's presentation of Shrujan's career, newest first, starting with the sabbatical. Each employer is one entry; a title progression at one employer stays inside that entry. An employer's entry says what Shrujan's part was, how far it reached and one thing that came of it, never a list of duties. Earlier work belongs to Education & Internships, not the timeline.
 _Avoid_: Resume section, CV, experience
 
 **Education & Internships**:
@@ -97,7 +97,7 @@ The window of the timeline workspace that sits beside the timeline: the degree a
 _Avoid_: Illinois section, education section, early career
 
 **Skill bar**:
-A skill Shrujan rates himself on out of ten, shown as the length of a bar with no number. The last one, Comedic Talent, is a joke and always outranks the rest.
+A skill Shrujan rates himself on out of ten, shown as the length of a bar with no number. The last one, Comedic Talent, is a joke and always outranks the rest; it appears in the skills window and never on the resume.
 _Avoid_: Skill meter, proficiency, rating
 
 **Resume**:
