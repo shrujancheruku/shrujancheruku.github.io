@@ -68,8 +68,8 @@ jobs:
           path: dist
 
   # The end-to-end tests, 4 shards in parallel against the build's dist. Two
-  # workers per shard (playwright.config.ts): a busier runner slows the CRT's
-  # frames and makes the timing tests flaky.
+  # workers per shard (the --workers=2 flag on the test step): a busier runner
+  # slows the CRT's frames and makes the timing tests flaky.
   e2e:
     needs: build
     runs-on: ubuntu-latest
