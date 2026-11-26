@@ -1,9 +1,9 @@
 import { expect, type Page, test } from "@playwright/test";
+import { area } from "./helpers";
 
 // a beat is 2.2 s and a cycle five of them
 test.describe.configure({ timeout: 60_000 });
 
-const area = (page: Page) => page.locator("main.area");
 const slot = (page: Page) => page.locator('[data-composition="unmacos"]');
 const scene = (page: Page) => slot(page).locator(".scene");
 const bar = (page: Page) => scene(page).locator(".sb");
@@ -89,8 +89,13 @@ test("it opens with nvim, btop and spotify_player, one window opens from the lau
   expect(await names()).toHaveLength(3);
   const labels: string[] = [];
   const counts: number[] = [];
+  // the close comes about 11 s in; sample until it and five labels are seen,
+  // rather than for a fixed time a loaded machine can run past
   const started = Date.now();
-  while (Date.now() - started < 12_500) {
+  while (
+    (counts.length < 3 || labels.length < 5) &&
+    Date.now() - started < 30_000
+  ) {
     const label = ((await scene(page).locator(".keys.on").textContent()) ?? "")
       .replace(/\s+/g, " ")
       .trim();
