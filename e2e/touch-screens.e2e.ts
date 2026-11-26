@@ -1,4 +1,5 @@
 import { devices, expect, type Page, test } from "@playwright/test";
+import { typed, unseen } from "./fit";
 import { area, ready, SWIPES, settle, swipe, warmUpTouch } from "./helpers";
 
 // On a phone nothing scrolls, so every window must fit its box. A step is
@@ -38,72 +39,6 @@ const lastStep = (page: Page) =>
       ).length - 1,
   );
 
-/** What is cut off in every window on show: strings, none when all fits. */
-const cutOff = (page: Page) =>
-  page.evaluate(() => {
-    const problems: string[] = [];
-    for (const pane of document.querySelectorAll<HTMLElement>(".pane")) {
-      if (getComputedStyle(pane).display === "none") continue;
-      const id = pane.dataset.window;
-      const win = pane.querySelector<HTMLElement>(".win");
-      const body = pane.querySelector<HTMLElement>(".body");
-      if (!win || !body) continue;
-      const box = win.getBoundingClientRect();
-      const slot = pane.querySelector<HTMLElement>("[data-slot]");
-      if (slot) {
-        // a composition: its scene fits, and so does each of its panes
-        const scene = slot.querySelector<HTMLElement>(".scene");
-        if (!scene) continue;
-        if (scene.scrollHeight > scene.clientHeight + 1)
-          problems.push(
-            `${id}: scene ${scene.scrollHeight}>${scene.clientHeight}`,
-          );
-        const s = scene.getBoundingClientRect();
-        for (const c of scene.children) {
-          // a pane the touch layout hides has no box
-          if (getComputedStyle(c).display === "none") continue;
-          const r = c.getBoundingClientRect();
-          if (
-            r.bottom > s.bottom + 1 ||
-            r.right > s.right + 1 ||
-            r.top < s.top - 1 ||
-            r.left < s.left - 1
-          )
-            problems.push(`${id}: ${c.className} outside the scene`);
-        }
-        continue;
-      }
-      for (const el of [body, ...body.querySelectorAll<HTMLElement>("*")]) {
-        const cs = getComputedStyle(el);
-        if (cs.display === "none" || el.closest("[hidden]")) continue;
-        if (
-          el === body ||
-          cs.overflowY !== "visible" ||
-          cs.overflowX !== "visible"
-        ) {
-          if (el.scrollHeight > el.clientHeight + 1)
-            problems.push(
-              `${id}: ${el.tagName}.${el.className} ${el.scrollHeight}>${el.clientHeight}`,
-            );
-          if (el.scrollWidth > el.clientWidth + 1)
-            problems.push(
-              `${id}: ${el.tagName}.${el.className} wide ${el.scrollWidth}>${el.clientWidth}`,
-            );
-        }
-        // text that sits outside the window's box is cut off
-        if (el.children.length === 0 && el.textContent?.trim()) {
-          const r = el.getBoundingClientRect();
-          if (
-            r.height > 0 &&
-            (r.bottom > box.bottom + 1 || r.right > box.right + 1)
-          )
-            problems.push(`${id}: "${el.textContent.slice(0, 24)}" outside`);
-        }
-      }
-    }
-    return problems;
-  });
-
 /** One swipe down or up; waits for the screen it moves to. */
 async function move(page: Page, direction: 1 | -1): Promise<void> {
   const before = await where(page);
@@ -140,10 +75,11 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       for (let guard = 0; guard < 80; guard++) {
         const at = await where(page);
         visited.push(`${at.step}.${at.screen}`);
-        expect(
-          await cutOff(page),
-          `step ${at.step} screen ${at.screen}`,
-        ).toEqual([]);
+        await typed(page);
+        // soft: one walk reports every screen with something cut off
+        expect
+          .soft(await unseen(page), `step ${at.step} screen ${at.screen}`)
+          .toEqual([]);
         expect(new URL(page.url()).pathname).toBe(addresses[at.step]);
         if (at.step === last && at.screen === at.screens - 1) break;
         await move(page, 1);
@@ -225,7 +161,7 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       expect(total).toBeGreaterThan(0);
       const seen: string[] = [];
       for (let guard = 0; guard < 20; guard++) {
-        expect(await cutOff(page)).toEqual([]);
+        expect(await unseen(page)).toEqual([]);
         seen.push(
           ...(await page
             .locator("#education-roles > article:not([hidden])")
@@ -240,7 +176,7 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       await page.locator("[data-disclosure=education]").tap();
       await settle(page);
       expect((await where(page)).screen).toBe(before.screen);
-      expect(await cutOff(page)).toEqual([]);
+      expect(await unseen(page)).toEqual([]);
     });
 
     test("the archive lists every entry across its screens, each fitting", async ({
@@ -252,7 +188,7 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       expect(total).toBeGreaterThan(0);
       const seen: string[] = [];
       for (let guard = 0; guard < 20; guard++) {
-        expect(await cutOff(page)).toEqual([]);
+        expect(await unseen(page)).toEqual([]);
         seen.push(
           ...(await page
             .locator("[data-archive] [data-entry]:not([hidden])")
