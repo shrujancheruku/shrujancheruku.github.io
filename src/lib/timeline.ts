@@ -232,8 +232,8 @@ export const hobbies: readonly { folder: string; items: readonly Hobby[] }[] = [
     folder: "making",
     items: [
       { name: "photography", resume: true },
-      { name: "watchmaking", resume: true },
-      { name: "cooking", resume: false },
+      { name: "cooking", resume: true },
+      { name: "watchmaking", resume: false },
       { name: "guitar", resume: false },
     ],
   },
@@ -251,7 +251,7 @@ export const hobbies: readonly { folder: string; items: readonly Hobby[] }[] = [
  *  each with its share (%) of the foreground colour over the background. */
 export const hobbyFades: readonly { name: string; fg: number }[] = [
   "football",
-  "cooking",
+  "watchmaking",
   "pub quizzes",
   "chess",
   "guitar",
