@@ -112,6 +112,10 @@ const css = `
   .um .sb{font-size:calc(1.3*var(--u))}
   .um .keys{font-size:calc(1.15*var(--u))}
   .um .keys .wide{display:none}
+  .um .keys,.um legend,.um .sb>span,.um .kv>*,.um .m>span:first-child,.um .pr span,.um .hint>span,.um .tabs>*,
+  .um .app fieldset>div:not(.row,.col,.cg,.m,.kv,.tk,.pr){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .um legend{max-width:100%}
+  .um [data-cut]{visibility:hidden}
 }
 `;
 
@@ -174,7 +178,7 @@ const COMMITS: [string, string][] = [
 ];
 
 const lazygit = (): string =>
-  `<div class="app lg"><div class="row g"><div class="col side"><fieldset><legend><b>[1]</b> Status</legend><span class="a">✓</span> unmacos → main</fieldset><fieldset class="act fl"><legend><b>[2]</b> Files <span class="d">- Worktrees - Submodules</span></legend><div class="sel"><span class="h">&nbsp;M</span> home/dot_config/rift/config.toml</div><div><span class="a">A&nbsp;</span> themes/ristretto.toml</div><div><span class="h">&nbsp;M</span> home/dot_config/sketchybar/colors.sh</div><div><span class="h">??</span> docs/ristretto.png</div></fieldset><fieldset class="br"><legend><b>[3]</b> Local branches <span class="d">- Remotes - Tags</span></legend><div><span class="a">*</span> main <span class="a">✓</span></div><div>&nbsp; feat/ristretto <span class="h">↑2</span></div><div>&nbsp; fix/bar-gap</div></fieldset><fieldset class="g"><legend><b>[4]</b> Commits <span class="d">- Reflog</span></legend>${COMMITS.map(([h, m]) => `<div><span class="a">${h}</span> <span class="d">SC</span> ${m}</div>`).join("")}</fieldset><fieldset class="sth"><legend><b>[5]</b> Stash</legend></fieldset></div><div class="col g main"><fieldset class="g"><legend><b>[0]</b> Unstaged changes</legend><div><b>home/dot_config/rift/config.toml</b></div><div class="a">@@ -12,7 +12,7 @@ [settings.layout]</div><div> mode = "bsp"</div><div> [settings.layout.gaps]</div><div class="h">-inner = 6</div><div class="add">+inner = 4</div><div> outer = 4</div><div> </div><div class="a">@@ -31,6 +31,7 @@ [settings.ui]</div><div> [settings.ui.border]</div><div> width = 2</div><div class="add">+radius = 10</div><div> active = "theme"</div></fieldset><fieldset class="log"><legend>Command log</legend><div class="d">git add themes/ristretto.toml</div><div class="d">git fetch origin</div></fieldset></div></div><div class="hint"><span>Stage: &lt;space&gt; | Commit: c | Stash: s | Reset: D | Keybindings: ?</span><span class="d">0.44.1</span></div></div>`;
+  `<div class="app lg"><div class="row g"><div class="col side"><fieldset><legend><b>[1]</b> Status</legend><div><span class="a">✓</span> unmacos → main</div></fieldset><fieldset class="act fl"><legend><b>[2]</b> Files <span class="d">- Worktrees - Submodules</span></legend><div class="sel"><span class="h">&nbsp;M</span> home/dot_config/rift/config.toml</div><div><span class="a">A&nbsp;</span> themes/ristretto.toml</div><div><span class="h">&nbsp;M</span> home/dot_config/sketchybar/colors.sh</div><div><span class="h">??</span> docs/ristretto.png</div></fieldset><fieldset class="br"><legend><b>[3]</b> Local branches <span class="d">- Remotes - Tags</span></legend><div><span class="a">*</span> main <span class="a">✓</span></div><div>&nbsp; feat/ristretto <span class="h">↑2</span></div><div>&nbsp; fix/bar-gap</div></fieldset><fieldset class="g"><legend><b>[4]</b> Commits <span class="d">- Reflog</span></legend>${COMMITS.map(([h, m]) => `<div><span class="a">${h}</span> <span class="d">SC</span> ${m}</div>`).join("")}</fieldset><fieldset class="sth"><legend><b>[5]</b> Stash</legend></fieldset></div><div class="col g main"><fieldset class="g"><legend><b>[0]</b> Unstaged changes</legend><div><b>home/dot_config/rift/config.toml</b></div><div class="a">@@ -12,7 +12,7 @@ [settings.layout]</div><div> mode = "bsp"</div><div> [settings.layout.gaps]</div><div class="h">-inner = 6</div><div class="add">+inner = 4</div><div> outer = 4</div><div> </div><div class="a">@@ -31,6 +31,7 @@ [settings.ui]</div><div> [settings.ui.border]</div><div> width = 2</div><div class="add">+radius = 10</div><div> active = "theme"</div></fieldset><fieldset class="log"><legend>Command log</legend><div class="d">git add themes/ristretto.toml</div><div class="d">git fetch origin</div></fieldset></div></div><div class="hint"><span>Stage: &lt;space&gt; | Commit: c | Stash: s | Reset: D | Keybindings: ?</span><span class="d">0.44.1</span></div></div>`;
 
 const NVIM_LINES = [
   `<span class="a">local</span> path = vim.fn.expand(<span class="a">"~/.local/state/unmacos/theme"</span>)`,
@@ -190,7 +194,7 @@ const NVIM_LINES = [
 ];
 
 const nvim = (): string =>
-  `<div class="app nv"><div class="tabs"><b>colourscheme.lua</b><span class="d">options.lua</span><span class="d">keymaps.lua</span></div><div class="code g">${NVIM_LINES.map((l, i) => `<div${i === 9 ? ' class="cl"' : ""}><span class="ln">${String(i + 1).padStart(3)} </span>${l}</div>`).join("")}${'<div class="d">~</div>'.repeat(30)}</div><div class="sl"><b class="mode">NORMAL</b><span class="a">main</span><span>lua/config/colourscheme.lua</span><span class="r d">lua · utf-8</span><span>10:3 · Bot</span></div></div>`;
+  `<div class="app nv"><div class="tabs"><b>colourscheme.lua</b><span class="d">options.lua</span><span class="d">keymaps.lua</span></div><div class="code g" data-runs-off>${NVIM_LINES.map((l, i) => `<div${i === 9 ? ' class="cl"' : ""}><span class="ln">${String(i + 1).padStart(3)} </span>${l}</div>`).join("")}${'<div class="d">~</div>'.repeat(30)}</div><div class="sl" data-runs-off><b class="mode">NORMAL</b><span class="a">main</span><span>lua/config/colourscheme.lua</span><span class="r d">lua · utf-8</span><span>10:3 · Bot</span></div></div>`;
 
 const APPS: Record<string, () => string> = {
   nvim,
@@ -253,9 +257,67 @@ function layout(kit: Kit, focus: Win | undefined): void {
   kit.focus(focus?.el ?? null);
 }
 
+/** A line of a tile: a panel, a line in one, or a line of the app's own. */
+const LINES =
+  "fieldset, fieldset > *, .cg > *, .app > :not(fieldset, .row, .col), .row > :not(fieldset, .col), .col > :not(fieldset)";
+
+/** The box an element's clipped content shows in: inside its border. */
+function inner(el: HTMLElement): DOMRect {
+  const r = el.getBoundingClientRect();
+  return new DOMRect(
+    r.left + el.clientLeft,
+    r.top + el.clientTop,
+    el.clientWidth,
+    el.clientHeight,
+  );
+}
+
+/**
+ * On a phone a tile is small. A line too long for its panel ends in an
+ * ellipsis (the css), and a line or a panel that does not fit whole in what
+ * holds it is left out, never shown cut in half (#83). nvim's code runs off
+ * its pane's edge, as a terminal's does.
+ */
+function fit(tile: HTMLElement): void {
+  for (const el of tile.querySelectorAll("[data-cut]"))
+    el.removeAttribute("data-cut");
+  if (!onPhone()) return;
+  for (const el of tile.querySelectorAll<HTMLElement>(LINES)) {
+    if (el.closest("[data-cut], [data-runs-off]")) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) continue;
+    const cs = getComputedStyle(el);
+    // what runs past the line itself, unless an ellipsis shortens it
+    let cut = cs.overflowX === "visible" && el.scrollWidth > el.clientWidth + 1;
+    for (let a = el.parentElement; a && !cut; a = a.parentElement) {
+      const clips = a === tile || getComputedStyle(a).overflow !== "visible";
+      if (clips) {
+        // a legend sits on its fieldset's border
+        const b =
+          a.tagName === "FIELDSET" && el.tagName === "LEGEND"
+            ? a.getBoundingClientRect()
+            : inner(a);
+        cut =
+          r.top < b.top - 1 ||
+          r.left < b.left - 1 ||
+          r.bottom > b.bottom + 1 ||
+          r.right > b.right + 1;
+      }
+      if (a === tile) break;
+    }
+    if (cut) el.dataset.cut = "";
+  }
+}
+
+/** Whether the scene is on a phone; the kit knows, once the scene is built. */
+let onPhone = (): boolean => false;
+/** Refits a tile whenever its size changes (a window moves, the screen turns). */
+let fitting: ResizeObserver | undefined;
+
 function spawn(kit: Kit, name: string, instant: boolean): Win {
   const el = kit.el("div", "pn tile out", "", view.desk);
   el.innerHTML = APPS[name]?.() ?? "";
+  fitting?.observe(el);
   const win = { name, el };
   wins.push(win);
   live(el);
@@ -276,7 +338,10 @@ function reorder(order: readonly string[]): void {
 const isWin = (w: Win | undefined): w is Win => w !== undefined;
 
 function clear(): void {
-  for (const w of wins) w.el.remove();
+  for (const w of wins) {
+    fitting?.unobserve(w.el);
+    w.el.remove();
+  }
   wins = [];
 }
 
@@ -311,6 +376,7 @@ function tick(): void {
     if (fill) fill.style.width = `${v}%`;
   }
   live();
+  for (const w of wins) fit(w.el);
 }
 
 const kbd = (keys: readonly string[]): string =>
@@ -352,6 +418,10 @@ function build(kit: Kit): void {
   const menu = el("div", "menu", "", root);
   const keys = el("div", "keys", "", root);
   view = { tn, desk, menu, keys };
+  onPhone = () => kit.touch;
+  fitting = new ResizeObserver((entries) => {
+    for (const e of entries) fit(e.target as HTMLElement);
+  });
   // a visitor who switches theme sees the composition carry on from theirs
   kit.onTheme((name) => {
     if (!playing) return;
@@ -431,6 +501,7 @@ async function play(kit: Kit): Promise<void> {
           last?.el.classList.add("out");
           switchTheme();
           await wait(beat.at + 250);
+          if (last) fitting?.unobserve(last.el);
           last?.el.remove();
           wins = wins.slice(0, -1);
           layout(kit, wins[0]);

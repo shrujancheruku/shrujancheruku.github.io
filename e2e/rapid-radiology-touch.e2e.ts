@@ -1,4 +1,5 @@
 import { devices, expect, type Page, test } from "@playwright/test";
+import { toComposition } from "./helpers";
 
 test.use({ ...devices["Pixel 7"] });
 test.describe.configure({ timeout: 120_000 });
@@ -7,6 +8,7 @@ const slot = (page: Page) =>
   page.locator('[data-composition="rapid-radiology"]');
 const open = async (page: Page) => {
   await page.goto("/work/rapid-radiology/");
+  await toComposition(page);
   await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
 };
 

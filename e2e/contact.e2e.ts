@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { area } from "./helpers";
+import { area, SWIPES, settle, swipe, warmUpTouch } from "./helpers";
 
 const win = (page: Page, id: string) => page.locator(`[data-window="${id}"]`);
 const box = (page: Page, id: string) => win(page, id).boundingBox();
@@ -104,19 +104,28 @@ test("returning to contact after leaving shows the command at once, without typi
   });
 });
 
-test("on touch, the terminal sits above the whoami terminal", async ({
+test("on touch, the terminal has the screen, and the whoami terminal is the next", async ({
   browser,
 }) => {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
   });
   const page = await context.newPage();
   await page.goto("/contact/");
   await expect(area(page)).toHaveAttribute("data-ready", "true");
-  const contact = await box(page, "contact");
+  await expect(area(page)).toHaveAttribute("data-screens", "2");
+  expect(await box(page, "contact")).not.toBeNull();
+  expect(await box(page, "term")).toBeNull();
+  await warmUpTouch(page);
+  await swipe(page, 1, SWIPES[0] as (typeof SWIPES)[number]);
+  await expect(area(page)).toHaveAttribute("data-screen", "1");
+  await settle(page);
+  expect(await box(page, "contact")).toBeNull();
+  const name = await box(page, "name");
   const term = await box(page, "term");
-  expect(contact).not.toBeNull();
-  expect(term).not.toBeNull();
-  expect(contact?.y ?? Infinity).toBeLessThan(term?.y ?? 0);
+  expect(name?.y ?? Infinity).toBeLessThan(term?.y ?? 0);
+  expect(new URL(page.url()).pathname).toBe("/contact/");
   await context.close();
 });
