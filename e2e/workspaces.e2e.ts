@@ -162,7 +162,7 @@ test("windows animate between tilings, not cut", async ({ page }) => {
 
 test("windows arriving fade in rather than appearing", async ({ page }) => {
   const frames = await framesOf(page, '[data-window="comp-1"]', "opacity", () =>
-    page.keyboard.press("ArrowDown"),
+    page.keyboard.press("3"),
   );
   expect(frames.some(([o = 0]) => o > 0 && o < 1)).toBe(true);
 });

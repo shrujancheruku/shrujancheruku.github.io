@@ -46,12 +46,18 @@ test("scrolling changes address and title and adds no history entry", async ({
   const before = await page.evaluate(() => history.length);
   await flick(page, { x: 640, y: 400 });
   await settle(page);
+  expect(new URL(page.url()).pathname).toBe("/about/");
+  await expect(page).toHaveTitle("About — Shrujan Cheruku");
+  await flick(page, { x: 640, y: 400 });
+  await settle(page);
   expect(new URL(page.url()).pathname).toBe("/work/");
   await expect(page).toHaveTitle("Projects — Shrujan Cheruku");
   await flick(page, { x: 640, y: 400 });
   await settle(page);
   expect(new URL(page.url()).pathname).toBe("/work/unmacos/");
   await expect(page).toHaveTitle("unmacos — Shrujan Cheruku");
+  await page.keyboard.press("ArrowUp");
+  await settle(page);
   await page.keyboard.press("ArrowUp");
   await settle(page);
   await page.keyboard.press("ArrowUp");

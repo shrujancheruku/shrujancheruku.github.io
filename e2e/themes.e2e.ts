@@ -96,7 +96,7 @@ test("home and contact jump to their workspaces", async ({ page }) => {
   await page.getByRole("button", { name: "contact", exact: true }).click();
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "4",
+    "5",
   );
   await page.keyboard.press("h");
   await expect(page.locator("main.area")).toHaveAttribute(
@@ -106,7 +106,7 @@ test("home and contact jump to their workspaces", async ({ page }) => {
   await page.keyboard.press("c");
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "4",
+    "5",
   );
 });
 
@@ -262,10 +262,10 @@ test("Back after H returns to the previous place, and C is a jump too", async ({
   page,
 }) => {
   await ready(page);
-  await page.keyboard.press("3");
+  await page.keyboard.press("4");
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "2",
+    "3",
   );
   const where = new URL(page.url()).pathname;
   await page.keyboard.press("h");
@@ -277,18 +277,18 @@ test("Back after H returns to the previous place, and C is a jump too", async ({
   await page.goBack();
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "2",
+    "3",
   );
   expect(new URL(page.url()).pathname).toBe(where);
   await page.getByRole("button", { name: "contact", exact: true }).click();
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "4",
+    "5",
   );
   await page.goBack();
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "2",
+    "3",
   );
 });
 
