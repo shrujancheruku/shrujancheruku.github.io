@@ -232,8 +232,8 @@ export const hobbies: readonly { folder: string; items: readonly Hobby[] }[] = [
     folder: "making",
     items: [
       { name: "photography", resume: true },
-      { name: "watchmaking", resume: true },
       { name: "cooking", resume: false },
+      { name: "watchmaking", resume: true },
       { name: "guitar", resume: false },
     ],
   },

@@ -89,6 +89,29 @@ test("hobbies are the tree with three folders and nine hobbies", async ({
   ]);
 });
 
+test("the making folder reads photography, cooking, watchmaking, guitar", async ({
+  page,
+}) => {
+  await enter(page);
+  await settle(page);
+  const tree = page
+    .locator('[data-window="skills"]')
+    .getByRole("list", { name: "hobbies" });
+  const names = await tree
+    .locator("[data-hobby]")
+    .evaluateAll((els) => els.map((el) => el.getAttribute("data-hobby")));
+  const at = names.indexOf("photography");
+  expect(names.slice(at, at + 4)).toEqual([
+    "photography",
+    "cooking",
+    "watchmaking",
+    "guitar",
+  ]);
+  // cooking keeps its fade, watchmaking keeps its accent
+  await expect(tree.locator('[data-hobby="cooking"]')).not.toHaveClass(/hit/);
+  await expect(tree.locator('[data-hobby="watchmaking"]')).toHaveClass(/hit/);
+});
+
 test("the window scrolls when the content does not fit", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 520 });
   await enter(page);
