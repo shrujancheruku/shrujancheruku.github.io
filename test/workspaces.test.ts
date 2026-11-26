@@ -300,15 +300,22 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
     expect(ids(touch(2))).toEqual([["timeline", "education"], ["skills"]]);
   });
 
-  test("the sabbatical is its copy, then the four photos in a 2 x 2 grid", () => {
-    const [copy, photos] = touch(3);
-    expect(Object.keys(copy ?? {})).toEqual(["sabbatical"]);
-    expect(Object.keys(photos ?? {}).sort()).toEqual([
+  test("the sabbatical is one touch screen: the copy over the four photos in a 2 x 2 grid", () => {
+    const screens = touch(3);
+    expect(screens.length).toBe(1);
+    const [screen] = screens;
+    expect(Object.keys(screen ?? {}).sort()).toEqual([
       "photo-1",
       "photo-2",
       "photo-3",
       "photo-4",
+      "sabbatical",
     ]);
+    // the copy above the grid, the grid filling what the copy leaves
+    expect(tile(screen ?? {}, "sabbatical")[1]).toBe(0);
+    expect(tile(screen ?? {}, "photo-1")[1]).toBeGreaterThanOrEqual(
+      tile(screen ?? {}, "sabbatical")[3],
+    );
   });
 
   test("wherever the projects count goes, every project has its two screens", () => {

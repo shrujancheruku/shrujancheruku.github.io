@@ -1,4 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
+import { devices, expect, type Page, test } from "@playwright/test";
+import { typed, unseen } from "./fit";
 import { area, settle } from "./helpers";
 
 const shown = (page: Page) =>
@@ -63,25 +64,42 @@ test("each photo window fills its tile and carries a place · date caption", asy
   }
 });
 
-test("on touch the copy window is one screen and the 2 × 2 grid the next", async ({
-  browser,
-}) => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await page.goto("/");
-  await expect(area(page)).toHaveAttribute("data-ready", "true");
-  await page.locator(".ws button").nth(3).click();
-  await expect(area(page)).toHaveAttribute("data-workspace", "3");
-  await settle(page);
-  await expect(page.locator('.pane[data-window="sabbatical"]')).toBeVisible();
-  await expect(page.locator('.pane[data-window="photo-1"]')).toBeHidden();
-  await page.keyboard.press("ArrowDown");
-  await expect(area(page)).toHaveAttribute("data-screen", "1");
-  await settle(page);
-  await expect(page.locator('.pane[data-window="sabbatical"]')).toBeHidden();
-  const p1 = await page.locator('.pane[data-window="photo-1"]').boundingBox();
-  const p2 = await page.locator('.pane[data-window="photo-2"]').boundingBox();
-  const p3 = await page.locator('.pane[data-window="photo-3"]').boundingBox();
-  expect(p1 && p2 && p2.x > p1.x).toBe(true);
-  expect(p3 && p1 && p3.y > p1.y).toBe(true);
-  await page.close();
-});
+// On a phone the copy and the four photos are one screen: nothing to swipe to,
+// and nothing cut off. Pixel 7 and iPhone 14 are the phones; 375x667 is the
+// smallest the site is held to.
+const PHONES = {
+  "Pixel 7": devices["Pixel 7"],
+  "375x667": {
+    viewport: { width: 375, height: 667 },
+    hasTouch: true,
+    isMobile: true,
+    deviceScaleFactor: 2,
+  },
+} as const;
+
+for (const [name, emulation] of Object.entries(PHONES)) {
+  test(`on ${name} the copy and the four photos are one screen, with nothing cut off`, async ({
+    browser,
+  }) => {
+    const { defaultBrowserType: _engine, ...phone } = emulation as {
+      defaultBrowserType?: string;
+    };
+    const page = await browser.newPage(phone);
+    await page.goto("/");
+    await expect(area(page)).toHaveAttribute("data-ready", "true");
+    await page.locator(".ws button").nth(3).click();
+    await expect(area(page)).toHaveAttribute("data-workspace", "3");
+    await settle(page);
+    await expect(area(page)).toHaveAttribute("data-screens", "1");
+    expect(await shown(page)).toEqual([
+      "photo-1",
+      "photo-2",
+      "photo-3",
+      "photo-4",
+      "sabbatical",
+    ]);
+    await typed(page);
+    expect(await unseen(page)).toEqual([]);
+    await page.close();
+  });
+}
