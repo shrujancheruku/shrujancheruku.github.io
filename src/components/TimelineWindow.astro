@@ -1,8 +1,9 @@
 ---
 // The timeline: the five career entries, newest first, scrolling inside the
-// window on a short screen. On touch nothing scrolls: the window shares its
-// screen with Education & Internships, and each entry collapses to its heading
-// (a tap opens it, one at a time) so all five fit with the resume download.
+// window on a short screen. On touch nothing scrolls: each entry collapses to
+// its heading (a tap opens or closes it). They start open, up to the most that
+// fit the screen, and past that opening one closes the one open longest
+// (src/scripts/timeline-entries.ts, #130).
 import { PDF_PATH } from "../lib/resume";
 import { timeline } from "../lib/timeline";
 import TimelineEntry from "./TimelineEntry.astro";
@@ -15,22 +16,6 @@ import Window from "./Window.astro";
     {timeline.map((entry, i) => <TimelineEntry entry={entry} now={i === 0} collapsible />)}
   </div>
 </Window>
-
-<script>
-  // one entry open at a time; a button's own click covers tap and keyboard
-  const list = document.querySelector<HTMLElement>("[data-entries]");
-  list?.addEventListener("click", (e) => {
-    const button = (e.target as Element).closest<HTMLButtonElement>(".tgl");
-    if (!button) return;
-    const open = button.getAttribute("aria-expanded") !== "true";
-    list.toggleAttribute("data-has-open", open);
-    for (const b of list.querySelectorAll<HTMLButtonElement>(".tgl")) {
-      const on = open && b === button;
-      b.setAttribute("aria-expanded", String(on));
-      b.closest<HTMLElement>(".te")?.setAttribute("data-open", String(on));
-    }
-  });
-</script>
 
 <style>
   /* a phone: the download sits in the window's label band, top right, so the
