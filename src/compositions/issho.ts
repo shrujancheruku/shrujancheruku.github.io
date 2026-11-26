@@ -127,6 +127,8 @@ const css = `
   .is .av{border-radius:calc(2*var(--u))}
   .is .scrn{font-size:min(5cqw,3.2cqh);padding:4cqw}
   .is .cities{display:none}
+  .is .pg>*{transition:opacity .4s}.is .pg>.off{opacity:0}
+  .is .scrn .stops .s{display:none}
 }
 @media (prefers-reduced-motion:reduce){
   .is .pg,.is .scrn{transition:none}
@@ -143,6 +145,8 @@ interface View {
 }
 
 let view: View;
+/** Whether the scene is on a phone; the kit knows, once the scene is built. */
+let onPhone = (): boolean => false;
 /** The index in STOPS the scene is on. */
 let at = 0;
 
@@ -155,7 +159,16 @@ function show(i: number): void {
   const sec = stop.section === null ? null : secs[stop.section];
   const max = Math.max(0, pg.offsetHeight - vp.offsetHeight);
   const top = sec ? sec.offsetTop - 0.03 * vp.offsetWidth : 0;
-  pg.style.transform = `translateY(${-Math.min(top, max)}px)`;
+  const y = Math.min(top, max);
+  pg.style.transform = `translateY(${-y}px)`;
+  // on a phone the site shows only what fits whole where it comes to rest: a
+  // section half under the window's edge is left out, not cut (#83)
+  for (const part of pg.children) {
+    const el = part as HTMLElement;
+    const from = el.offsetTop - y;
+    const off = from < -1 || from + el.offsetHeight > vp.offsetHeight + 1;
+    el.classList.toggle("off", onPhone() && off);
+  }
   for (const [j, s] of secs.entries())
     s.classList.toggle("at", sec !== null && j === stop.step);
   for (const [j, s] of screens.entries())
@@ -177,6 +190,7 @@ function jump(kit: Kit, i: number, still: boolean): void {
 function build(kit: Kit): void {
   const { root, el } = kit;
   root.classList.add("is");
+  onPhone = () => kit.touch;
   const site = kit.pane("site", "site");
   const app = kit.pane("app", "app");
   const cities = kit.pane("launch cities", "cities");
