@@ -33,6 +33,7 @@ import {
 } from "../lib/workspaces";
 import { addresses, model } from "./page-data";
 import { measurePages, type Paged, pagedOf, showPage } from "./paged";
+import { fitTimeline } from "./timeline-entries";
 
 gsap.registerPlugin(Flip, Observer);
 
@@ -727,6 +728,7 @@ for (const [act, index] of [
 // and when the screen's size or the fonts change what fits a page
 function onLayoutChange(): void {
   swipe.reset();
+  if (touch.matches) fitEntries();
   pageCache.clear();
   screen = 0;
   place(step, false);
@@ -746,11 +748,24 @@ const entriesOf: EntriesOf = (s, id) => {
  */
 function remeasure(): void {
   if (!touch.matches) return;
+  fitEntries();
   const before = screensAt(step, open)[screen];
   const anchor = before && anchorOf(before, entriesOf);
   pageCache.clear();
   if (anchor) screen = screenHolding(screensAt(step, open), anchor, entriesOf);
   place(step, false);
+}
+/**
+ * Open the timeline's entries to what the screen holds. Always before the
+ * step's screens are counted, so the timeline is never more than one screen.
+ */
+function fitEntries(): void {
+  for (let n = 0; n < steps; n++) {
+    const tile = screensOf(stepAt(workspaces, n), false)[0]?.timeline;
+    if (!tile) continue;
+    fitTimeline(tile);
+    return;
+  }
 }
 let measured = "";
 addEventListener("resize", () => {
@@ -778,6 +793,7 @@ if (bootArchive !== undefined && archiveEl && inProjects()) {
   markEntry(bootArchive);
   staggerEntries();
 }
+if (touch.matches) fitEntries();
 place(step, false);
 area.dataset.retiling ??= "false";
 area.dataset.ready = "true";

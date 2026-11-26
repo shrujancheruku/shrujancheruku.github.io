@@ -3,7 +3,9 @@ import { unseen } from "./fit";
 import { area, ready, settle, warmUpTouch, whereOf } from "./helpers";
 
 // On a phone the timeline step is two screens: the timeline alone, its entries
-// collapsed to their headings (a tap opens one), then education over skills.
+// collapsed to their headings (a tap opens or closes one), then education over
+// skills. The entries start open, the top ones up to the most that fit, and
+// past that limit opening one closes the one open longest (#130).
 
 const PHONES = {
   "Pixel 7": devices["Pixel 7"],
@@ -24,6 +26,23 @@ const EDUCATION_OPEN_SCREENS: Record<keyof typeof PHONES, number> = {
   "iPhone 14": 4,
   "375x667": 4,
 };
+
+// The most entries that fit open together on the timeline's screen, measured
+// from the layout (the page's data-limit says it; this pins what it measured).
+const LIMIT: Record<keyof typeof PHONES, number> = {
+  "Pixel 7": 3,
+  "iPhone 14": 2,
+  "375x667": 2,
+};
+
+const limitOf = (page: Page) =>
+  page
+    .locator("[data-entries]")
+    .evaluate((e) => Number((e as HTMLElement).dataset.limit));
+
+/** The indices of the open entries, top to bottom. */
+const openOnes = async (page: Page) =>
+  (await expanded(page)).flatMap((v, i) => (v === "true" ? [i] : []));
 
 const shown = (page: Page, id: string) =>
   page
@@ -160,41 +179,84 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       expect(over).toBeLessThanOrEqual(1);
     });
 
-    test("entries open by tap and by keyboard, one at a time, and everything still fits", async ({
+    test("the step starts with the top entries open, as many as fit, on one screen", async ({
+      page,
+    }) => {
+      await ready(page, "/timeline/");
+      await warmUpTouch(page);
+      const n = LIMIT[name as keyof typeof PHONES];
+      expect(await limitOf(page)).toBe(n);
+      expect(await openOnes(page)).toEqual(
+        Array.from({ length: n }, (_, i) => i),
+      );
+      // data-open follows aria-expanded
+      expect(
+        await page
+          .locator('[data-window="timeline"] article')
+          .evaluateAll((els) =>
+            els.map((e) => e.getAttribute("data-open") === "true"),
+          ),
+      ).toEqual((await expanded(page)).map((v) => v === "true"));
+      expect(await unseen(page)).toEqual([]);
+      await expect(area(page)).toHaveAttribute("data-screens", "2");
+    });
+
+    test("opening past the limit closes the longest-open entry, and closing one frees a slot", async ({
       page,
     }) => {
       await ready(page, "/timeline/");
       await warmUpTouch(page);
       const buttons = toggles(page);
-      await expect(buttons).toHaveCount(5);
-      expect(await expanded(page)).toEqual(Array(5).fill("false"));
+      const n = LIMIT[name as keyof typeof PHONES];
       const before = await whereOf(page);
-
-      // every entry in turn, the longest included
+      // start: 0..n-1 open, 0 the longest-open. Open entry n: 0 closes.
+      await buttons.nth(n).tap();
+      await settle(page);
+      expect(await openOnes(page)).toEqual(
+        Array.from({ length: n }, (_, i) => i + 1),
+      );
+      expect(await unseen(page), "entry opened past the limit").toEqual([]);
+      // the order follows opening: reopen 0, now 1 (the next oldest) closes
+      await buttons.nth(0).tap();
+      await settle(page);
+      expect(await openOnes(page)).toEqual(
+        [0, ...Array.from({ length: n }, (_, i) => i + 1)].filter(
+          (i) => i !== 1,
+        ),
+      );
+      expect(await unseen(page)).toEqual([]);
+      // closing by hand frees a slot: the next open closes nothing
+      await buttons.nth(0).tap();
+      await settle(page);
+      expect(await openOnes(page)).toHaveLength(n - 1);
+      const free = (await expanded(page)).indexOf("false");
+      await buttons.nth(free).tap();
+      await settle(page);
+      expect(await openOnes(page)).toHaveLength(n);
+      // never more than the limit, whichever entries are opened
       for (let i = 0; i < 5; i++) {
         await buttons.nth(i).tap();
         await settle(page);
-        expect((await expanded(page))[i]).toBe("true");
-        expect((await expanded(page)).filter((v) => v === "true")).toHaveLength(
-          1,
-        );
-        expect(await unseen(page), `entry ${i} open`).toEqual([]);
-        expect(await whereOf(page)).toEqual(before);
+        expect((await openOnes(page)).length).toBeLessThanOrEqual(n);
+        expect(await unseen(page), `entry ${i} tapped`).toEqual([]);
       }
+      expect(await whereOf(page)).toEqual(before);
+    });
 
-      // tapping the open one closes it
-      await buttons.nth(4).tap();
-      await settle(page);
-      expect(await expanded(page)).toEqual(Array(5).fill("false"));
-
-      // keyboard: Enter opens, Space closes
-      await buttons.nth(1).focus();
+    test("keyboard: Enter opens an entry, Space closes it", async ({
+      page,
+    }) => {
+      await ready(page, "/timeline/");
+      await warmUpTouch(page);
+      const before = await whereOf(page);
+      const last = toggles(page).nth(4);
+      await last.focus();
       await page.keyboard.press("Enter");
       await settle(page);
-      expect((await expanded(page))[1]).toBe("true");
+      expect((await expanded(page))[4]).toBe("true");
       await page.keyboard.press("Space");
       await settle(page);
-      expect((await expanded(page))[1]).toBe("false");
+      expect((await expanded(page))[4]).toBe("false");
       expect(await whereOf(page)).toEqual(before);
     });
 
@@ -217,14 +279,14 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       await ready(page, "/timeline/");
       await warmUpTouch(page);
       const before = await whereOf(page);
-      await toggles(page).nth(2).focus();
+      await toggles(page).nth(4).focus();
       await page.keyboard.press("Space");
       await settle(page);
-      expect((await expanded(page))[2]).toBe("true");
+      expect((await expanded(page))[4]).toBe("true");
       expect(await whereOf(page)).toEqual(before);
       await page.keyboard.press("Space");
       await settle(page);
-      expect((await expanded(page))[2]).toBe("false");
+      expect((await expanded(page))[4]).toBe("false");
       expect(await whereOf(page)).toEqual(before);
     });
 
