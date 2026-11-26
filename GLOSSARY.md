@@ -24,6 +24,14 @@ _Avoid_: Slide, view, workspace, page
 The share of a window's entries that fits one screen on a phone. A window with more entries than fit (the timeline, the archive) has several pages, each on a screen of its own.
 _Avoid_: Screen, slide; never the desktop or a workspace
 
+**Opening a window**:
+A window coming on show in a step while its neighbours stay: it slides out of the edge of the desktop it sits against, and its neighbours give up the space as it comes, sharing one moving border with it.
+_Avoid_: Fade in, pop in, launch; "the opening" (that is the first workspace)
+
+**Closing a window**:
+The reverse of opening a window: it slides back into the edge it came from while its neighbours fill the space it leaves.
+_Avoid_: Fade out, dismiss, hide
+
 **Project**:
 A public GitHub repository that Shrujan has selected to appear on the portfolio. Nothing appears without being selected.
 _Avoid_: Repo (when talking about what the visitor sees), work, piece
