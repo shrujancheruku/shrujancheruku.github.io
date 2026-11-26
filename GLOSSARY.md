@@ -37,12 +37,16 @@ The reverse of opening a window: it slides back into the edge it came from while
 _Avoid_: Fade out, dismiss, hide
 
 **Rolling past**:
-How one project gives way to the next. The tiles stay put; inside each one the old project's window slides out and the next one's slides in, like a scroll: forwards, the old goes up and the next comes from below; backwards, the reverse. A window both projects share (the stack) doesn't move.
+How one project gives way to the next. The tiles stay put; inside each one the old project's window slides out and the next one's slides in, like a scroll: forwards, the old goes up and the next comes from below; backwards, the reverse. A window both projects share (the stack) doesn't move. On a phone, a window turns its page the same way: its frame stays and inside it the old page's entries roll out as the next page's roll in.
 _Avoid_: Crossfade, swap, carousel, page turn
 
 **Changing workspace**:
-How the desktop moves from one workspace to another. Nothing opens or closes: the old workspace's windows slide up and off one after another in tiling order, as the next workspace's come up from below in the same order (the reverse going to a lower number). A window on both workspaces (the name) travels with each one rather than staying. A jump across several workspaces travels one screen, like a step to the next.
+How the desktop moves from one workspace to another. Nothing opens or closes: the old workspace's windows slide up and off one after another in tiling order, as the next workspace's come up from below in the same order (the reverse going to a lower number). A window on both workspaces (the name) travels with each one rather than staying. A jump across several workspaces travels one screen, like a step to the next. On a phone, a swipe between screens of one step whose windows all change travels the same way.
 _Avoid_: Page transition, slide, scroll, swipe
+
+**First appearance**:
+How a step's windows come on show when the desktop loads, at any address. Each window slides out of the edge of the desktop its tile sits on (right, else bottom, left, top) straight into its tile, one after another in tiling order; nothing re-tiles. The wheel waits until every window is in. With reduced motion the step is simply there.
+_Avoid_: Launch, boot animation, intro, power-on; "opening a window" (that has neighbours giving up space)
 
 **Project**:
 A public GitHub repository that Shrujan has selected to appear on the portfolio. Nothing appears without being selected.
@@ -61,15 +65,15 @@ The one-line claim Shrujan writes for a project. Every project has one, and it i
 _Avoid_: Description, tagline, blurb
 
 **Proof line**:
-A short statement of fact under a featured project's pitch that backs the pitch up. A featured project has two to five, each one true when a visitor checks it against the project, and none repeating the pitch.
-_Avoid_: Bullet, feature, highlight
+A full sentence in Shrujan's own voice under a featured project's pitch, saying something he did or decided on that project. A featured project has two to four: at least one says what his part was and who it was for, at least one says where the project stands or what it achieved, and the rest are decisions he made. Each is true when a visitor checks it against the project; none repeats the pitch or sells the project to its users.
+_Avoid_: Bullet, feature, highlight, selling point
 
 **Claim**:
-The one statement the portfolio makes about Shrujan himself: that he takes a product from the problem to production on his own. It never appears without its evidence beside it. A project's statement is its pitch, not a claim.
+The one statement the portfolio makes about Shrujan himself: give him a problem, not a spec, and what comes back is designs in a day, a prototype in a week and something shipped in a month. It sits on the opening, in his own voice, with no career achievement beside it. A project's statement is its pitch, not a claim.
 _Avoid_: Tagline, slogan, headline, value proposition
 
 **Positioning line**:
-The claim, the role title and the scope that backs it, in one sentence that can be reused off the portfolio. It names no domain and says nothing about availability.
+The role title and the claim in one sentence that can be reused off the portfolio. It names no domain and no career achievement, and says nothing about availability.
 _Avoid_: Bio, elevator pitch, summary
 
 **Hero image**:
@@ -89,7 +93,7 @@ The image GitHub serves for a repository when its link is shared. It is not a he
 _Avoid_: OG image, card
 
 **Timeline**:
-The portfolio's presentation of Shrujan's career, newest first, starting with the sabbatical. Each employer is one entry; a title progression at one employer stays inside that entry. Earlier work belongs to Education & Internships, not the timeline.
+The portfolio's presentation of Shrujan's career, newest first, starting with the sabbatical. Each employer is one entry; a title progression at one employer stays inside that entry. An employer's entry says what Shrujan's part was, how far it reached and one thing that came of it, never a list of duties. Earlier work belongs to Education & Internships, not the timeline.
 _Avoid_: Resume section, CV, experience
 
 **Education & Internships**:
@@ -97,7 +101,7 @@ The window of the timeline workspace that sits beside the timeline: the degree a
 _Avoid_: Illinois section, education section, early career
 
 **Skill bar**:
-A skill Shrujan rates himself on out of ten, shown as the length of a bar with no number. The last one, Comedic Talent, is a joke and always outranks the rest.
+A skill Shrujan rates himself on out of ten, shown as the length of a bar with no number. The last one, Comedic Talent, is a joke and always outranks the rest; it appears in the skills window and never on the resume.
 _Avoid_: Skill meter, proficiency, rating
 
 **Resume**:
