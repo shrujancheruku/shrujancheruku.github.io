@@ -35,6 +35,12 @@ import {
   type Workspace,
 } from "../lib/workspaces";
 import { measurePages, type Paged, pagedOf, showPage } from "./paged";
+// PROTOTYPE (ticket #113): project-to-project motions, dev only
+import {
+  changeOf,
+  currentMotion,
+  runHandoff,
+} from "./prototype-project-handoff";
 
 gsap.registerPlugin(Flip, Observer);
 
@@ -196,8 +202,14 @@ function markStack(index: number): void {
   }
 }
 
+/** PROTOTYPE: the step last placed, to tell a project-to-project step. */
+let placedStep = -1;
+
 /** Put the windows of a step in place; animate from where they are if asked. */
 function place(n: number, animate: boolean): void {
+  const from = placedStep;
+  placedStep = n;
+  const before = shown;
   const screens = screensAt(n, open);
   screen = Math.max(0, Math.min(screens.length - 1, screen));
   const { layout, pages } = screens[screen] ?? { layout: {}, pages: {} };
@@ -250,7 +262,29 @@ function place(n: number, animate: boolean): void {
     else b.removeAttribute("aria-current");
   }
 
-  if (state) {
+  const motion = currentMotion();
+  const projects = (k: number) =>
+    workspaces[locate(workspaces, k).workspace]?.id === "projects";
+  if (
+    state &&
+    import.meta.env.DEV &&
+    motion.run &&
+    before &&
+    !open &&
+    !touch.matches &&
+    from >= 0 &&
+    from !== n &&
+    projects(from) &&
+    projects(n)
+  ) {
+    gate.hold();
+    area.dataset.retiling = "true";
+    gsap.killTweensOf(panes);
+    const tl = runHandoff(changeOf(panes, before, layout), Math.sign(n - from), () =>
+      settled(tl),
+    );
+    latest = tl;
+  } else if (state) {
     // the wheel stays shut for the whole re-tile, which on a busy page starts
     // late and ends well after the wheel event that asked for it
     gate.hold();
