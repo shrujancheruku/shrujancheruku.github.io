@@ -80,6 +80,13 @@ const POLICIES: Policy[] = [
       "the input runs at once: every window glides from where it is now to its new tile (0.32 s); the step's own motion (roll, slide up) is lost",
     holdsWheel: false,
   },
+  {
+    key: "F",
+    name: "Queue, turn back (chosen)",
+    about:
+      "an input that undoes the step reverses the motion from where the windows are, dropping anything queued; any other waits as in A",
+    holdsWheel: false,
+  },
 ];
 const STORE = "prototype-mid-motion";
 const initial = (): Policy => {
@@ -476,6 +483,20 @@ export function act(to: Where, run: () => void): void {
         pending = run;
         r.tl.timeScale(4);
         lastAction = `hurried at ${(r.tl.progress() * 100).toFixed(0)}%`;
+      }
+      break;
+    case "F":
+      if (to.step === r.from.step && to.open === r.from.open) {
+        pending = null;
+        reversing = true;
+        try {
+          run();
+        } finally {
+          reversing = false;
+        }
+      } else {
+        pending = run;
+        lastAction = "queued";
       }
       break;
     case "E": {
