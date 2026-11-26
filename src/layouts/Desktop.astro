@@ -10,6 +10,7 @@ import { cardPathFor } from "../lib/share";
 import {
   CRT_KEY,
   DEFAULT_THEME,
+  swatch,
   THEME_KEY,
   THEME_NAMES,
   THEMES,
@@ -47,9 +48,10 @@ const workspaces = createWorkspaces({ featured: featured.length });
 const steps = stepCount(workspaces);
 const themeCss = THEME_NAMES.map(
   (n) =>
-    `[data-theme="${n}"]{${Object.entries(THEMES[n])
-      .map(([k, v]) => `--${k}:${v}`)
-      .join(";")}}`,
+    `[data-theme="${n}"]{${[
+      ...Object.entries(THEMES[n]).map(([k, v]) => `--${k}:${v}`),
+      `--swatch:${swatch(THEMES[n])}`,
+    ].join(";")}}`,
 ).join("");
 const themeBoot = { names: THEME_NAMES, themeKey: THEME_KEY, crtKey: CRT_KEY };
 const workspacePaths = workspaces.map(

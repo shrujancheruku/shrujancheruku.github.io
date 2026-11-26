@@ -6,6 +6,7 @@ import {
   nextTheme,
   saveCrt,
   saveTheme,
+  swatch,
   THEMES,
 } from "../src/lib/themes";
 
@@ -69,5 +70,14 @@ describe("themes", () => {
     expect(loadCrt(s)).toBe(false);
     expect(loadCrt(broken)).toBe(true);
     expect(() => saveCrt(broken, false)).not.toThrow();
+  });
+
+  test("the swatch is the background over the accent, split on the diagonal", () => {
+    expect(swatch(THEMES.paper)).toBe(
+      "linear-gradient(135deg, #f2eede 50%, #cc3e28 50%)",
+    );
+    expect(swatch(THEMES["issho-dark"])).toBe(
+      "linear-gradient(135deg, #0D1330 50%, #DEA92C 50%)",
+    );
   });
 });

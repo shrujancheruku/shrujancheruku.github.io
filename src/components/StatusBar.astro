@@ -3,7 +3,7 @@
 // only on touch). Right: four icon toggles (home, contact, crt effect, theme)
 // and a clock on desktop. Each toggle carries a tooltip that shows on hover or
 // focus, and is written out as a staircase until the first interaction.
-import { THEME_NAMES, THEMES } from "../lib/themes";
+import { THEME_NAMES } from "../lib/themes";
 import type { Workspace } from "../lib/workspaces";
 
 interface Props {
@@ -57,7 +57,7 @@ const { workspaces } = Astro.props;
           aria-checked="false"
           data-theme-set={name}
         >
-          <i style={`background:linear-gradient(135deg,${THEMES[name].bg} 50%,${THEMES[name].ac} 50%)`} />
+          <i />
           {name}
         </button>
       ))
@@ -169,7 +169,7 @@ const { workspaces } = Astro.props;
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: conic-gradient(var(--fg) 0 50%, var(--ac) 0);
+    background: var(--swatch);
     box-shadow: 0 0 0 1.5px var(--fg);
   }
 
@@ -395,6 +395,7 @@ const { workspaces } = Astro.props;
     width: 32px;
     height: 32px;
     border-radius: 50%;
+    background: var(--swatch);
     box-shadow: 0 0 0 1px var(--line);
   }
 
