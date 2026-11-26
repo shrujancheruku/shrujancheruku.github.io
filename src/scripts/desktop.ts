@@ -1,13 +1,14 @@
-// The window manager: places the windows of the current step, re-tiles them
-// with GSAP Flip when the step changes, and turns wheel, keys and clicks into
-// steps. On touch nothing scrolls: a swipe is one gesture and moves one
-// screen, like a wheel flick moves one step (src/lib/swipe.ts). A step is one
-// or more screens on touch (src/lib/screens.ts), the same step and address.
+// The window manager: places the windows of the current step, moves them with
+// one GSAP timeline when the step changes (src/lib/motion.ts says how), and
+// turns wheel, keys and clicks into steps. On touch nothing scrolls: a swipe is
+// one gesture and moves one screen, like a wheel flick moves one step
+// (src/lib/swipe.ts). A step is one or more screens on touch
+// (src/lib/screens.ts), the same step and address.
 import { gsap } from "gsap";
-import { Flip } from "gsap/Flip";
 import { Observer } from "gsap/Observer";
 import { notFoundTitle as NOT_FOUND_TITLE } from "../lib/addresses";
 import { interpretKey } from "../lib/keys";
+import { collapsed, edgeOf, sortChanges } from "../lib/motion";
 import {
   anchorOf,
   type EntriesOf,
@@ -25,6 +26,7 @@ import {
   focusOf,
   type Layout,
   locate,
+  type Rect,
   screensOf,
   stepAt,
   stepCount,
@@ -35,11 +37,16 @@ import { addresses, model } from "./page-data";
 import { measurePages, type Paged, pagedOf, showPage } from "./paged";
 import { fitTimeline } from "./timeline-entries";
 
-gsap.registerPlugin(Flip, Observer);
+gsap.registerPlugin(Observer);
 
-/** How long a re-tile takes, in seconds. */
-const RETILE = 0.85;
-/** One step per wheel gesture; held shut while a re-tile runs. */
+/** How long a step's motion takes, in seconds. */
+const MOVE = 0.32;
+const EASE = "power3.out";
+/** A window opening fades in over its first this long; closing, its last. */
+const FADE = 0.12;
+/** Reduced motion: no timeline, the windows are simply there. */
+const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+/** One step per wheel gesture; held shut while a step's motion runs. */
 const gate = createWheelGate({ tailMs: 500, steadyMs: 150, threshold: 40 });
 
 const found = document.querySelector<HTMLElement>("main.area");
@@ -69,6 +76,8 @@ let screen = 0;
 let screenBeforeOpen = 0;
 /** The layout on show, to tell the windows that come and go. */
 let shown: Layout | null = null;
+/** The workspace of the layout on show. */
+let shownWorkspace = -1;
 /** The current step's disclosure (Education & Internships) is open. */
 let open = false;
 /** An unknown path booted the desktop: the not-found terminal is on show. */
@@ -199,7 +208,10 @@ function place(n: number, animate: boolean): void {
   screen = Math.max(0, Math.min(screens.length - 1, screen));
   const { layout, pages } = screens[screen] ?? { layout: {}, pages: {} };
   const focus = focusAmong(layout, focusOf(stepAt(workspaces, n), open));
-  const state = animate ? Flip.getState(panes) : null;
+  const before = shown;
+  const beforeWorkspace = shownWorkspace;
+  // a motion still running ends here: its windows go to rest first
+  const interrupted = stopMotion();
 
   let z = 1;
   for (const pane of panes) {
@@ -237,6 +249,7 @@ function place(n: number, animate: boolean): void {
   shown = layout;
 
   const { workspace, index } = locate(workspaces, n);
+  shownWorkspace = workspace;
   markStack(workspaces[workspace]?.id === "projects" ? index : -1);
   area.dataset.step = String(n);
   area.dataset.screen = String(screen);
@@ -247,46 +260,119 @@ function place(n: number, animate: boolean): void {
     else b.removeAttribute("aria-current");
   }
 
-  if (state) {
-    // the wheel stays shut for the whole re-tile, which on a busy page starts
+  if (animate && before && !reduced.matches) {
+    // the wheel stays shut for the whole motion, which on a busy page starts
     // late and ends well after the wheel event that asked for it
     gate.hold();
-    // for the page and its tests: a re-tile is running until `settled`
+    // for the page and its tests: a motion is running until `settled`
     area.dataset.retiling = "true";
-    const retiling = Flip.from(state, {
-      targets: panes,
-      duration: RETILE,
-      ease: "expo.out",
-      // animate width and height, so text is re-set rather than stretched
-      scale: false,
-      overwrite: true,
-      onComplete: () => settled(retiling),
-      onInterrupt: () => settled(retiling),
-      onEnter: (els) =>
-        gsap.fromTo(
-          els,
-          { opacity: 0, scale: 0.94 },
-          { opacity: 1, scale: 1, duration: RETILE, ease: "expo.out" },
-        ),
-      onLeave: (els) =>
-        gsap.to(els, {
-          opacity: 0,
-          scale: 0.94,
-          duration: RETILE * 0.45,
-          ease: "expo.out",
-        }),
-    });
-    latest = retiling;
+    latest = motionBetween(before, layout, workspace === beforeWorkspace);
+  } else if (interrupted) {
+    area.dataset.retiling = "false";
+    gate.release();
   }
 }
 
+const css = ([left, top, width, height]: Rect) => ({
+  left: `${left}%`,
+  top: `${top}%`,
+  width: `${width}%`,
+  height: `${height}%`,
+});
+
+/** The running motion's clean-up: what leaves goes, and fades are cleared. */
+let rest: (() => void) | null = null;
+
+/** End the running motion, if any, with its windows at rest. */
+function stopMotion(): boolean {
+  if (!latest) return false;
+  const running = latest;
+  latest = null;
+  running.kill();
+  rest?.();
+  rest = null;
+  return true;
+}
+
 /**
- * The newest re-tile; one that a later one overwrote does not open the wheel.
- * When the newest ends, a wheel gesture that came during it steps now.
+ * The step's one timeline, from the old to the new written rectangles
+ * (`left/top/width/height`, never scale, so text re-sets rather than
+ * stretches). A window in both steps re-tiles. On a wide screen, a window that
+ * opens grows out of its edge along that edge's axis, and one that closes
+ * shrinks back into it, sharing one moving border with the neighbours that
+ * re-tile beside it. Rolling past, changing workspace and the phone's own
+ * motions are their own tickets: until then their windows simply appear or
+ * go, and only those in both steps move.
+ */
+function motionBetween(
+  before: Layout,
+  after: Layout,
+  sameWorkspace: boolean,
+): gsap.core.Timeline {
+  const leaving: HTMLElement[] = [];
+  const faded: HTMLElement[] = [];
+  const timeline = gsap.timeline({
+    onComplete: () => {
+      if (timeline !== latest) return;
+      rest?.();
+      rest = null;
+      settled(timeline);
+    },
+  });
+  const tween = (pane: HTMLElement, from: Rect, to: Rect) =>
+    timeline.fromTo(
+      pane,
+      css(from),
+      { ...css(to), duration: MOVE, ease: EASE },
+      0,
+    );
+  for (const c of sortChanges(before, after, sameWorkspace)) {
+    const pane = windowOf.get(c.id);
+    if (!pane) continue;
+    if (c.from && c.to) {
+      tween(pane, c.from, c.to);
+    } else if (touch.matches) {
+      // the phone's motions are their own ticket
+    } else if (c.motion === "opening" && c.to) {
+      tween(pane, collapsed(c.to, edgeOf(c.id, before, after)), c.to);
+      timeline.fromTo(
+        pane,
+        { opacity: 0 },
+        { opacity: 1, duration: FADE, ease: "none" },
+        0,
+      );
+      faded.push(pane);
+    } else if (c.motion === "closing" && c.from) {
+      // it stays on show until it is in its edge
+      pane.style.display = "block";
+      tween(pane, c.from, collapsed(c.from, edgeOf(c.id, before, after)));
+      timeline.fromTo(
+        pane,
+        { opacity: 1 },
+        { opacity: 0, duration: FADE, ease: "none" },
+        MOVE - FADE,
+      );
+      leaving.push(pane);
+      faded.push(pane);
+    }
+  }
+  // a step whose windows only appear and go still takes the step's time
+  timeline.set({}, {}, MOVE);
+  rest = () => {
+    for (const pane of leaving) pane.style.display = "none";
+    gsap.set(faded, { clearProps: "opacity" });
+  };
+  return timeline;
+}
+
+/**
+ * The newest step's motion; one that a later one stopped does not open the
+ * wheel. When the newest ends, a wheel gesture that came during it steps now.
  */
 let latest: gsap.core.Timeline | null = null;
-function settled(retiling: gsap.core.Timeline): void {
-  if (retiling !== latest) return;
+function settled(motion: gsap.core.Timeline): void {
+  if (motion !== latest) return;
+  latest = null;
   area.dataset.retiling = "false";
   const waiting = gate.release();
   if (waiting) moveOneScreen(waiting);

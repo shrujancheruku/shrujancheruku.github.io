@@ -171,13 +171,6 @@ test("windows animate between tilings, not cut", async ({ page }) => {
   expect(lefts.some((l) => l > before + 1 && l < after - 1)).toBe(true);
 });
 
-test("windows arriving fade in rather than appearing", async ({ page }) => {
-  const frames = await framesOf(page, '[data-window="comp-1"]', "opacity", () =>
-    page.keyboard.press("3"),
-  );
-  expect(frames.some(([o = 0]) => o > 0 && o < 1)).toBe(true);
-});
-
 test("windows have the decided gap, border, radius and focus gradient", async ({
   page,
 }) => {
