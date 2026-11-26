@@ -1,7 +1,8 @@
 // The window manager: places the windows of the current step, re-tiles them
 // with GSAP Flip when the step changes, and turns wheel, keys and clicks into
-// steps. On touch nothing scrolls: a swipe is one gesture and moves one step,
-// like a wheel flick (src/lib/swipe.ts).
+// steps. On touch nothing scrolls: a swipe is one gesture and moves one
+// screen, like a wheel flick moves one step (src/lib/swipe.ts). A step is one
+// or more screens on touch (src/lib/screens.ts), the same step and address.
 import { gsap } from "gsap";
 import { Flip } from "gsap/Flip";
 import { Observer } from "gsap/Observer";
@@ -10,6 +11,7 @@ import {
   openAddresses,
 } from "../lib/addresses";
 import { interpretKey } from "../lib/keys";
+import { expandScreens, focusAmong, moveBy, type Screen } from "../lib/screens";
 import { windowChanges } from "../lib/signals";
 import { createSwipe } from "../lib/swipe";
 import { createWheelGate } from "../lib/wheel-gate";
@@ -18,12 +20,13 @@ import {
   focusOf,
   type Layout,
   locate,
-  stepAfter,
+  screensOf,
   stepAt,
   stepCount,
   tilingOf,
   type Workspace,
 } from "../lib/workspaces";
+import { measurePages, type Paged, pagedOf, showPage } from "./paged";
 
 gsap.registerPlugin(Flip, Observer);
 
@@ -55,6 +58,10 @@ const numbers = [
 const touch = matchMedia("(max-width: 760px)");
 
 let step = 0;
+/** The screen of the step on show (always 0 on a wide screen). */
+let screen = 0;
+/** The screen the disclosure was opened from, which closing returns to. */
+let screenBeforeOpen = 0;
 /** The layout on show, to tell the windows that come and go. */
 let shown: Layout | null = null;
 /** The current step's disclosure (Education & Internships) is open. */
@@ -67,8 +74,60 @@ const archiveEl = area.querySelector<HTMLElement>(
   '.pane[data-window="archive"]',
 );
 
-const layoutOf = (n: number): Layout =>
-  tilingOf(stepAt(workspaces, n), touch.matches ? "touch" : "desktop", open);
+// ---- screens
+// On touch a step is its layouts in order, and a window with more entries than
+// fit (the timeline, the archive) is as many screens as its entries need. The
+// pages are measured in the window as it will be tiled, and kept until the
+// screen changes size or the fonts arrive.
+
+const windowOf = new Map(panes.map((p) => [p.dataset.window ?? "", p]));
+const pagedByWindow = new Map<string, Paged | undefined>();
+const pagedWindow = (id: string): Paged | undefined => {
+  if (!pagedByWindow.has(id)) {
+    const pane = windowOf.get(id);
+    pagedByWindow.set(id, pane && pagedOf(pane));
+  }
+  return pagedByWindow.get(id);
+};
+const pageCache = new Map<string, number[][]>();
+
+/** The pages a paged window falls into at a tile of the area. */
+function pagesOf(id: string, tile: Layout[string]): number[][] {
+  const paged = pagedWindow(id);
+  if (!paged) return [[]];
+  const key = `${id}:${tile.join(",")}`;
+  let pages = pageCache.get(key);
+  if (!pages) {
+    pages = measurePages(paged, tile);
+    pageCache.set(key, pages);
+  }
+  return pages;
+}
+
+/** The screens of step `n`; `opened` says whether its disclosure is open. */
+function screensAt(n: number, opened: boolean): Screen[] {
+  const found = stepAt(workspaces, n);
+  if (!touch.matches) return [{ layout: tilingOf(found, opened), pages: {} }];
+  const layouts = screensOf(found, opened);
+  const counts: Record<string, number> = {};
+  for (const layout of layouts)
+    for (const [id, tile] of Object.entries(layout))
+      if (pagedWindow(id)) counts[id] = pagesOf(id, tile).length;
+  return expandScreens(layouts, counts);
+}
+
+/** The screen of the archive that holds an entry (0 on a wide screen). */
+function screenOfEntry(slug: string): number {
+  const paged = pagedWindow("archive");
+  if (!touch.matches || !slug || !paged) return 0;
+  const at = paged.items.findIndex(
+    (li) => li.dataset.entry?.toLowerCase() === slug.toLowerCase(),
+  );
+  const tile = screensOf(stepAt(workspaces, step), true)[0]?.archive;
+  if (at < 0 || !tile) return 0;
+  const page = pagesOf("archive", tile).findIndex((ix) => ix.includes(at));
+  return Math.max(0, page);
+}
 
 /** The not-found terminal floats over the opening until the first jump. */
 function showNotFound(): void {
@@ -131,8 +190,10 @@ function markStack(index: number): void {
 
 /** Put the windows of a step in place; animate from where they are if asked. */
 function place(n: number, animate: boolean): void {
-  const layout = layoutOf(n);
-  const focus = focusOf(stepAt(workspaces, n), open);
+  const screens = screensAt(n, open);
+  screen = Math.max(0, Math.min(screens.length - 1, screen));
+  const { layout, pages } = screens[screen] ?? { layout: {}, pages: {} };
+  const focus = focusAmong(layout, focusOf(stepAt(workspaces, n), open));
   const state = animate ? Flip.getState(panes) : null;
 
   let z = 1;
@@ -154,6 +215,18 @@ function place(n: number, animate: boolean): void {
     });
   }
 
+  // the entries of a paged window: its page on touch, all of them wide
+  for (const pane of panes) {
+    const id = pane.dataset.window ?? "";
+    const paged = pagedWindow(id);
+    const tile = layout[id];
+    if (!paged || !tile) continue;
+    showPage(
+      paged,
+      touch.matches ? pagesOf(id, tile)[pages[id] ?? 0] : undefined,
+    );
+  }
+
   showNotFound();
   signal(shown, layout);
   shown = layout;
@@ -161,6 +234,8 @@ function place(n: number, animate: boolean): void {
   const { workspace, index } = locate(workspaces, n);
   markStack(workspaces[workspace]?.id === "projects" ? index : -1);
   area.dataset.step = String(n);
+  area.dataset.screen = String(screen);
+  area.dataset.screens = String(screens.length);
   area.dataset.workspace = String(workspace);
   for (const [i, b] of numbers.entries()) {
     if (i === workspace) b.setAttribute("aria-current", "true");
@@ -229,14 +304,19 @@ function announce(): void {
 }
 
 /** Open or close the step's disclosure; the windows re-tile and listen for the event. */
-function setOpen(next: boolean, animate = true): void {
+function setOpen(next: boolean, animate = true, toScreen = 0): void {
   if (next === open) return;
   if (next && !stepAt(workspaces, step).open) return;
+  if (next) screenBeforeOpen = screen;
   open = next;
   if (!open) archivePushed = false;
   area.dataset.open = String(open);
-  place(step, animate);
+  // opened, its screens are the disclosure's; closed, back to where it began
+  screen = open ? toScreen : screenBeforeOpen;
+  // the disclosure's window shows its entries before they are measured
   announce();
+  pageCache.clear();
+  place(step, animate);
 }
 
 /** Leaving a step closes its disclosure. */
@@ -250,6 +330,7 @@ function closeDisclosure(): void {
   open = false;
   area.dataset.open = "false";
   announce();
+  pageCache.clear();
 }
 
 // ---- the archive window
@@ -263,7 +344,9 @@ function markEntry(slug: string): void {
   for (const li of area.querySelectorAll<HTMLElement>("[data-entry]")) {
     if (slug && li.dataset.entry?.toLowerCase() === slug.toLowerCase()) {
       li.setAttribute("aria-current", "true");
-      li.scrollIntoView({ block: "nearest", behavior: "instant" });
+      // on touch the entry's own screen shows it
+      if (!touch.matches)
+        li.scrollIntoView({ block: "nearest", behavior: "instant" });
     } else li.removeAttribute("aria-current");
   }
 }
@@ -293,7 +376,7 @@ function openArchive(slug = "", push = true): void {
     archivePushed = true;
   }
   document.title = book.forPath(ARCHIVE_PATH)?.title ?? document.title;
-  setOpen(true);
+  setOpen(true, true, screenOfEntry(slug));
   markEntry(slug);
   staggerEntries();
 }
@@ -325,14 +408,17 @@ document.addEventListener("click", (e) => {
   if (target?.closest("[data-archive-close]")) closeArchive();
 });
 
-/** Move to a step and re-tile (wide screen and touch alike). */
-function goTo(n: number): void {
+/** Move to a step, and a screen of it, and re-tile (wide screen and touch alike). */
+function goTo(n: number, toScreen = 0): void {
   const next = Math.max(0, Math.min(steps - 1, n));
-  if (next === step) return;
-  leave();
+  if (next === step && toScreen === screen) return;
+  const changed = next !== step;
+  // a move between screens of the step keeps its disclosure open
+  if (changed) leave();
   step = next;
+  screen = toScreen;
   place(step, true);
-  follow(step);
+  if (changed) follow(step);
 }
 
 // ---- the address bar
@@ -360,11 +446,15 @@ function restore(): void {
   const next = n ?? 0;
   const address = book.forPath(location.pathname);
   document.title = address?.title ?? NOT_FOUND_TITLE;
+  // closing the archive (Back) lands on the screen it was opened from
+  const returning = open && next === step;
   leave();
   step = next;
+  screen = returning ? screenBeforeOpen : 0;
   if (address?.archive !== undefined && archiveEl) {
     open = true;
     area.dataset.open = "true";
+    screen = screenOfEntry(address.archive);
     announce();
     markEntry(address.archive);
     staggerEntries();
@@ -410,9 +500,18 @@ export function jumpToPath(path: string): boolean {
   return true;
 }
 
-/** One scroll step up or down: follows the address without a history entry. */
+/**
+ * One screen up or down: on a wide screen a step is one screen, so this is one
+ * step. Follows the address without a history entry.
+ */
 export function scrollStep(direction: 1 | -1): void {
-  goTo(stepAfter(workspaces, step, direction));
+  const next = moveBy(
+    { step, screen },
+    direction,
+    (n) => screensAt(n, n === step && open).length,
+    steps,
+  );
+  goTo(next.step, next.screen);
 }
 
 /** The global step on show. */
@@ -615,11 +714,29 @@ for (const [act, index] of [
 }
 
 // ---- layout changes between wide and touch
+// and when the screen's size or the fonts change what fits a page
 function onLayoutChange(): void {
   swipe.reset();
+  pageCache.clear();
+  screen = 0;
   place(step, false);
 }
 touch.addEventListener("change", onLayoutChange);
+
+/** What fits a page changed: measure again and show the page at hand. */
+function remeasure(): void {
+  if (!touch.matches) return;
+  pageCache.clear();
+  place(step, false);
+}
+let measured = "";
+addEventListener("resize", () => {
+  const size = `${area.clientWidth}x${area.clientHeight}`;
+  if (size === measured) return;
+  measured = size;
+  remeasure();
+});
+document.fonts?.ready.then(remeasure);
 
 // ---- boot
 // the entry page says which step its address opens
@@ -633,6 +750,7 @@ const bootArchive = notFound
 if (bootArchive !== undefined && archiveEl && inProjects()) {
   open = true;
   area.dataset.open = "true";
+  screen = screenOfEntry(bootArchive);
   announce();
   markEntry(bootArchive);
   staggerEntries();

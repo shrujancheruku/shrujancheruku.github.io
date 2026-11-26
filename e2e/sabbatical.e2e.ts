@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { area } from "./helpers";
+import { area, settle } from "./helpers";
 
 const shown = (page: Page) =>
   page.$$eval(".pane", (els) =>
@@ -63,20 +63,25 @@ test("each photo window fills its tile and carries a place · date caption", asy
   }
 });
 
-test("on touch the copy window is above the 2 × 2 grid", async ({
+test("on touch the copy window is one screen and the 2 × 2 grid the next", async ({
   browser,
 }) => {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await page.goto("/");
   await expect(area(page)).toHaveAttribute("data-ready", "true");
   await page.locator(".ws button").nth(3).click();
-  await page.waitForTimeout(600);
-  const copy = await page
-    .locator('.pane[data-window="sabbatical"]')
-    .boundingBox();
+  await expect(area(page)).toHaveAttribute("data-workspace", "3");
+  await settle(page);
+  await expect(page.locator('.pane[data-window="sabbatical"]')).toBeVisible();
+  await expect(page.locator('.pane[data-window="photo-1"]')).toBeHidden();
+  await page.keyboard.press("ArrowDown");
+  await expect(area(page)).toHaveAttribute("data-screen", "1");
+  await settle(page);
+  await expect(page.locator('.pane[data-window="sabbatical"]')).toBeHidden();
   const p1 = await page.locator('.pane[data-window="photo-1"]').boundingBox();
+  const p2 = await page.locator('.pane[data-window="photo-2"]').boundingBox();
   const p3 = await page.locator('.pane[data-window="photo-3"]').boundingBox();
-  expect(copy && p1 && copy.y < p1.y).toBe(true);
+  expect(p1 && p2 && p2.x > p1.x).toBe(true);
   expect(p3 && p1 && p3.y > p1.y).toBe(true);
   await page.close();
 });

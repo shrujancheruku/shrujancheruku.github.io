@@ -15,7 +15,7 @@ const { archive } = Astro.props;
 ---
 
 <Window id="archive">
-  <div class="archive" data-archive>
+  <div class="archive" data-archive data-paged-root>
     <header>
       <div>
         <p class="kick">{archive.heading}</p>
@@ -23,7 +23,7 @@ const { archive } = Astro.props;
       </div>
       <button type="button" class="close" data-archive-close>esc ✕</button>
     </header>
-    <ol class="entries">
+    <ol class="entries" data-paged>
       {
         archive.entries.map((e) => (
           <li class="entry" data-entry={e.slug}>

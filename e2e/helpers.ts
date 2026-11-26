@@ -191,6 +191,75 @@ export async function pinch(page: Page, scale: number): Promise<number> {
   return last;
 }
 
+/** The step on show, the screen in it (a phone splits a step into screens), and how many it has. */
+export interface Where {
+  step: number;
+  screen: number;
+  screens: number;
+}
+export const whereOf = (page: Page): Promise<Where> =>
+  area(page).evaluate((a) => ({
+    step: Number(a.dataset.step),
+    screen: Number(a.dataset.screen),
+    screens: Number(a.dataset.screens),
+  }));
+
+/** Whether `after` is exactly one screen from `before` in `direction`. */
+export function isOneScreen(before: Where, after: Where, direction: 1 | -1) {
+  if (direction === 1)
+    return before.screen < before.screens - 1
+      ? after.step === before.step && after.screen === before.screen + 1
+      : after.step === before.step + 1 && after.screen === 0;
+  return before.screen > 0
+    ? after.step === before.step && after.screen === before.screen - 1
+    : after.step === before.step - 1 && after.screen === after.screens - 1;
+}
+
+/** Swipe once and wait for the screen it moves to; returns where it was and is. */
+export async function swipeScreen(
+  page: Page,
+  direction: 1 | -1,
+  s: Swipe,
+): Promise<{ before: Where; after: Where }> {
+  const before = await whereOf(page);
+  await swipe(page, direction, s);
+  await expect
+    .poll(async () => {
+      const now = await whereOf(page);
+      return now.step !== before.step || now.screen !== before.screen;
+    })
+    .toBe(true);
+  // a moment for a second, wrong, move to show
+  await page.waitForTimeout(150);
+  return { before, after: await whereOf(page) };
+}
+
+/** Whether a position is the last screen of the last step. */
+export const atEnd = (page: Page, w: Where): Promise<boolean> =>
+  page
+    .evaluate(
+      () =>
+        (
+          JSON.parse(
+            document.getElementById("desktop-addresses")?.textContent ?? "{}",
+          ).byStep as string[]
+        ).length - 1,
+    )
+    .then((last) => w.step === last && w.screen === w.screens - 1);
+
+/**
+ * On a phone a project is its copy, then its composition. Wait for the page,
+ * then move to the composition's screen (the page may open on either).
+ */
+export async function toComposition(page: Page): Promise<void> {
+  await expect(area(page)).toHaveAttribute("data-ready", "true");
+  if ((await area(page).getAttribute("data-screen")) !== "1") {
+    await page.keyboard.press("ArrowDown");
+    await expect(area(page)).toHaveAttribute("data-screen", "1");
+  }
+  await settle(page);
+}
+
 /**
  * Whether this browser zooms on a synthesized pinch at all, tried on a bare
  * page with nothing of the site's in it. Chromium on Linux (the CI runner,

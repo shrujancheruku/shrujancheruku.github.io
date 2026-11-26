@@ -16,7 +16,8 @@ const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
 ---
 
 <Window id="skills" label="skills" scrolls>
-  <div class="sk">
+  <div class="sk" data-paged-root>
+   <div data-paged>
     <div class="bars">
       {
         bars.map((b) => (
@@ -30,6 +31,7 @@ const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
       }
     </div>
 
+    <section class="sec">
     <h3 class="head">languages</h3>
     <ul class="langs">
       {
@@ -42,7 +44,9 @@ const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
         ))
       }
     </ul>
+    </section>
 
+    <section class="sec">
     <h3 class="head">hobbies</h3>
     <div class="tree row"><span class="prompt">❯</span> tree ~/hobbies</div>
     <div class="tree" role="list" aria-label="hobbies">
@@ -72,6 +76,8 @@ const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
         })
       }
     </div>
+    </section>
+   </div>
   </div>
 </Window>
 
@@ -106,18 +112,23 @@ const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
       .to(joke, { scaleX: 1, duration: SHOOT, ease: "back.out(2.2)" }, `>${PAUSE}`);
   }
 
+  // play when the workspace is entered, or, on touch, when the skills' screen
+  // comes on show
   let workspace: string | undefined;
+  let wasShown = false;
   function entered(): void {
     if (!area || !pane) return;
     const now = area.dataset.workspace;
-    if (now === workspace) return;
+    const shown = getComputedStyle(pane).display !== "none";
+    const arrived = now !== workspace || (shown && !wasShown);
     workspace = now;
-    if (getComputedStyle(pane).display !== "none") play();
+    wasShown = shown;
+    if (arrived && shown) play();
   }
   if (area) {
     new MutationObserver(entered).observe(area, {
       attributes: true,
-      attributeFilter: ["data-workspace"],
+      attributeFilter: ["data-workspace", "data-screen"],
     });
     entered();
   }
@@ -148,8 +159,10 @@ const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
     width: calc(var(--len) * 100%);
     background: linear-gradient(90deg, var(--ac), var(--hot));
   }
+  .sec {
+    padding-top: 14px;
+  }
   .head {
-    margin-top: 14px;
     font: 500 12.5px var(--mono);
     opacity: 0.55;
   }
