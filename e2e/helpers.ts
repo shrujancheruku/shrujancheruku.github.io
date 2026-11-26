@@ -190,3 +190,54 @@ export async function pinch(page: Page, scale: number): Promise<number> {
     .toBe(true);
   return last;
 }
+
+/**
+ * Whether this browser zooms on a synthesized pinch at all, tried on a bare
+ * page with nothing of the site's in it. Chromium on Linux (the CI runner,
+ * headless shell and full alike) leaves visualViewport.scale at 1 for every
+ * Input.synthesizePinchGesture, while the same build on macOS zooms.
+ */
+export async function pinchZoomWorks(page: Page): Promise<boolean> {
+  const bare = await page.context().newPage();
+  await bare.setContent(
+    '<meta name="viewport" content="width=device-width"><div style="height:200vh"></div>',
+  );
+  const scale = await pinch(bare, 2);
+  await bare.close();
+  return scale > 1.5;
+}
+
+/**
+ * Two fingers down, spread apart, lifted (CDP touch events, so the page sees
+ * them whether or not the browser zooms): a pinch as the page's own handlers
+ * get it.
+ */
+export async function twoFingerSpread(page: Page): Promise<void> {
+  const cdp = await page.context().newCDPSession(page);
+  const { w, h } = await page.evaluate(() => ({
+    w: innerWidth,
+    h: innerHeight,
+  }));
+  const x = Math.round(w / 2);
+  const y = Math.round(h / 2);
+  const at = (d: number) => [
+    { x, y: y - d, id: 0 },
+    { x, y: y + d, id: 1 },
+  ];
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: at(20),
+  });
+  for (let d = 40; d <= 140; d += 20) {
+    await page.waitForTimeout(16);
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: at(d),
+    });
+  }
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
+  await cdp.detach();
+}
