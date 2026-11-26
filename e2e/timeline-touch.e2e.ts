@@ -18,7 +18,7 @@ test("the timeline and education share a screen, then skills; opening gives educ
   page,
 }) => {
   await ready(page, "/");
-  await page.locator(".ws button").nth(2).tap();
+  await page.locator(".ws button").nth(3).tap();
   await settle(page);
   // the first screen: the timeline over education, nothing else
   expect((await box(page, "timeline")).shown).toBe(true);
@@ -39,7 +39,7 @@ test("the timeline and education share a screen, then skills; opening gives educ
   expect(skills.shown).toBe(true);
   expect(Math.round(skills.h * 100)).toBe(100);
 
-  await page.locator(".ws button").nth(2).tap();
+  await page.locator(".ws button").nth(3).tap();
   await settle(page);
   await page.locator("[data-disclosure=education]").click();
   await settle(page);

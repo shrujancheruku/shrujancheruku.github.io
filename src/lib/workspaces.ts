@@ -92,8 +92,12 @@ const squeeze = (layout: Layout, share: number): Layout =>
     ]),
   );
 
+/** The share of a phone screen a project's copy takes; the composition has the rest. */
+const PROJECT_COPY_SHARE = 56;
+
 const WORKSPACE_NAMES = [
   ["opening", "opening"],
+  ["about", "about"],
   ["projects", "projects"],
   ["timeline", "timeline"],
   ["sabbatical", "sabbatical"],
@@ -112,11 +116,13 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
     return stepOf(
       comp,
       desktop,
-      // a phone cannot hold the three windows: the copy, then the composition
-      // over the stack (its rows need a window of their own height)
+      // a phone drops the stack and holds the project on one screen: the copy
+      // over the composition (the archive opens from the copy)
       [
-        { [copy]: [0, 0, 100, 100] },
-        { [comp]: [0, 0, 100, 60], stack: [0, 60, 100, 40] },
+        {
+          [copy]: [0, 0, 100, PROJECT_COPY_SHARE],
+          [comp]: [0, PROJECT_COPY_SHARE, 100, 100 - PROJECT_COPY_SHARE],
+        },
       ],
       // the archive open: the workspace squeezes into the left 42%, the archive
       // takes the right 58% and focus; on touch it takes the whole workspace
@@ -144,6 +150,11 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
           },
         ],
       ),
+    ],
+    about: [
+      stepOf("about", { about: [0, 0, 100, 100] }, [
+        { about: [0, 0, 100, 100] },
+      ]),
     ],
     projects: projectSteps,
     timeline: [
@@ -179,10 +190,16 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
             [34, 0, 66, 100],
           ),
         },
-        // the copy, then the four photos
+        // the copy over the four photos, on one screen: the copy takes the
+        // height its text needs at 375 × 667 (about 55%), the 2 × 2 grid the rest
         [
-          { sabbatical: [0, 0, 100, 100] },
-          grid2(["photo-1", "photo-2", "photo-3", "photo-4"], [0, 0, 100, 100]),
+          {
+            sabbatical: [0, 0, 100, 55],
+            ...grid2(
+              ["photo-1", "photo-2", "photo-3", "photo-4"],
+              [0, 55, 100, 45],
+            ),
+          },
         ],
       ),
     ],

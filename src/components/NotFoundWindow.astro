@@ -19,7 +19,7 @@ const { workspaces, paths } = Astro.props;
     <p><span class="prompt">~ $</span> cd <span data-missing></span></p>
     <p class="err">cd: no such place</p>
     <p>It was either never here or it left without saying.</p>
-    <p class="prompt">There are five places:</p>
+    <p class="prompt">There are {workspaces.length} places:</p>
     <ul>
       {
         workspaces.map((w, i) => (

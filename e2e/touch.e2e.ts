@@ -11,7 +11,7 @@ test("at touch width the windows stack in one column and the bar shows numbers a
   expect(bar?.height).toBe(40);
   // numbers only: the names are not shown
   const names = page.locator(".ws .name");
-  await expect(names).toHaveCount(5);
+  await expect(names).toHaveCount(6);
   for (const name of await names.all()) await expect(name).toBeHidden();
 
   const boxes = await page.$$eval(".pane", (els) =>
@@ -46,22 +46,23 @@ test("the page does not scroll on touch: a swipe is a step", async ({
 test("tapping a number jumps to its workspace", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
-  await page.locator(".ws button").nth(4).tap();
+  await page.locator(".ws button").nth(5).tap();
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "4",
+    "5",
   );
-  await expect(page.locator(".ws button").nth(4)).toHaveAttribute(
+  await expect(page.locator(".ws button").nth(5)).toHaveAttribute(
     "aria-current",
     "true",
   );
 });
 
-test("a featured project is its copy, then its composition over the stack", async ({
+test("a featured project is one screen: its copy over its composition, no stack", async ({
   page,
 }) => {
   await page.goto("/work/");
   await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
+  await expect(page.locator("main.area")).toHaveAttribute("data-screens", "1");
   const shown = () =>
     page.$$eval(
       '[data-window="copy-1"], [data-window="comp-1"], [data-window="stack"]',
@@ -75,10 +76,7 @@ test("a featured project is its copy, then its composition over the stack", asyn
           .sort((a, b) => a.top - b.top)
           .map((e) => e.id),
     );
-  expect(await shown()).toEqual(["copy-1"]);
-  await page.keyboard.press("ArrowDown");
-  await expect(page.locator("main.area")).toHaveAttribute("data-screen", "1");
-  await expect.poll(shown).toEqual(["comp-1", "stack"]);
+  await expect.poll(shown).toEqual(["copy-1", "comp-1"]);
 });
 
 test("no hover tooltips and no clock on touch, before or after interaction", async ({
@@ -95,45 +93,6 @@ test("no hover tooltips and no clock on touch, before or after interaction", asy
   await expect(page.locator("[data-clock]")).toBeHidden();
   for (const tip of await page.locator(".tip").all())
     await expect(tip).toBeHidden();
-});
-
-test("a featured project's second screen is the composition 60 / stack 40, with every stack row in view under its label band", async ({
-  page,
-}) => {
-  await page.goto("/work/");
-  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
-  await page.keyboard.press("ArrowDown");
-  await expect(page.locator("main.area")).toHaveAttribute("data-screen", "1");
-  await page.waitForTimeout(1100);
-  const heights = await page.$$eval(
-    '[data-window="comp-1"], [data-window="stack"]',
-    (els) => {
-      const total = els.reduce(
-        (sum, e) => sum + e.getBoundingClientRect().height,
-        0,
-      );
-      return els.map((e) =>
-        Math.round((e.getBoundingClientRect().height / total) * 100),
-      );
-    },
-  );
-  expect(heights).toEqual([60, 40]);
-
-  const stack = page.locator("[data-stack]");
-  const band = page.locator('[data-window="stack"] .label');
-  expect(
-    await band.evaluate((e) => getComputedStyle(e).backgroundColor),
-  ).not.toBe("rgba(0, 0, 0, 0)");
-  // a swipe is never taken by the stack, and every row fits it
-  expect(await stack.evaluate((e) => getComputedStyle(e).overflowY)).toBe(
-    "hidden",
-  );
-  expect(
-    await stack.evaluate((e) => e.scrollHeight <= e.clientHeight + 1),
-  ).toBe(true);
-  await expect(
-    page.locator('[data-stack] a[data-position="1"]'),
-  ).toHaveAttribute("aria-current", "true");
 });
 
 test("on touch the archive takes the whole workspace", async ({ page }) => {

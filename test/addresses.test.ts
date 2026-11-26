@@ -18,8 +18,9 @@ const book = createAddressBook(workspaces, [
 describe("the address book", () => {
   test("each workspace has its path and title from the spec's table", () => {
     const at = (w: number) => book.forStep(firstStepOf(workspaces, w));
-    expect([0, 2, 3, 4].map((w) => [at(w).path, at(w).title])).toEqual([
+    expect([0, 1, 3, 4, 5].map((w) => [at(w).path, at(w).title])).toEqual([
       ["/", "Shrujan Cheruku — Product Engineer"],
+      ["/about/", "About — Shrujan Cheruku"],
       ["/timeline/", "Timeline — Shrujan Cheruku"],
       ["/now/", "Sabbatical — Shrujan Cheruku"],
       ["/contact/", "Contact — Shrujan Cheruku"],
@@ -27,12 +28,12 @@ describe("the address book", () => {
   });
 
   test("the first featured project is /work/, the rest have their own slug", () => {
-    expect(book.forStep(1)).toMatchObject({
+    expect(book.forStep(2)).toMatchObject({
       path: "/work/",
       title: "Projects — Shrujan Cheruku",
     });
-    expect(book.forStep(2).path).toBe("/work/unmacos/");
-    expect(book.forStep(3)).toMatchObject({
+    expect(book.forStep(3).path).toBe("/work/unmacos/");
+    expect(book.forStep(4)).toMatchObject({
       path: "/work/truecrypt-steganography/",
       title: "TrueCrypt-Steganography — Shrujan Cheruku",
       description: "Hide things.",
@@ -40,9 +41,9 @@ describe("the address book", () => {
   });
 
   test("/work/issho/ opens the same step as /work/", () => {
-    expect(book.stepFor("/work/issho/")).toBe(1);
-    expect(book.stepFor("/work/")).toBe(1);
-    expect(book.stepFor("/work/unmacos/")).toBe(2);
+    expect(book.stepFor("/work/issho/")).toBe(2);
+    expect(book.stepFor("/work/")).toBe(2);
+    expect(book.stepFor("/work/unmacos/")).toBe(3);
   });
 
   test("other addresses use the standing description", () => {
@@ -73,13 +74,13 @@ describe("the address book", () => {
           path: "/archive/",
           title: "Archive — Shrujan Cheruku",
           description: DESCRIPTION,
-          step: 1,
+          step: 2,
         },
       ],
     );
-    expect(more.stepFor("/archive/")).toBe(1);
+    expect(more.stepFor("/archive/")).toBe(2);
     // the step's own address is still the first one
-    expect(more.forStep(1).path).toBe("/work/");
+    expect(more.forStep(2).path).toBe("/work/");
   });
 
   test("helper titles", () => {
@@ -106,7 +107,7 @@ describe("the archive's addresses", () => {
     expect(withArchive.forPath("/archive/")).toMatchObject({
       path: "/archive/",
       title: "Archive — Shrujan Cheruku",
-      step: 3,
+      step: 4,
       archive: "",
     });
   });
@@ -115,13 +116,13 @@ describe("the archive's addresses", () => {
     expect(withArchive.forPath("/work/claude-orchestrate/")).toMatchObject({
       title: "claude-orchestrate — Shrujan Cheruku",
       description: "Run many.",
-      step: 3,
+      step: 4,
       archive: "claude-orchestrate",
     });
   });
 
   test("the step keeps its own address", () => {
-    expect(withArchive.forStep(3).path).toBe("/work/truecrypt-steganography/");
+    expect(withArchive.forStep(4).path).toBe("/work/truecrypt-steganography/");
   });
 
   test("an empty archive adds nothing", () => {

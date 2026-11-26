@@ -22,7 +22,7 @@ const visible = (page: Page, id: string) =>
 
 test.beforeEach(async ({ page }) => {
   await ready(page);
-  await page.keyboard.press("3");
+  await page.keyboard.press("4");
   await settle(page);
 });
 
@@ -125,9 +125,9 @@ test("opening re-tiles to 46 / 54, drops skills, staggers the roles in; closing 
 test("leaving the workspace closes it", async ({ page }) => {
   await page.locator("[data-disclosure=education]").click();
   await settle(page);
-  await page.keyboard.press("4");
+  await page.keyboard.press("5");
   await settle(page);
-  await page.keyboard.press("3");
+  await page.keyboard.press("4");
   await settle(page);
   expect(await visible(page, "skills")).toBe(true);
   await expect(page.locator("[data-disclosure=education]")).toHaveAttribute(
