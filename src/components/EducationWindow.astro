@@ -39,8 +39,8 @@ import Window from "./Window.astro";
   const label = cue?.querySelector<HTMLElement>(".cl");
   const note = cue?.querySelector<HTMLElement>(".note");
 
-  // the re-tile takes ~0.85s; the roles come in as it settles
-  const STAGGER_DELAY = 0.4;
+  // the re-tile takes ~0.32s; the roles come in as the window grows
+  const STAGGER_DELAY = 0.08;
 
   document.addEventListener("desktop:open", (e) => {
     if (!cue || !roles || !label || !note) return;
