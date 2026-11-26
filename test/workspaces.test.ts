@@ -190,12 +190,9 @@ describe("the decided proportions", () => {
     expect(tile(l, "term")[3]).toBe(38);
   });
 
-  test("touch contact: the terminal whole, then the name (62%) over the whoami terminal (38%)", () => {
-    const [first, second] = at(at(ws, 4).steps, 0).touch;
-    if (!first || !second) throw new Error("no touch screens");
-    expect(first).toEqual({ contact: [0, 0, 100, 100] });
-    expect(tile(second, "name")).toEqual([0, 0, 100, 62]);
-    expect(tile(second, "term")).toEqual([0, 62, 100, 38]);
+  test("touch contact: the terminal whole, and nothing after it", () => {
+    const screens = at(at(ws, 4).steps, 0).touch;
+    expect(screens).toEqual([{ contact: [0, 0, 100, 100] }]);
   });
 });
 
@@ -278,8 +275,8 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
     expect(touch(0)).toHaveLength(1);
   });
 
-  test("contact is its terminal, then the name over the whoami terminal", () => {
-    expect(ids(touch(4))).toEqual([["contact"], ["name", "term"]]);
+  test("contact is its terminal alone: one screen, the last step", () => {
+    expect(ids(touch(4))).toEqual([["contact"]]);
   });
 
   test("a project is its copy, then its composition over the stack", () => {
