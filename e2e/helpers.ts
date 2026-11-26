@@ -248,15 +248,11 @@ export const atEnd = (page: Page, w: Where): Promise<boolean> =>
     .then((last) => w.step === last && w.screen === w.screens - 1);
 
 /**
- * On a phone a project is its copy, then its composition. Wait for the page,
- * then move to the composition's screen (the page may open on either).
+ * On a phone a project is one screen, its copy over its composition (#90).
+ * Wait for the page and for the desktop to come to rest.
  */
 export async function toComposition(page: Page): Promise<void> {
   await expect(area(page)).toHaveAttribute("data-ready", "true");
-  if ((await area(page).getAttribute("data-screen")) !== "1") {
-    await page.keyboard.press("ArrowDown");
-    await expect(area(page)).toHaveAttribute("data-screen", "1");
-  }
   await settle(page);
 }
 
