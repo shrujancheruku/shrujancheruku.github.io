@@ -89,6 +89,17 @@ test("keyboard scrolling moves one step at a time", async ({ page }) => {
   expect(steps).toEqual([1, 2, 3, 2, 1]);
 });
 
+test("Space after clicking a status bar number moves one step", async ({
+  page,
+}) => {
+  await page.locator('.ws button[data-workspace="2"]').click();
+  await settle(page);
+  const before = (await current(page)).step;
+  await page.keyboard.press("Space");
+  await settle(page);
+  expect((await current(page)).step).toBe(before + 1);
+});
+
 test("number keys jump to a workspace, and are ignored with a modifier held", async ({
   page,
 }) => {

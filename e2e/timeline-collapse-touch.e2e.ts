@@ -172,6 +172,23 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       expect(await whereOf(page)).toEqual(before);
     });
 
+    test("Space on an entry's toggle opens and closes it, and never moves a step", async ({
+      page,
+    }) => {
+      await ready(page, "/timeline/");
+      await warmUpTouch(page);
+      const before = await whereOf(page);
+      await toggles(page).nth(2).focus();
+      await page.keyboard.press("Space");
+      await settle(page);
+      expect((await expanded(page))[2]).toBe("true");
+      expect(await whereOf(page)).toEqual(before);
+      await page.keyboard.press("Space");
+      await settle(page);
+      expect((await expanded(page))[2]).toBe("false");
+      expect(await whereOf(page)).toEqual(before);
+    });
+
     test("the resume download stays at the top, and Education & Internships still opens whole", async ({
       page,
     }) => {

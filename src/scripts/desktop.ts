@@ -692,10 +692,9 @@ addEventListener("keydown", (e: KeyboardEvent) => {
     t.matches("input, textarea, select, [contenteditable]")
   )
     return;
-  // Space activates a focused button or link (a timeline entry's toggle), it
-  // does not move on
-  if (e.key === " " && t instanceof HTMLElement && t.closest("button, a"))
-    return;
+  // Space on a timeline entry's toggle opens or closes the entry, it does not
+  // move on; anywhere else (a status bar number just clicked) it moves a step
+  if (e.key === " " && t instanceof HTMLElement && t.closest(".tgl")) return;
   if (e.key === "Escape" && open && inProjects()) {
     e.preventDefault();
     closeArchive();
