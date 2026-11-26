@@ -129,6 +129,10 @@ const css = `
   .is .cities{display:none}
   .is .pg>*{transition:opacity .4s}.is .pg>.off{opacity:0}
   .is .scrn .stops .s{display:none}
+  /* each card fits its phone screen with room to spare, whatever the fonts'
+     metrics (#83): tighter spacing, and the detail a small screen can do without */
+  .is .scrn .c{padding:.8em .9em}.is .scrn .map{margin:.5em 0}.is .scrn .chat{min-height:0;margin:.6em 0}
+  .is .scrn .c>.s:has(+.map),.is .scrn .stops~*,.is .scrn .chat>.s,.is .scrn .chat .me{display:none}
 }
 @media (prefers-reduced-motion:reduce){
   .is .pg,.is .scrn{transition:none}

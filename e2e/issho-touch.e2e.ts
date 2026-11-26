@@ -83,3 +83,36 @@ test("on touch the site's text does not overflow sideways and the phone stays in
   );
   expect(over).toEqual([]);
 });
+
+for (const [name, viewport] of [
+  ["375x667", { width: 375, height: 667 }],
+  ["Pixel 7", devices["Pixel 7"].viewport],
+] as const)
+  test(`on a ${name} phone every card of the app fits its screen with room to spare`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/work/issho/");
+    await toComposition(page);
+    await expect(slot(page)).toHaveAttribute("data-mounted", "true");
+    // each card in turn, measured against the screen's box inside its padding:
+    // a card taller than that runs under the header and off the phone (#83)
+    const over = await scene(page).evaluate((root) => {
+      root.classList.add("still");
+      return [...root.querySelectorAll<HTMLElement>(".app .scrn")].flatMap(
+        (s) => {
+          const was = s.classList.contains("on");
+          s.classList.add("on");
+          const pad = Number.parseFloat(getComputedStyle(s).paddingTop);
+          const room = s.clientHeight - 2 * pad;
+          const card = s.querySelector<HTMLElement>(".c")?.offsetHeight ?? 0;
+          s.classList.toggle("on", was);
+          // a margin, so another machine's font metrics still fit
+          return card > room - 8
+            ? [`screen ${s.dataset.step}: ${card}>${room - 8}`]
+            : [];
+        },
+      );
+    });
+    expect(over).toEqual([]);
+  });
