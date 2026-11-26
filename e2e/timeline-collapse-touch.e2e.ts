@@ -84,60 +84,56 @@ for (const [name, emulation] of Object.entries(PHONES)) {
     test("the skills window fits with 8px to spare, while the joke bar shoots in and once it rests", async ({
       page,
     }) => {
+      // Time is the test's: Playwright's clock fakes requestAnimationFrame,
+      // so GSAP's ticker advances only when the test runs the clock, in fixed
+      // steps. No frame is ever missed, and the joke bar's peak is always hit.
+      await page.clock.install();
       await ready(page, "/timeline/");
       await warmUpTouch(page);
       // widths depend on the web fonts: read them once all have loaded
       await page.evaluate(() => document.fonts.ready);
-      // sample every frame of the bars' entry (the joke bar overshoots its
-      // track) with the window 8px narrower than it is, from before the step
-      // until the bars rest: nothing may overflow. Nothing clips the bars, so
-      // an overshoot that leaves the column widens the window and shows here.
-      const sampled = page.evaluate(
-        () =>
-          new Promise<{ over: number; frames: number; peak: number }>(
-            (done) => {
-              const sk = document.querySelector<HTMLElement>(".sk");
-              const pane = sk?.closest<HTMLElement>(".pane");
-              const joke = sk?.querySelector<HTMLElement>(".fill.joke");
-              if (!sk || !pane || !joke)
-                return done({
-                  over: Number.POSITIVE_INFINITY,
-                  frames: 0,
-                  peak: 0,
-                });
-              const SLACK = 8;
-              let worst = 0;
-              let frames = 0;
-              let peak = 0;
-              let started = false;
-              const t0 = performance.now();
-              const tick = () => {
-                if (getComputedStyle(pane).display !== "none") {
-                  if (!sk.style.width)
-                    sk.style.width = `${sk.clientWidth - SLACK}px`;
-                  worst = Math.max(worst, sk.scrollWidth - sk.clientWidth);
-                  frames++;
-                  peak = Math.max(
-                    peak,
-                    new DOMMatrix(getComputedStyle(joke).transform).a,
-                  );
-                  started ||= pane.dataset.bars === "growing";
-                }
-                const done_ = started && pane.dataset.bars === "rest";
-                if (!done_ && performance.now() - t0 < 10_000)
-                  requestAnimationFrame(tick);
-                else {
-                  sk.style.width = "";
-                  done({ over: worst, frames, peak });
-                }
-              };
-              tick();
-            },
-          ),
-      );
+      await page.clock.pauseAt(new Date(Date.now() + 1000));
+      const STEP = 8; // ms of fake time per sample
+      // measure with the window 8px narrower than it is: nothing may overflow.
+      // Nothing clips the bars, so an overshoot that leaves the column widens
+      // the window and shows here.
+      await page.evaluate(() => {
+        const sk = document.querySelector<HTMLElement>(".sk");
+        if (sk) sk.style.width = `${sk.clientWidth - 8}px`;
+      });
       await page.keyboard.press("ArrowDown");
-      const { over, frames, peak } = await sampled;
+      let over = Number.NEGATIVE_INFINITY;
+      let frames = 0;
+      let peak = 0;
+      let started = false;
+      // the whole entry is about 2.3s of fake time: step through 6s
+      for (let t = 0; t < 6000; t += STEP) {
+        await page.clock.runFor(STEP);
+        const m = await page.evaluate(() => {
+          const sk = document.querySelector<HTMLElement>(".sk");
+          const pane = sk?.closest<HTMLElement>(".pane");
+          const joke = sk?.querySelector<HTMLElement>(".fill.joke");
+          if (!sk || !pane || !joke) return null;
+          if (getComputedStyle(pane).display === "none") return null;
+          return {
+            over: sk.scrollWidth - sk.clientWidth,
+            scale: new DOMMatrix(getComputedStyle(joke).transform).a,
+            bars: pane.dataset.bars,
+          };
+        });
+        if (!m) continue;
+        frames++;
+        over = Math.max(over, m.over);
+        peak = Math.max(peak, m.scale);
+        started ||= m.bars === "growing";
+        if (started && m.bars === "rest") break;
+      }
+      await page.evaluate(() => {
+        const sk = document.querySelector<HTMLElement>(".sk");
+        if (sk) sk.style.width = "";
+      });
       // the sampling saw the joke bar overshoot, not just its rest
+      expect(started).toBe(true);
       expect(frames).toBeGreaterThan(10);
       expect(peak).toBeGreaterThan(1.05);
       expect(over).toBeLessThanOrEqual(1);
