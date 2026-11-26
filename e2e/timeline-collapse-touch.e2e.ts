@@ -93,35 +93,53 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       // widths depend on the web fonts: read them once all have loaded
       await page.evaluate(() => document.fonts.ready);
       await page.clock.pauseAt(new Date(Date.now() + 1000));
-      const STEP = 8; // ms of fake time per sample
       // measure with the window 8px narrower than it is: nothing may overflow.
       // Nothing clips the bars, so an overshoot that leaves the column widens
-      // the window and shows here.
-      await page.evaluate(() => {
-        const sk = document.querySelector<HTMLElement>(".sk");
-        if (sk) sk.style.width = `${sk.clientWidth - 8}px`;
-      });
+      // the window and shows here. The skills pane is display:none until
+      // ArrowDown, where its width reads 0, so the narrowing is applied on the
+      // first sample that finds the pane shown, before that sample measures.
       await page.keyboard.press("ArrowDown");
+      // Fake time moves in coarse steps, except around the joke bar's shoot
+      // (about 1.97s to 2.22s after the bars start): fine steps there catch its
+      // peak, and the rest of the ~2.3s entry costs few round trips.
+      const COARSE = 50;
+      const FINE = 8;
+      const FINE_FROM = 1800;
+      const FINE_TO = 2500;
       let over = Number.NEGATIVE_INFINITY;
       let frames = 0;
       let peak = 0;
       let started = false;
-      // the whole entry is about 2.3s of fake time: step through 6s
-      for (let t = 0; t < 6000; t += STEP) {
-        await page.clock.runFor(STEP);
+      let natural: number | null = null;
+      let narrowed: number | null = null;
+      let firstShown = -1;
+      for (let t = 0; t < 6000; ) {
+        const since = firstShown < 0 ? 0 : t - firstShown;
+        const step = since >= FINE_FROM && since < FINE_TO ? FINE : COARSE;
+        await page.clock.runFor(step);
+        t += step;
         const m = await page.evaluate(() => {
           const sk = document.querySelector<HTMLElement>(".sk");
           const pane = sk?.closest<HTMLElement>(".pane");
           const joke = sk?.querySelector<HTMLElement>(".fill.joke");
           if (!sk || !pane || !joke) return null;
           if (getComputedStyle(pane).display === "none") return null;
+          const was = sk.style.width ? null : sk.clientWidth;
+          if (was !== null) sk.style.width = `${was - 8}px`;
           return {
+            was,
+            width: sk.clientWidth,
             over: sk.scrollWidth - sk.clientWidth,
             scale: new DOMMatrix(getComputedStyle(joke).transform).a,
             bars: pane.dataset.bars,
           };
         });
         if (!m) continue;
+        if (firstShown < 0) firstShown = t;
+        if (m.was !== null) {
+          natural = m.was;
+          narrowed = m.width;
+        }
         frames++;
         over = Math.max(over, m.over);
         peak = Math.max(peak, m.scale);
@@ -132,6 +150,9 @@ for (const [name, emulation] of Object.entries(PHONES)) {
         const sk = document.querySelector<HTMLElement>(".sk");
         if (sk) sk.style.width = "";
       });
+      // the narrowing took effect on the first measured step
+      expect(natural).toBeGreaterThan(0);
+      expect(narrowed).toBe((natural ?? 0) - 8);
       // the sampling saw the joke bar overshoot, not just its rest
       expect(started).toBe(true);
       expect(frames).toBeGreaterThan(10);
