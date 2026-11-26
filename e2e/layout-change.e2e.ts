@@ -65,24 +65,29 @@ test("a project's step survives the breakpoint both ways", async ({ page }) => {
   await expect(page).toHaveURL(/\/work\/unmacos\/$/);
 });
 
-test("a taller phone screen keeps the timeline over education on one screen", async ({
+test("a taller phone screen keeps the timeline step's two screens, and the one you are on", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 667 });
   await ready(page, "/timeline/");
   await settle(page);
+  expect(await whereOf(page)).toMatchObject({ screen: 0, screens: 2 });
   expect(await shown(page, "timeline")).toBe(true);
-  expect(await shown(page, "education")).toBe(true);
+  expect(await shown(page, "education")).toBe(false);
 
   await resize(page, { width: 390, height: 1000 });
-  expect(await whereOf(page)).toMatchObject({ screen: 0 });
+  expect(await whereOf(page)).toMatchObject({ screen: 0, screens: 2 });
   expect(await shown(page, "timeline")).toBe(true);
-  expect(await shown(page, "education")).toBe(true);
 
+  // on the second screen, education over skills, a resize stays there
+  await page.keyboard.press("ArrowDown");
+  await settle(page);
+  expect(await whereOf(page)).toMatchObject({ screen: 1, screens: 2 });
   await resize(page, { width: 390, height: 667 });
-  expect(await whereOf(page)).toMatchObject({ screen: 0 });
-  expect(await shown(page, "timeline")).toBe(true);
+  expect(await whereOf(page)).toMatchObject({ screen: 1, screens: 2 });
   expect(await shown(page, "education")).toBe(true);
+  expect(await shown(page, "skills")).toBe(true);
+  expect(await shown(page, "timeline")).toBe(false);
 });
 
 test.describe("reduced motion on touch", () => {
