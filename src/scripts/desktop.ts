@@ -35,6 +35,11 @@ import {
   type Workspace,
 } from "../lib/workspaces";
 import { measurePages, type Paged, pagedOf, showPage } from "./paged";
+// PROTOTYPE (ticket #114): workspace-change motions, dev only
+import {
+  runWorkspaceChange,
+  workspaceMotionOn,
+} from "./prototype-workspace-change";
 
 gsap.registerPlugin(Flip, Observer);
 
@@ -197,7 +202,13 @@ function markStack(index: number): void {
 }
 
 /** Put the windows of a step in place; animate from where they are if asked. */
+/** PROTOTYPE: the step last placed, to tell a workspace change. */
+let placedStep = -1;
+
 function place(n: number, animate: boolean): void {
+  const from = placedStep;
+  placedStep = n;
+  const before = shown;
   const screens = screensAt(n, open);
   screen = Math.max(0, Math.min(screens.length - 1, screen));
   const { layout, pages } = screens[screen] ?? { layout: {}, pages: {} };
@@ -250,7 +261,29 @@ function place(n: number, animate: boolean): void {
     else b.removeAttribute("aria-current");
   }
 
-  if (state) {
+  const fromWs = from >= 0 ? locate(workspaces, from).workspace : workspace;
+  if (
+    state &&
+    import.meta.env.DEV &&
+    workspaceMotionOn() &&
+    before &&
+    !touch.matches &&
+    fromWs !== workspace
+  ) {
+    gate.hold();
+    area.dataset.retiling = "true";
+    latest?.kill();
+    gsap.killTweensOf(panes);
+    const tl = runWorkspaceChange(
+      area,
+      panes,
+      before,
+      layout,
+      Math.sign(workspace - fromWs),
+      () => settled(tl),
+    );
+    latest = tl;
+  } else if (state) {
     // the wheel stays shut for the whole re-tile, which on a busy page starts
     // late and ends well after the wheel event that asked for it
     gate.hold();
