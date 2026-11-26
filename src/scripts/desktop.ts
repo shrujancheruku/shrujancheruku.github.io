@@ -11,7 +11,15 @@ import {
   openAddresses,
 } from "../lib/addresses";
 import { interpretKey } from "../lib/keys";
-import { expandScreens, focusAmong, moveBy, type Screen } from "../lib/screens";
+import {
+  anchorOf,
+  type EntriesOf,
+  expandScreens,
+  focusAmong,
+  moveBy,
+  type Screen,
+  screenHolding,
+} from "../lib/screens";
 import { windowChanges } from "../lib/signals";
 import { createSwipe, UNZOOMED } from "../lib/swipe";
 import { createWheelGate } from "../lib/wheel-gate";
@@ -723,10 +731,23 @@ function onLayoutChange(): void {
 }
 touch.addEventListener("change", onLayoutChange);
 
-/** What fits a page changed: measure again and show the page at hand. */
+/** The entries a paged window shows on a screen, as the cache has them now. */
+const entriesOf: EntriesOf = (s, id) => {
+  const tile = s.layout[id];
+  return tile ? (pagesOf(id, tile)[s.pages[id] ?? 0] ?? []) : [];
+};
+
+/**
+ * What fits a page changed: measure again and stay on the same content. The
+ * screen that held what was on show may have another index now (the timeline
+ * over fewer screens, say), so it is found by its first entry, not its index.
+ */
 function remeasure(): void {
   if (!touch.matches) return;
+  const before = screensAt(step, open)[screen];
+  const anchor = before && anchorOf(before, entriesOf);
   pageCache.clear();
+  if (anchor) screen = screenHolding(screensAt(step, open), anchor, entriesOf);
   place(step, false);
 }
 let measured = "";

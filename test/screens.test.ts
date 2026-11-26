@@ -1,10 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import {
+  anchorOf,
+  type EntriesOf,
   expandScreens,
   focusAmong,
   moveBy,
   paginate,
+  type Screen,
+  screenHolding,
 } from "../src/lib/screens";
+import type { Layout } from "../src/lib/workspaces";
 
 describe("paginate: entries split into screens that fit", () => {
   test("packs entries in order while they fit", () => {
@@ -181,5 +186,57 @@ describe("focusAmong: the focused window must be on the screen", () => {
 
   test("otherwise takes the screen's first window", () => {
     expect(focusAmong({ "copy-1": [0, 0, 100, 100] }, "comp-1")).toBe("copy-1");
+  });
+});
+
+describe("anchorOf and screenHolding: a resize keeps the reader on the same content", () => {
+  const timeline: Layout = { timeline: [0, 0, 100, 100] };
+  const education: Layout = { education: [0, 0, 100, 100] };
+  const skills: Layout = { skills: [0, 0, 100, 100] };
+  const layouts = [timeline, education, skills];
+  /** Entries per timeline page: three pages before the resize, two after. */
+  const before = [
+    [0, 1],
+    [2, 3],
+    [4, 5],
+  ];
+  const after = [
+    [0, 1, 2],
+    [3, 4, 5],
+  ];
+  const entries =
+    (pages: number[][]): EntriesOf =>
+    (s, id) =>
+      id === "timeline" ? (pages[s.pages[id] ?? 0] ?? []) : [];
+
+  test("timeline screen 2 of 3 maps to the timeline screen that now holds it, not to Education", () => {
+    const old = expandScreens(layouts, { timeline: 3 });
+    const now = expandScreens(layouts, { timeline: 2 });
+    const anchor = anchorOf(old[2] as Screen, entries(before));
+    expect(anchor).toEqual({ layout: timeline, window: "timeline", entry: 4 });
+    // the same index (2) would now be Education
+    expect(now[2]?.layout).toBe(education);
+    expect(screenHolding(now, anchor, entries(after))).toBe(1);
+  });
+
+  test("a screen without paged windows keeps its layout's screen", () => {
+    const old = expandScreens(layouts, { timeline: 3 });
+    const now = expandScreens(layouts, { timeline: 2 });
+    const anchor = anchorOf(old[4] as Screen, entries(before));
+    expect(anchor).toEqual({ layout: skills });
+    expect(screenHolding(now, anchor, entries(after))).toBe(3);
+  });
+
+  test("a shrinking screen moves the reader later, onto the page that holds the entry", () => {
+    const old = expandScreens(layouts, { timeline: 2 });
+    const now = expandScreens(layouts, { timeline: 3 });
+    const anchor = anchorOf(old[1] as Screen, entries(after));
+    expect(anchor.entry).toBe(3);
+    expect(screenHolding(now, anchor, entries(before))).toBe(1);
+  });
+
+  test("no screen with the layout falls back to the first", () => {
+    const now = expandScreens([education], {});
+    expect(screenHolding(now, { layout: timeline }, entries(after))).toBe(0);
   });
 });

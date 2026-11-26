@@ -93,3 +93,49 @@ export function focusAmong(layout: Layout, preferred: string): string {
     ? preferred
     : (Object.keys(layout)[0] ?? preferred);
 }
+
+/** What a screen shows: its layout, and the first entry of a paged window on it. */
+export interface Anchor {
+  layout: Layout;
+  /** A paged window on the screen, and the first entry it shows; absent if none. */
+  window?: string;
+  entry?: number;
+}
+
+/** The entries a paged window shows on a screen, as measured now. */
+export type EntriesOf = (screen: Screen, id: string) => readonly number[];
+
+/** Pin down what `screen` shows, to find it again after the pages change. */
+export function anchorOf(screen: Screen, entriesOf: EntriesOf): Anchor {
+  for (const id of Object.keys(screen.pages)) {
+    const entry = entriesOf(screen, id)[0];
+    if (entry !== undefined)
+      return { layout: screen.layout, window: id, entry };
+  }
+  return { layout: screen.layout };
+}
+
+/**
+ * The screen that now shows what `anchor` pinned: the one with the same
+ * layout whose paged window holds the anchored entry. A screen with the same
+ * layout stands in when none holds it, and the first screen when no layout
+ * matches.
+ */
+export function screenHolding(
+  screens: readonly Screen[],
+  anchor: Anchor,
+  entriesOf: EntriesOf,
+): number {
+  const same = screens.flatMap((s, i) =>
+    s.layout === anchor.layout ? [i] : [],
+  );
+  const { window, entry } = anchor;
+  if (window !== undefined && entry !== undefined) {
+    const holding = same.find((i) => {
+      const s = screens[i];
+      return s !== undefined && entriesOf(s, window).includes(entry);
+    });
+    if (holding !== undefined) return holding;
+  }
+  return same[0] ?? 0;
+}
