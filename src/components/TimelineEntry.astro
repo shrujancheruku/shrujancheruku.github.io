@@ -25,7 +25,11 @@ const detailId = `te-${entry.organisation ?? entry.roles[0]?.title}`
         class="tgl"
         aria-expanded="false"
         aria-controls={detailId}
-        aria-label={`${entry.organisation ?? entry.roles[0]?.title}: ${entry.roles[0]?.title}`}
+        aria-label={
+          entry.organisation
+            ? `${entry.organisation}: ${entry.roles[0]?.title}`
+            : entry.roles[0]?.title
+        }
       >
         <span class="chev" aria-hidden="true">▸</span>
       </button>

@@ -172,6 +172,19 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       expect(await whereOf(page)).toEqual(before);
     });
 
+    test("each toggle is named by its entry: the organisation and title, or the title alone", async ({
+      page,
+    }) => {
+      await ready(page, "/timeline/");
+      const names = await toggles(page).evaluateAll((els) =>
+        els.map((e) => e.getAttribute("aria-label")),
+      );
+      expect(names[0]).toBe("Sabbatical");
+      expect(names.slice(1).every((n) => /^[^:]+: [^:]+$/.test(n ?? ""))).toBe(
+        true,
+      );
+    });
+
     test("Space on an entry's toggle opens and closes it, and never moves a step", async ({
       page,
     }) => {
