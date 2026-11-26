@@ -24,8 +24,12 @@ _Avoid_: Slide, view, workspace, page
 The share of a window's entries that fits one screen on a phone. A window whose entries do not all fit (the archive, and Education's roles or Skills if they are too long for their screen) has several pages, each on a screen of its own. The timeline's entries collapse to their headings and never page.
 _Avoid_: Screen, slide; never the desktop or a workspace
 
+**Tiling order**:
+The order a step's windows are tiled in, set by hand for each step rather than read off where they sit. Windows leave and arrive in this order when the desktop changes workspace.
+_Avoid_: Reading order, z-order, DOM order
+
 **Opening a window**:
-A window coming on show in a step while its neighbours stay: it slides out of the edge of the desktop it sits against, and its neighbours give up the space as it comes, sharing one moving border with it.
+A window coming on show in a step while its neighbours stay: it slides out of the edge of the desktop on the far side from the neighbours that give up their space to it, and they give it up as it comes, sharing one moving border with it.
 _Avoid_: Fade in, pop in, launch; "the opening" (that is the first workspace)
 
 **Closing a window**:
@@ -35,6 +39,10 @@ _Avoid_: Fade out, dismiss, hide
 **Rolling past**:
 How one project gives way to the next. The tiles stay put; inside each one the old project's window slides out and the next one's slides in, like a scroll: forwards, the old goes up and the next comes from below; backwards, the reverse. A window both projects share (the stack) doesn't move.
 _Avoid_: Crossfade, swap, carousel, page turn
+
+**Changing workspace**:
+How the desktop moves from one workspace to another. Nothing opens or closes: the old workspace's windows slide up and off one after another in tiling order, as the next workspace's come up from below in the same order (the reverse going to a lower number). A window on both workspaces (the name) travels with each one rather than staying. A jump across several workspaces travels one screen, like a step to the next.
+_Avoid_: Page transition, slide, scroll, swipe
 
 **Project**:
 A public GitHub repository that Shrujan has selected to appear on the portfolio. Nothing appears without being selected.
