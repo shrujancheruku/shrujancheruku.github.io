@@ -1,7 +1,8 @@
 // The window manager: places the windows of the current step, re-tiles them
 // with GSAP Flip when the step changes, and turns wheel, keys and clicks into
-// steps. On touch the document scrolls natively with scroll-snap and this
-// script only follows the scroll position.
+// steps. On touch nothing scrolls: a swipe is one gesture and moves one
+// screen, like a wheel flick moves one step (src/lib/swipe.ts). A step is one
+// or more screens on touch (src/lib/screens.ts), the same step and address.
 import { gsap } from "gsap";
 import { Flip } from "gsap/Flip";
 import { Observer } from "gsap/Observer";
@@ -10,19 +11,30 @@ import {
   openAddresses,
 } from "../lib/addresses";
 import { interpretKey } from "../lib/keys";
+import {
+  anchorOf,
+  type EntriesOf,
+  expandScreens,
+  focusAmong,
+  moveBy,
+  type Screen,
+  screenHolding,
+} from "../lib/screens";
 import { windowChanges } from "../lib/signals";
+import { createSwipe, UNZOOMED } from "../lib/swipe";
 import { createWheelGate } from "../lib/wheel-gate";
 import {
   firstStepOf,
   focusOf,
   type Layout,
   locate,
-  stepAfter,
+  screensOf,
   stepAt,
   stepCount,
   tilingOf,
   type Workspace,
 } from "../lib/workspaces";
+import { measurePages, type Paged, pagedOf, showPage } from "./paged";
 
 gsap.registerPlugin(Flip, Observer);
 
@@ -54,6 +66,10 @@ const numbers = [
 const touch = matchMedia("(max-width: 760px)");
 
 let step = 0;
+/** The screen of the step on show (always 0 on a wide screen). */
+let screen = 0;
+/** The screen the disclosure was opened from, which closing returns to. */
+let screenBeforeOpen = 0;
 /** The layout on show, to tell the windows that come and go. */
 let shown: Layout | null = null;
 /** The current step's disclosure (Education & Internships) is open. */
@@ -62,14 +78,64 @@ let open = false;
 let notFound = area.dataset.notFound === "true";
 /** The archive entered the address bar as a history entry of its own (Back closes it). */
 let archivePushed = false;
-/** An archive open that waits for a scroll to its step (touch). */
-let pendingArchive: string | null = null;
 const archiveEl = area.querySelector<HTMLElement>(
   '.pane[data-window="archive"]',
 );
 
-const layoutOf = (n: number): Layout =>
-  tilingOf(stepAt(workspaces, n), touch.matches ? "touch" : "desktop", open);
+// ---- screens
+// On touch a step is its layouts in order, and a window with more entries than
+// fit (the timeline, the archive) is as many screens as its entries need. The
+// pages are measured in the window as it will be tiled, and kept until the
+// screen changes size or the fonts arrive.
+
+const windowOf = new Map(panes.map((p) => [p.dataset.window ?? "", p]));
+const pagedByWindow = new Map<string, Paged | undefined>();
+const pagedWindow = (id: string): Paged | undefined => {
+  if (!pagedByWindow.has(id)) {
+    const pane = windowOf.get(id);
+    pagedByWindow.set(id, pane && pagedOf(pane));
+  }
+  return pagedByWindow.get(id);
+};
+const pageCache = new Map<string, number[][]>();
+
+/** The pages a paged window falls into at a tile of the area. */
+function pagesOf(id: string, tile: Layout[string]): number[][] {
+  const paged = pagedWindow(id);
+  if (!paged) return [[]];
+  const key = `${id}:${tile.join(",")}`;
+  let pages = pageCache.get(key);
+  if (!pages) {
+    pages = measurePages(paged, tile);
+    pageCache.set(key, pages);
+  }
+  return pages;
+}
+
+/** The screens of step `n`; `opened` says whether its disclosure is open. */
+function screensAt(n: number, opened: boolean): Screen[] {
+  const found = stepAt(workspaces, n);
+  if (!touch.matches) return [{ layout: tilingOf(found, opened), pages: {} }];
+  const layouts = screensOf(found, opened);
+  const counts: Record<string, number> = {};
+  for (const layout of layouts)
+    for (const [id, tile] of Object.entries(layout))
+      if (pagedWindow(id)) counts[id] = pagesOf(id, tile).length;
+  return expandScreens(layouts, counts);
+}
+
+/** The screen of the archive that holds an entry (0 on a wide screen). */
+function screenOfEntry(slug: string): number {
+  const paged = pagedWindow("archive");
+  if (!touch.matches || !slug || !paged) return 0;
+  const at = paged.items.findIndex(
+    (li) => li.dataset.entry?.toLowerCase() === slug.toLowerCase(),
+  );
+  const tile = screensOf(stepAt(workspaces, step), true)[0]?.archive;
+  if (at < 0 || !tile) return 0;
+  const page = pagesOf("archive", tile).findIndex((ix) => ix.includes(at));
+  return Math.max(0, page);
+}
 
 /** The not-found terminal floats over the opening until the first jump. */
 function showNotFound(): void {
@@ -132,8 +198,10 @@ function markStack(index: number): void {
 
 /** Put the windows of a step in place; animate from where they are if asked. */
 function place(n: number, animate: boolean): void {
-  const layout = layoutOf(n);
-  const focus = focusOf(stepAt(workspaces, n), open);
+  const screens = screensAt(n, open);
+  screen = Math.max(0, Math.min(screens.length - 1, screen));
+  const { layout, pages } = screens[screen] ?? { layout: {}, pages: {} };
+  const focus = focusAmong(layout, focusOf(stepAt(workspaces, n), open));
   const state = animate ? Flip.getState(panes) : null;
 
   let z = 1;
@@ -155,6 +223,18 @@ function place(n: number, animate: boolean): void {
     });
   }
 
+  // the entries of a paged window: its page on touch, all of them wide
+  for (const pane of panes) {
+    const id = pane.dataset.window ?? "";
+    const paged = pagedWindow(id);
+    const tile = layout[id];
+    if (!paged || !tile) continue;
+    showPage(
+      paged,
+      touch.matches ? pagesOf(id, tile)[pages[id] ?? 0] : undefined,
+    );
+  }
+
   showNotFound();
   signal(shown, layout);
   shown = layout;
@@ -162,6 +242,8 @@ function place(n: number, animate: boolean): void {
   const { workspace, index } = locate(workspaces, n);
   markStack(workspaces[workspace]?.id === "projects" ? index : -1);
   area.dataset.step = String(n);
+  area.dataset.screen = String(screen);
+  area.dataset.screens = String(screens.length);
   area.dataset.workspace = String(workspace);
   for (const [i, b] of numbers.entries()) {
     if (i === workspace) b.setAttribute("aria-current", "true");
@@ -210,7 +292,7 @@ function settled(retiling: gsap.core.Timeline): void {
   if (retiling !== latest) return;
   area.dataset.retiling = "false";
   const waiting = gate.release();
-  if (waiting) scrollStep(waiting);
+  if (waiting) moveOneScreen(waiting);
 }
 
 /** Whether the step's disclosure is the archive (the projects workspace's). */
@@ -230,14 +312,19 @@ function announce(): void {
 }
 
 /** Open or close the step's disclosure; the windows re-tile and listen for the event. */
-function setOpen(next: boolean, animate = true): void {
+function setOpen(next: boolean, animate = true, toScreen = 0): void {
   if (next === open) return;
   if (next && !stepAt(workspaces, step).open) return;
+  if (next) screenBeforeOpen = screen;
   open = next;
   if (!open) archivePushed = false;
   area.dataset.open = String(open);
-  place(step, animate);
+  // opened, its screens are the disclosure's; closed, back to where it began
+  screen = open ? toScreen : screenBeforeOpen;
+  // the disclosure's window shows its entries before they are measured
   announce();
+  pageCache.clear();
+  place(step, animate);
 }
 
 /** Leaving a step closes its disclosure. */
@@ -251,6 +338,7 @@ function closeDisclosure(): void {
   open = false;
   area.dataset.open = "false";
   announce();
+  pageCache.clear();
 }
 
 // ---- the archive window
@@ -264,7 +352,9 @@ function markEntry(slug: string): void {
   for (const li of area.querySelectorAll<HTMLElement>("[data-entry]")) {
     if (slug && li.dataset.entry?.toLowerCase() === slug.toLowerCase()) {
       li.setAttribute("aria-current", "true");
-      li.scrollIntoView({ block: "nearest", behavior: "instant" });
+      // on touch the entry's own screen shows it
+      if (!touch.matches)
+        li.scrollIntoView({ block: "nearest", behavior: "instant" });
     } else li.removeAttribute("aria-current");
   }
 }
@@ -294,7 +384,7 @@ function openArchive(slug = "", push = true): void {
     archivePushed = true;
   }
   document.title = book.forPath(ARCHIVE_PATH)?.title ?? document.title;
-  setOpen(true);
+  setOpen(true, true, screenOfEntry(slug));
   markEntry(slug);
   staggerEntries();
 }
@@ -326,19 +416,17 @@ document.addEventListener("click", (e) => {
   if (target?.closest("[data-archive-close]")) closeArchive();
 });
 
-/** Move to a step: re-tile on a wide screen, scroll the page on touch. */
-function goTo(n: number): void {
+/** Move to a step, and a screen of it, and re-tile (wide screen and touch alike). */
+function goTo(n: number, toScreen = 0): void {
   const next = Math.max(0, Math.min(steps - 1, n));
-  if (touch.matches) {
-    // the scroll handler follows
-    window.scrollTo({ top: next * innerHeight, behavior: "instant" });
-    return;
-  }
-  if (next === step) return;
-  leave();
+  if (next === step && toScreen === screen) return;
+  const changed = next !== step;
+  // a move between screens of the step keeps its disclosure open
+  if (changed) leave();
   step = next;
+  screen = toScreen;
   place(step, true);
-  follow(step);
+  if (changed) follow(step);
 }
 
 // ---- the address bar
@@ -366,18 +454,20 @@ function restore(): void {
   const next = n ?? 0;
   const address = book.forPath(location.pathname);
   document.title = address?.title ?? NOT_FOUND_TITLE;
+  // closing the archive (Back) lands on the screen it was opened from
+  const returning = open && next === step;
   leave();
   step = next;
+  screen = returning ? screenBeforeOpen : 0;
   if (address?.archive !== undefined && archiveEl) {
     open = true;
     area.dataset.open = "true";
+    screen = screenOfEntry(address.archive);
     announce();
     markEntry(address.archive);
     staggerEntries();
   }
   place(step, true);
-  if (touch.matches)
-    window.scrollTo({ top: step * innerHeight, behavior: "instant" });
 }
 addEventListener("popstate", restore);
 
@@ -413,19 +503,23 @@ export function jumpToPath(path: string): boolean {
     return true;
   }
   // an archive address: go to its step, then open the archive on its entry
-  if (n !== step) {
-    jump(n);
-    if (touch.matches) pendingArchive = archive;
-    else openArchive(archive);
-  } else {
-    openArchive(archive);
-  }
+  if (n !== step) jump(n);
+  openArchive(archive);
   return true;
 }
 
-/** One scroll step up or down: follows the address without a history entry. */
-export function scrollStep(direction: 1 | -1): void {
-  goTo(stepAfter(workspaces, step, direction));
+/**
+ * One screen up or down: on a wide screen a step is one screen, so this is one
+ * step. Follows the address without a history entry.
+ */
+export function moveOneScreen(direction: 1 | -1): void {
+  const next = moveBy(
+    { step, screen },
+    direction,
+    (n) => screensAt(n, n === step && open).length,
+    steps,
+  );
+  goTo(next.step, next.screen);
 }
 
 /** The global step on show. */
@@ -449,25 +543,65 @@ document.addEventListener("click", (e) => {
   jumpToPath(url.pathname);
 });
 
-// ---- touch: follow native scroll-snap
-addEventListener(
-  "scroll",
-  () => {
-    if (!touch.matches) return;
-    const n = Math.max(
-      0,
-      Math.min(steps - 1, Math.round(scrollY / innerHeight)),
-    );
-    if (n === step) return;
-    leave();
-    step = n;
-    place(step, true);
-    follow(step);
-    if (pendingArchive !== null) {
-      const slug = pendingArchive;
-      pendingArchive = null;
-      openArchive(slug);
-    }
+// ---- touch: one step per swipe, through the pure gesture rule
+// The page never scrolls on touch (`touch-action: pinch-zoom`, see
+// Desktop.astro), so the browser has no scroll position to lose when its URL
+// bar shows or hides. Pinch-zoom stays the browser's: the rule ignores a
+// gesture with a second finger, and one on a zoomed-in page.
+const swipe = createSwipe({ distance: 48, flick: 16, speed: 0.4 });
+
+/** The page's pinch-zoom: 1 unless the visitor zoomed in. */
+const zoom = (): number => window.visualViewport?.scale ?? 1;
+
+// Zoomed in, one finger pans the zoomed page (Desktop.astro's `data-zoomed`).
+const markZoom = () => {
+  document.documentElement.dataset.zoomed = String(zoom() > UNZOOMED);
+};
+window.visualViewport?.addEventListener("resize", markZoom);
+markZoom();
+
+/** Touch input only: a mouse on a narrow window has the wheel. */
+const fingerEvent = (e: PointerEvent): boolean =>
+  touch.matches && e.pointerType === "touch";
+
+const fingerOf = (e: PointerEvent) => ({
+  id: e.pointerId,
+  x: e.clientX,
+  y: e.clientY,
+  time: e.timeStamp,
+});
+
+// Pointer events, not touch events: the browser can hand a gesture to its own
+// handling and stop sending `touchmove`, but the pointer stream keeps coming.
+document.addEventListener(
+  "pointerdown",
+  (e) => {
+    if (fingerEvent(e)) swipe.down(fingerOf(e), e.isPrimary, zoom());
+  },
+  { passive: true },
+);
+document.addEventListener(
+  "pointermove",
+  (e) => {
+    if (!fingerEvent(e)) return;
+    const direction = swipe.move(fingerOf(e));
+    if (direction) moveOneScreen(direction);
+  },
+  { passive: true },
+);
+document.addEventListener(
+  "pointerup",
+  (e) => {
+    if (!fingerEvent(e)) return;
+    const direction = swipe.up(fingerOf(e));
+    if (direction) moveOneScreen(direction);
+  },
+  { passive: true },
+);
+document.addEventListener(
+  "pointercancel",
+  (e) => {
+    if (fingerEvent(e)) swipe.cancel(e.pointerId);
   },
   { passive: true },
 );
@@ -524,7 +658,7 @@ const stalls = (() => {
   };
 })();
 
-const wheel = Observer.create({
+Observer.create({
   target: window,
   type: "wheel",
   // every event, as it comes: debounced, Observer calls onWheel once a frame
@@ -543,7 +677,7 @@ const wheel = Observer.create({
       return;
     }
     const direction = gate.feed(e.timeStamp, e.deltaY, stall);
-    if (direction) scrollStep(direction);
+    if (direction) moveOneScreen(direction);
   },
 });
 
@@ -567,7 +701,7 @@ addEventListener("keydown", (e: KeyboardEvent) => {
     jump(firstStepOf(workspaces, command.index));
   } else if (command.type === "step" && !e.repeat) {
     e.preventDefault();
-    scrollStep(command.direction);
+    moveOneScreen(command.direction);
   }
 });
 
@@ -588,35 +722,47 @@ for (const [act, index] of [
 }
 
 // ---- layout changes between wide and touch
+// and when the screen's size or the fonts change what fits a page
 function onLayoutChange(): void {
-  if (touch.matches) {
-    wheel.disable();
-    window.scrollTo({ top: step * innerHeight, behavior: "instant" });
-  } else {
-    wheel.enable();
-  }
+  swipe.reset();
+  pageCache.clear();
+  screen = 0;
   place(step, false);
 }
 touch.addEventListener("change", onLayoutChange);
 
-let resizing: ReturnType<typeof setTimeout>;
+/** The entries a paged window shows on a screen, as the cache has them now. */
+const entriesOf: EntriesOf = (s, id) => {
+  const tile = s.layout[id];
+  return tile ? (pagesOf(id, tile)[s.pages[id] ?? 0] ?? []) : [];
+};
+
+/**
+ * What fits a page changed: measure again and stay on the same content. The
+ * screen that held what was on show may have another index now (the timeline
+ * over fewer screens, say), so it is found by its first entry, not its index.
+ */
+function remeasure(): void {
+  if (!touch.matches) return;
+  const before = screensAt(step, open)[screen];
+  const anchor = before && anchorOf(before, entriesOf);
+  pageCache.clear();
+  if (anchor) screen = screenHolding(screensAt(step, open), anchor, entriesOf);
+  place(step, false);
+}
+let measured = "";
 addEventListener("resize", () => {
-  clearTimeout(resizing);
-  resizing = setTimeout(() => {
-    if (touch.matches) {
-      window.scrollTo({ top: step * innerHeight, behavior: "instant" });
-    }
-  }, 120);
+  const size = `${area.clientWidth}x${area.clientHeight}`;
+  if (size === measured) return;
+  measured = size;
+  remeasure();
 });
+document.fonts?.ready.then(remeasure);
 
 // ---- boot
 // the entry page says which step its address opens
 history.scrollRestoration = "manual";
 step = Math.max(0, Math.min(steps - 1, Number(area.dataset.bootStep ?? 0)));
-if (touch.matches) {
-  window.scrollTo({ top: step * innerHeight, behavior: "instant" });
-  wheel.disable();
-}
 area.dataset.open = "false";
 // /archive/ and an archive project's address boot with the archive open
 const bootArchive = notFound
@@ -625,6 +771,7 @@ const bootArchive = notFound
 if (bootArchive !== undefined && archiveEl && inProjects()) {
   open = true;
   area.dataset.open = "true";
+  screen = screenOfEntry(bootArchive);
   announce();
   markEntry(bootArchive);
   staggerEntries();

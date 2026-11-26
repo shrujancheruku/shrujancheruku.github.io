@@ -57,6 +57,12 @@ const { n, copy } = Astro.props;
     padding: 28px 24px 22px 5cqw;
   }
 
+  @media (max-width: 760px) {
+    .copy {
+      overflow: hidden;
+    }
+  }
+
   @container (max-height: 460px) {
     .copy {
       gap: 6px;

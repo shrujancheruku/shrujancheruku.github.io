@@ -87,4 +87,24 @@ const { id, label, scrolls = false } = Astro.props;
     scrollbar-width: thin;
     padding: 38px 24px 8px 24px;
   }
+
+  /* On touch a swipe is a step, never a scroll: no window takes it. What does
+     not fit a phone screen is clipped, and split into steps by its own ticket. */
+  @media (max-width: 760px) {
+    .scrolls .body {
+      overflow: hidden;
+    }
+
+    /* A paged window (src/scripts/paged.ts): the room the pages have, which
+       is the window's body. */
+    .body :global([data-paged-root]) {
+      height: 100%;
+      overflow: hidden;
+    }
+  }
+
+  /* an entry on another page */
+  :global([data-paged] > [hidden]) {
+    display: none !important;
+  }
 </style>

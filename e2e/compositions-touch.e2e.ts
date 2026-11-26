@@ -1,4 +1,5 @@
 import { devices, expect, type Page, test } from "@playwright/test";
+import { toComposition } from "./helpers";
 
 test.use({ ...devices["Pixel 7"] });
 
@@ -11,6 +12,7 @@ test("on touch orca-flow shows the command, the header, the nine tickets without
   page,
 }) => {
   await page.goto("/work/orca-flow/");
+  await toComposition(page);
   await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
   await expect(slot(page)).toHaveAttribute("data-state", "held", {
     timeout: 45_000,
@@ -36,6 +38,7 @@ test("on touch orca-flow shows the command, the header, the nine tickets without
 
 test("the scene unit sets text at about 11px on touch", async ({ page }) => {
   await page.goto("/work/orca-flow/");
+  await toComposition(page);
   await expect(slot(page)).toHaveAttribute("data-mounted", "true");
   const size = await slot(page)
     .locator(".scene")
@@ -48,6 +51,7 @@ test("on touch every row fits its window with no sideways overflow", async ({
   page,
 }) => {
   await page.goto("/work/orca-flow/");
+  await toComposition(page);
   await expect(slot(page)).toHaveAttribute("data-state", "held", {
     timeout: 45_000,
   });

@@ -1,5 +1,12 @@
 /** Pure rules and shader source for the CRT overlay (drawn by src/scripts/crt.ts). */
 
+/** The two dimmer colours of the RGB mask; the third channel of each stripe stays at 1. */
+export const MASK_TINT = 0.84;
+/** How far the dimmest scanline sits below the brightest. */
+export const SCAN_DEPTH = 0.24;
+/** The scanline period, in CSS px. */
+export const SCAN_PERIOD = 3;
+
 export function shouldDraw(state: { on: boolean; hidden: boolean }): boolean {
   return state.on && !state.hidden;
 }
@@ -9,8 +16,37 @@ export function crtMotion(reduced: boolean): { flicker: number; band: number } {
   return reduced ? { flicker: 0, band: 0 } : { flicker: 1, band: 1 };
 }
 
+/** The scanline factor at height `y` (in CSS px): 1 - D · (1 - s)², period SCAN_PERIOD. */
+export function scanline(y: number): number {
+  const s = 0.5 + 0.5 * Math.cos((y * Math.PI * 2) / SCAN_PERIOD);
+  return 1 - SCAN_DEPTH * (1 - s) * (1 - s);
+}
+
+/** The scanline factor averaged over one period. */
+export function scanlineAverage(): number {
+  return 1 - SCAN_DEPTH * (3 / 8);
+}
+
+/** The RGB mask averaged over its three columns: (1 + t + t) / 3. */
+export function maskAverage(): number {
+  return (1 + 2 * MASK_TINT) / 3;
+}
+
+/**
+ * The brightness the page needs under the overlay so that the multiply
+ * averages back to 1: the overlay can only darken, so the content is lifted by
+ * the inverse of the mask and scanline averages. The vignette, band and flicker
+ * keep their own small dimming.
+ */
+export function brightnessLift(): number {
+  return 1 / (maskAverage() * scanlineAverage());
+}
+
 export const VERTEX = `#version 300 es
 void main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);gl_Position=vec4(p*2.-1.,0.,1.);}`;
+
+/** A number as a GLSL float literal (an integer alone would be an int). */
+const glsl = (n: number): string => (Number.isInteger(n) ? `${n}.` : `${n}`);
 
 /** Scanlines, RGB mask, soft vignette (corners floor at 90%), rolling band, flicker. */
 export const FRAGMENT = `#version 300 es
@@ -18,13 +54,14 @@ precision highp float;
 uniform vec2 R;
 uniform float T, D, FL, BD;
 out vec4 o;
+const float K=${glsl(MASK_TINT)};
 void main(){
   vec2 uv=gl_FragCoord.xy/R;
   vec2 p=gl_FragCoord.xy/D;
-  float s=.5+.5*cos(p.y*6.2831853/3.);
-  float scan=1.-.24*(1.-s)*(1.-s);
+  float s=.5+.5*cos(p.y*6.2831853/${glsl(SCAN_PERIOD)});
+  float scan=1.-${SCAN_DEPTH}*(1.-s)*(1.-s);
   float c=mod(floor(p.x),3.);
-  vec3 m=c<1.?vec3(1.,.84,.84):c<2.?vec3(.84,1.,.84):vec3(.84,.84,1.);
+  vec3 m=c<1.?vec3(1.,K,K):c<2.?vec3(K,1.,K):vec3(K,K,1.);
   float v=mix(.9,1.,pow(16.*uv.x*uv.y*(1.-uv.x)*(1.-uv.y),.35));
   float band=1.-.05*BD*exp(-pow((fract(T*.07)*1.4-.2-(1.-uv.y))*9.,2.));
   float fl=1.-FL*(.012-.012*sin(T*97.)*sin(T*13.));

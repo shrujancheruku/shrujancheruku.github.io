@@ -72,7 +72,11 @@ export interface Composition {
 
 export type Mode = "idle" | "playing" | "paused" | "held" | "frame";
 
-const touchQuery = () => matchMedia("(max-width: 760px)");
+/**
+ * True in the touch layout (max-width 760px), read live: for a composition's
+ * helpers that run outside `build` and `play`, where `kit.touch` is not to hand.
+ */
+export const onPhone = (): boolean => matchMedia("(max-width: 760px)").matches;
 
 /** Mount a composition into a project's slot (`[data-slot]` in a `comp-N` window). */
 export function mount(slot: HTMLElement, composition: Composition): void {
@@ -100,7 +104,7 @@ export function mount(slot: HTMLElement, composition: Composition): void {
   const kit: Kit = {
     root,
     get touch() {
-      return touchQuery().matches;
+      return onPhone();
     },
     sleep: (ms) => clock.sleep(ms),
     every: (ms, fn) => clock.every(ms, fn),

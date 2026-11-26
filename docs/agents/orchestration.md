@@ -88,6 +88,13 @@ Blockers are the issue's native dependencies (`gh api repos/shrujancheruku/shruj
 - The integration PR body has one `Closes #<n>` line per ticket, kept current as tickets land. When the founder merges the PR into main, GitHub closes those tickets.
 - The founder merges integration PRs.
 
+## Verifying
+
+- Workers on a ticket (implementer, checker, merger, fixer) do not run the end-to-end suite (`bun run test:e2e`) locally. It is too slow. They run the fast gates (`biome ci`, `astro check`, `bun test`, `bun run build`), push, and treat GitHub's CI on the PR as the end-to-end result: `gh pr checks <PR> --watch`. CI runs on every pull request, so ticket PRs into the integration branch get it too.
+- A worker may run one failing spec locally to reproduce a CI failure, never the whole suite.
+- A ticket merges into the integration branch only when its PR's CI is green on its tip.
+- The full end-to-end suite runs locally once per milestone: on the integration branch, in the integration review, before the integration PR is marked ready. CI must also be green on that tip.
+
 ## Automerge
 
 Off. The coordinator never merges an integration PR on its own.

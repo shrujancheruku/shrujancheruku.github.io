@@ -12,7 +12,7 @@ import {
   STEPS,
   STOPS,
 } from "./issho-session";
-import type { Composition, Kit } from "./kit";
+import { type Composition, type Kit, onPhone } from "./kit";
 
 const dots = (n: number): string =>
   `<span class="dash">${"<i></i>".repeat(n)}</span>`;
@@ -123,10 +123,16 @@ const css = `
   .is .sec{grid-template-columns:1fr;padding-right:42cqw}.is .sec .c{display:none}
   .is .sec h2{font-size:5cqw}.is .sec p{font-size:2.6cqw}
   .is .hero h1{font-size:8cqw}.is .hero p{max-width:26ch}
-  .scene.is .pn.app{position:absolute;right:calc(2.5*var(--u));bottom:calc(-2*var(--u));width:calc(21*var(--u));aspect-ratio:404/644;border:calc(.7*var(--u)) solid var(--line);border-radius:calc(2.6*var(--u));background:color-mix(in srgb,var(--fg) 88%,var(--bg));box-shadow:0 calc(2*var(--u)) calc(5*var(--u)) #0006;transform:rotate(3deg)}
+  .scene.is .pn.app{position:absolute;right:calc(2.5*var(--u));bottom:calc(1.6*var(--u));width:min(calc(21*var(--u)),calc((100cqh - 4*var(--u))*.627));aspect-ratio:404/644;border:calc(.7*var(--u)) solid var(--line);border-radius:calc(2.6*var(--u));background:color-mix(in srgb,var(--fg) 88%,var(--bg));box-shadow:0 calc(2*var(--u)) calc(5*var(--u)) #0006;transform:rotate(3deg)}
   .is .av{border-radius:calc(2*var(--u))}
   .is .scrn{font-size:min(5cqw,3.2cqh);padding:4cqw}
   .is .cities{display:none}
+  .is .pg>*{transition:opacity .4s}.is .pg>.off{opacity:0}
+  .is .scrn .stops .s{display:none}
+  /* each card fits its phone screen with room to spare, whatever the fonts'
+     metrics (#83): tighter spacing, and the detail a small screen can do without */
+  .is .scrn .c{padding:.8em .9em}.is .scrn .map{margin:.5em 0}.is .scrn .chat{min-height:0;margin:.6em 0}
+  .is .scrn .c>.s:has(+.map),.is .scrn .stops~*,.is .scrn .chat>.s,.is .scrn .chat .me{display:none}
 }
 @media (prefers-reduced-motion:reduce){
   .is .pg,.is .scrn{transition:none}
@@ -155,7 +161,16 @@ function show(i: number): void {
   const sec = stop.section === null ? null : secs[stop.section];
   const max = Math.max(0, pg.offsetHeight - vp.offsetHeight);
   const top = sec ? sec.offsetTop - 0.03 * vp.offsetWidth : 0;
-  pg.style.transform = `translateY(${-Math.min(top, max)}px)`;
+  const y = Math.min(top, max);
+  pg.style.transform = `translateY(${-y}px)`;
+  // on a phone the site shows only what fits whole where it comes to rest: a
+  // section half under the window's edge is left out, not cut (#83)
+  for (const part of pg.children) {
+    const el = part as HTMLElement;
+    const from = el.offsetTop - y;
+    const off = from < -1 || from + el.offsetHeight > vp.offsetHeight + 1;
+    el.classList.toggle("off", onPhone() && off);
+  }
   for (const [j, s] of secs.entries())
     s.classList.toggle("at", sec !== null && j === stop.step);
   for (const [j, s] of screens.entries())

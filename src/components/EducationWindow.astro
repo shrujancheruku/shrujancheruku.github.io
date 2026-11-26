@@ -8,7 +8,7 @@ import Window from "./Window.astro";
 ---
 
 <Window id="education" label="education & internships" scrolls>
-  <div class="edu">
+  <div class="edu" data-paged-root>
     <h2 class="deg">{education.degree}</h2>
     <p class="uni">{education.university} · {education.years}</p>
     <p class="sub">{education.college} · {education.concentrations.join(" / ")}</p>
@@ -23,7 +23,7 @@ import Window from "./Window.astro";
       <span class="cl" data-closed={cueText(education, false)} data-open={cueText(education, true)}>{cueText(education, false)}</span>{" "}
       <span class="note">· {education.cueNote}</span>
     </button>
-    <div class="roles" id="education-roles" hidden>
+    <div class="roles" id="education-roles" data-paged hidden>
       {education.roles.map((entry) => <TimelineEntry entry={entry} />)}
     </div>
   </div>
@@ -95,8 +95,20 @@ import Window from "./Window.astro";
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--ac) 30%, transparent);
     transition: transform 0.2s;
   }
-  .cue:hover {
-    transform: translateX(2px);
+  /* on a phone the cue is wider than the window: it wraps rather than being cut off */
+  @media (max-width: 760px) {
+    .cue {
+      display: block;
+      white-space: normal;
+      text-align: left;
+      line-height: 1.5;
+    }
+  }
+  /* not after a tap on touch, where hover sticks and would push the cue out of its window */
+  @media (hover: hover) {
+    .cue:hover {
+      transform: translateX(2px);
+    }
   }
   .chev {
     display: inline-block;

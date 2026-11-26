@@ -1,7 +1,13 @@
 // The CRT overlay: one hand-written WebGL 2 canvas over the screen. It reads
 // html[data-crt] (set by chrome.ts) and draws only while that is "on" and the
 // tab is visible. The site itself is never drawn into it.
-import { crtMotion, FRAGMENT, shouldDraw, VERTEX } from "../lib/crt";
+import {
+  brightnessLift,
+  crtMotion,
+  FRAGMENT,
+  shouldDraw,
+  VERTEX,
+} from "../lib/crt";
 
 const root = document.documentElement;
 const canvas = document.querySelector<HTMLCanvasElement>("#crt-canvas");
@@ -28,8 +34,25 @@ if (canvas && gl) {
     gl.attachShader(program, vs);
     gl.attachShader(program, fs);
     gl.linkProgram(program);
-    gl.useProgram(program);
   }
+  if (vs && fs && gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    gl.useProgram(program);
+    // The overlay can only darken, so it lifts the screen behind it first (a
+    // backdrop filter, so the page itself is never redrawn or transformed).
+    // Only once the program linked: without the mask on top the lift would
+    // wash the page out.
+    const lift = `brightness(${brightnessLift()})`;
+    canvas.style.setProperty("backdrop-filter", lift);
+    canvas.style.setProperty("-webkit-backdrop-filter", lift);
+    start(canvas, gl, program);
+  }
+}
+
+function start(
+  canvas: HTMLCanvasElement,
+  gl: WebGL2RenderingContext,
+  program: WebGLProgram,
+): void {
   const uni = (name: string) => gl.getUniformLocation(program, name);
   const uR = uni("R");
   const uT = uni("T");

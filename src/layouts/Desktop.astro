@@ -10,11 +10,12 @@ import { cardPathFor } from "../lib/share";
 import {
   CRT_KEY,
   DEFAULT_THEME,
+  swatch,
   THEME_KEY,
   THEME_NAMES,
   THEMES,
 } from "../lib/themes";
-import { createWorkspaces, firstStepOf, stepCount } from "../lib/workspaces";
+import { createWorkspaces, firstStepOf } from "../lib/workspaces";
 
 interface Props {
   title: string;
@@ -44,12 +45,12 @@ const card = cardPathFor(
   featured.map((p) => p.repository),
 );
 const workspaces = createWorkspaces({ featured: featured.length });
-const steps = stepCount(workspaces);
 const themeCss = THEME_NAMES.map(
   (n) =>
-    `[data-theme="${n}"]{${Object.entries(THEMES[n])
-      .map(([k, v]) => `--${k}:${v}`)
-      .join(";")}}`,
+    `[data-theme="${n}"]{${[
+      ...Object.entries(THEMES[n]).map(([k, v]) => `--${k}:${v}`),
+      `--swatch:${swatch(THEMES[n])}`,
+    ].join(";")}}`,
 ).join("");
 const themeBoot = { names: THEME_NAMES, themeKey: THEME_KEY, crtKey: CRT_KEY };
 const workspacePaths = workspaces.map(
@@ -103,10 +104,6 @@ const workspacePaths = workspaces.map(
       </main>
       <!-- The crt effect's overlay: never takes clicks, selection or scrolling. -->
       <canvas id="crt-canvas" aria-hidden="true"></canvas>
-    </div>
-    <!-- On touch the page itself scrolls and snaps, one stop per step. -->
-    <div class="snaps" aria-hidden="true">
-      {Array.from({ length: steps }, () => <div class="snap" />)}
     </div>
     <script type="application/json" id="desktop-addresses" set:html={JSON.stringify(addresses)} />
     <script type="application/json" id="desktop-model" set:html={JSON.stringify(workspaces)} />
@@ -179,29 +176,22 @@ const workspacePaths = workspaces.map(
     margin: 0 7px 7px;
   }
 
-  /* Touch: the document scrolls natively, one snap per step; the screen stays fixed. */
-  .snaps {
-    display: none;
-  }
-
+  /* Touch: the page never scrolls; a swipe is one step (src/lib/swipe.ts).
+     Pinch-zoom stays the browser's, and on a zoomed-in page one finger pans. */
   @media (max-width: 760px) {
     .area {
       margin: 0 5px 5px;
     }
 
-    .snaps {
-      display: block;
+    :global(html),
+    :global(body) {
+      overscroll-behavior: none;
+      touch-action: pinch-zoom;
     }
 
-    .snap {
-      height: 100vh;
-      height: 100svh;
-      scroll-snap-align: start;
-      scroll-snap-stop: always;
-    }
-
-    :global(html) {
-      scroll-snap-type: y mandatory;
+    :global(html[data-zoomed="true"]),
+    :global(html[data-zoomed="true"] body) {
+      touch-action: manipulation;
     }
   }
 </style>

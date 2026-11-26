@@ -1,4 +1,5 @@
 import { devices, expect, test } from "@playwright/test";
+import { area, ready, settle } from "./helpers";
 
 test.use({ ...devices["Pixel 7"] });
 
@@ -7,30 +8,45 @@ const box = (page: import("@playwright/test").Page, id: string) =>
     const area = document.querySelector("main.area")?.getBoundingClientRect();
     const r = e.getBoundingClientRect();
     return {
-      top: r.top,
       shown: getComputedStyle(e).display !== "none",
       w: r.width / (area?.width ?? 1),
       h: r.height / (area?.height ?? 1),
     };
   });
 
-test("timeline, then education, then the lower window; opening gives education the workspace", async ({
+test("the timeline, then education, then skills, each the whole workspace; opening gives education the workspace", async ({
   page,
 }) => {
-  await page.goto("/");
-  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
-  await page.evaluate(() =>
-    window.scrollTo({ top: 5 * innerHeight, behavior: "instant" }),
-  );
-  await page.waitForTimeout(1300);
-  const [t, e, s] = await Promise.all(
-    ["timeline", "education", "skills"].map((id) => box(page, id)),
-  );
-  expect(t?.top).toBeLessThan(e?.top ?? 0);
-  expect(e?.top).toBeLessThan(s?.top ?? 0);
+  await ready(page, "/");
+  await page.locator(".ws button").nth(2).tap();
+  await settle(page);
+  // the timeline screens come first, alone
+  expect((await box(page, "timeline")).shown).toBe(true);
+  expect((await box(page, "education")).shown).toBe(false);
+  expect((await box(page, "skills")).shown).toBe(false);
+  const whole = await box(page, "timeline");
+  expect(Math.round(whole.h * 100)).toBe(100);
+  expect(Math.round(whole.w * 100)).toBe(100);
 
+  // then education, then skills
+  const order: string[] = [];
+  for (let guard = 0; guard < 12; guard++) {
+    for (const id of ["timeline", "education", "skills"])
+      if ((await box(page, id)).shown && !order.includes(id)) order.push(id);
+    await page.keyboard.press("ArrowDown");
+    await settle(page);
+    if ((await area(page).getAttribute("data-step")) !== "5") break;
+  }
+  expect(order).toEqual(["timeline", "education", "skills"]);
+
+  await page.locator(".ws button").nth(2).tap();
+  await settle(page);
+  while (!(await box(page, "education")).shown) {
+    await page.keyboard.press("ArrowDown");
+    await settle(page);
+  }
   await page.locator("[data-disclosure=education]").click();
-  await page.waitForTimeout(1300);
+  await settle(page);
   expect((await box(page, "timeline")).shown).toBe(false);
   expect((await box(page, "skills")).shown).toBe(false);
   const open = await box(page, "education");

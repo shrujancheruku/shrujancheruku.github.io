@@ -79,6 +79,11 @@ export const THEMES = {
   },
 } as const satisfies Record<string, Palette>;
 
+/** The theme's swatch: background over accent, split on the diagonal. The menu and the status-bar icon both draw it. */
+export function swatch(p: Palette): string {
+  return `linear-gradient(135deg, ${p.bg} 50%, ${p.ac} 50%)`;
+}
+
 export type ThemeName = keyof typeof THEMES;
 
 export const THEME_NAMES = Object.keys(THEMES) as ThemeName[];

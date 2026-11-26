@@ -2,8 +2,8 @@
 // The stack: every featured project, the current one marked, and the archive
 // line. The desktop script marks the current one (`aria-current`) and turns a
 // click on a project into a jump; #38 binds the `[data-archive-open]` line.
-// On touch the window is 18% tall (the prototype's tiling), too short for every
-// project and the archive line, so the rows scroll under the opaque label band.
+// On touch the window sits under the composition on the project's second
+// screen, two fifths of the screen, with room for every row.
 import type { Stack } from "../lib/project-copy";
 import Window from "./Window.astro";
 
@@ -41,6 +41,12 @@ const { stack } = Astro.props;
     flex-direction: column;
     overflow-y: auto;
     scrollbar-width: thin;
+  }
+
+  @media (max-width: 760px) {
+    .stack {
+      overflow: hidden;
+    }
   }
 
   .stack > * {
@@ -97,8 +103,11 @@ const { stack } = Astro.props;
       border-top: 0;
     }
 
+    /* the window is two fifths of a screen: five rows at 34px fit, and more
+       rows give way to a smaller row before they would be cut off */
     .stack > * {
-      flex: 1 0 34px;
+      flex: 1 1 34px;
+      min-height: 22px;
       max-height: none;
     }
 

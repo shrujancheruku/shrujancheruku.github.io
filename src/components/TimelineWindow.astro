@@ -1,6 +1,7 @@
 ---
 // The timeline: the five career entries, newest first, scrolling inside the
-// window on a short screen.
+// window on a short screen. On touch nothing scrolls: the entries, and the
+// resume download first, are paged over as many screens as they need.
 import { PDF_PATH } from "../lib/resume";
 import { timeline } from "../lib/timeline";
 import TimelineEntry from "./TimelineEntry.astro";
@@ -8,9 +9,11 @@ import Window from "./Window.astro";
 ---
 
 <Window id="timeline" label="timeline" scrolls>
-  <a class="dl" href={PDF_PATH} download>↓ resume.pdf</a>
-  <div class="entries">
-    {timeline.map((entry, i) => <TimelineEntry entry={entry} now={i === 0} />)}
+  <div data-paged-root>
+    <div class="entries" data-paged>
+      <div><a class="dl" href={PDF_PATH} download>↓ resume.pdf</a></div>
+      {timeline.map((entry, i) => <TimelineEntry entry={entry} now={i === 0} />)}
+    </div>
   </div>
 </Window>
 

@@ -3,6 +3,12 @@
 // A workspace is one part of the story; a step is one scroll stop. Every
 // workspace is one step except projects, which holds one step per featured
 // project, so nothing here may assume how many there are.
+//
+// A step is one tiling on a wide screen. On touch it is one or more screens,
+// each a tiling of its own (a phone screen cannot hold a whole step, and
+// nothing scrolls): `touch` lists them in order, and src/lib/screens.ts splits
+// a window with more entries than fit into more. The step, and so the address,
+// stays the same across a step's screens.
 
 /** A window's tile: [left, top, width, height] in percent of the tiling area. */
 export type Rect = readonly [number, number, number, number];
@@ -15,25 +21,26 @@ export interface Variant {
   /** Focus while open, if it differs from the step's. */
   focus?: string;
   desktop: Layout;
-  touch: Layout;
+  touch: readonly Layout[];
 }
 
 export interface Step {
   /** The window that has focus (the gradient border). */
   focus: string;
-  /** One tiling for a wide screen and one column for touch. */
+  /** One tiling for a wide screen, and one or more screens for touch. */
   desktop: Layout;
-  touch: Layout;
+  touch: readonly Layout[];
   /** The tiling while the step's disclosure is open; absent if it has none. */
   open?: Variant;
 }
 
-/** The tiling to show: the open variant if the step has one and it is open. */
-export const tilingOf = (
-  step: Step,
-  kind: "desktop" | "touch",
-  open: boolean,
-): Layout => (open && step.open ? step.open[kind] : step[kind]);
+/** The wide tiling to show: the open variant if the step has one and it is open. */
+export const tilingOf = (step: Step, open: boolean): Layout =>
+  open && step.open ? step.open.desktop : step.desktop;
+
+/** The touch screens to show: the open variant's if the step has one and it is open. */
+export const screensOf = (step: Step, open: boolean): readonly Layout[] =>
+  open && step.open ? step.open.touch : step.touch;
 
 /** The focused window, given whether the step's disclosure is open. */
 export const focusOf = (step: Step, open: boolean): string =>
@@ -53,7 +60,7 @@ export interface WorkspaceOptions {
 const stepOf = (
   focus: string,
   desktop: Layout,
-  touch: Layout,
+  touch: readonly Layout[],
   open?: Variant,
 ): Step => ({
   focus,
@@ -105,11 +112,12 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
     return stepOf(
       comp,
       desktop,
-      {
-        [copy]: [0, 0, 100, 34],
-        [comp]: [0, 34, 100, 48],
-        stack: [0, 82, 100, 18],
-      },
+      // a phone cannot hold the three windows: the copy, then the composition
+      // over the stack (its rows need a window of their own height)
+      [
+        { [copy]: [0, 0, 100, 100] },
+        { [comp]: [0, 0, 100, 60], stack: [0, 60, 100, 40] },
+      ],
       // the archive open: the workspace squeezes into the left 42%, the archive
       // takes the right 58% and focus; on touch it takes the whole workspace
       {
@@ -118,7 +126,7 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
           ...squeeze(desktop, ARCHIVE_SHARE),
           archive: [ARCHIVE_SHARE * 100, 0, 100 - ARCHIVE_SHARE * 100, 100],
         },
-        touch: { archive: [0, 0, 100, 100] },
+        touch: [{ archive: [0, 0, 100, 100] }],
       },
     );
   });
@@ -128,11 +136,13 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
       stepOf(
         "name",
         { name: [0, 0, 60, 100], term: [60, 0, 40, 58], now: [60, 58, 40, 42] },
-        {
-          name: [0, 0, 100, 40],
-          term: [0, 40, 100, 36],
-          now: [0, 76, 100, 24],
-        },
+        [
+          {
+            name: [0, 0, 100, 40],
+            term: [0, 40, 100, 36],
+            now: [0, 76, 100, 24],
+          },
+        ],
       ),
     ],
     projects: projectSteps,
@@ -144,17 +154,19 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
           education: [62, 0, 38, 40],
           skills: [62, 40, 38, 60],
         },
-        {
-          timeline: [0, 0, 100, 60],
-          education: [0, 60, 100, 20],
-          skills: [0, 80, 100, 20],
-        },
+        // each window whole, one after another: the timeline over as many
+        // screens as its entries need, then education, then skills
+        [
+          { timeline: [0, 0, 100, 100] },
+          { education: [0, 0, 100, 100] },
+          { skills: [0, 0, 100, 100] },
+        ],
         {
           // Education & Internships open: it takes the right column and the
           // skills window leaves; on touch it takes the whole workspace.
           focus: "education",
           desktop: { timeline: [0, 0, 46, 100], education: [46, 0, 54, 100] },
-          touch: { education: [0, 0, 100, 100] },
+          touch: [{ education: [0, 0, 100, 100] }],
         },
       ),
     ],
@@ -168,13 +180,11 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
             [34, 0, 66, 100],
           ),
         },
-        {
-          sabbatical: [0, 0, 100, 36],
-          ...grid2(
-            ["photo-1", "photo-2", "photo-3", "photo-4"],
-            [0, 36, 100, 64],
-          ),
-        },
+        // the copy, then the four photos
+        [
+          { sabbatical: [0, 0, 100, 100] },
+          grid2(["photo-1", "photo-2", "photo-3", "photo-4"], [0, 0, 100, 100]),
+        ],
       ),
     ],
     contact: [
@@ -185,7 +195,12 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
           name: [58, 0, 42, 62],
           term: [58, 62, 42, 38],
         },
-        { contact: [0, 0, 100, 74], term: [0, 74, 100, 26] },
+        // the contact terminal, then the opening's name over its terminal: a
+        // phone has no room for both terminals typed out in full
+        [
+          { contact: [0, 0, 100, 100] },
+          { name: [0, 0, 100, 62], term: [0, 62, 100, 38] },
+        ],
       ),
     ],
   };
