@@ -48,6 +48,10 @@ _Avoid_: Page transition, slide, scroll, swipe
 How a step's windows come on show when the desktop loads, at any address. Each window slides out of the edge of the desktop its tile sits on (right, else bottom, left, top) straight into its tile, one after another in tiling order; nothing re-tiles. The wheel waits until every window is in. With reduced motion the step is simply there.
 _Avoid_: Launch, boot animation, intro, power-on; "opening a window" (that has neighbours giving up space)
 
+**Turning back**:
+What the windows do when the visitor undoes a step while it is still moving: the opposite flick, key or swipe, Back, closing a window that is opening, or a jump back to where the step began. The motion reverses from where the windows are, and anything waiting is dropped. Any other input during a motion waits until it ends, and only the latest one runs.
+_Avoid_: Cancel, interrupt, retarget, snap
+
 **Project**:
 A public GitHub repository that Shrujan has selected to appear on the portfolio. Nothing appears without being selected.
 _Avoid_: Repo (when talking about what the visitor sees), work, piece
