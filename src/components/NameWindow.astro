@@ -1,0 +1,41 @@
+---
+// The name window of the opening workspace: the two-line name.
+import Window from "./Window.astro";
+---
+
+<Window id="name" label="~ — shrujan">
+  <div class="name">
+    <h1><span>Shrujan</span> <span>Cheruku</span></h1>
+    <p class="role">product engineer</p>
+  </div>
+</Window>
+
+<style>
+  .name {
+    position: absolute;
+    inset: 0;
+    padding: 0 4cqw 0 5cqw;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  h1 {
+    font: 700 min(15cqw, 30cqh) / 0.95 var(--title);
+    letter-spacing: -0.02em;
+  }
+
+  h1 span {
+    display: block;
+  }
+
+  .role {
+    margin-top: 3cqh;
+    font: 400 14px var(--mono);
+    color: var(--ac);
+  }
+
+  .role::before {
+    content: "// ";
+  }
+</style>

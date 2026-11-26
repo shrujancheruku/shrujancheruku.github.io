@@ -1,0 +1,5 @@
+#!/bin/sh
+# Installed by `bun install` (the "prepare" script sets core.hooksPath).
+# The resume's drift check: resume-only wording must be re-confirmed when the
+# site wording it was written from changes. CI runs the same script.
+exec bun scripts/check-resume.ts

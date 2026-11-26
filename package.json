@@ -1,0 +1,32 @@
+{
+  "name": "shrujancheruku-github-io",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.5",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "bun scripts/check-resume.ts && astro build && bun scripts/print-resume.ts && bun scripts/make-cards.ts && bun scripts/check-collisions.ts && bun scripts/check-photos.ts && bun scripts/check-compositions.ts && bun scripts/check-budgets.ts",
+    "preview": "astro preview",
+    "check": "astro check",
+    "lint": "biome ci .",
+    "format": "biome format --write .",
+    "test": "bun test",
+    "test:e2e": "playwright test",
+    "prepare": "git config core.hooksPath .githooks || true",
+    "check:resume": "bun scripts/check-resume.ts"
+  },
+  "dependencies": {
+    "astro": "7.4.13",
+    "gsap": "3.15.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.12",
+    "@biomejs/biome": "2.6.9",
+    "@playwright/test": "1.65.1",
+    "@types/bun": "^1.4.5",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.5.438",
+    "typescript": "6.0.2"
+  }
+}

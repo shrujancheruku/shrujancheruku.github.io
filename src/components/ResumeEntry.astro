@@ -1,0 +1,101 @@
+---
+// One entry of the resume: dates | title (stacked titles each with their own
+// dates), organisation at the right, description, then the technologies on one
+// monospace line. The wording is already chosen by buildResume().
+import type { Entry } from "../lib/timeline";
+
+interface Props {
+  entry: Entry;
+}
+
+const { entry } = Astro.props;
+---
+
+<article class="entry">
+  {
+    entry.roles.map((role, i) => (
+      <div class="row">
+        <div class="when">
+          {role.dates}
+          {i === 0 && entry.tag && <small>{entry.tag}</small>}
+        </div>
+        <h3 class="role">{role.title}</h3>
+        {i === 0 && entry.organisation && <p class="org">{entry.organisation}</p>}
+      </div>
+    ))
+  }
+  <div class="body">
+    <p>{entry.description}</p>
+    {entry.technologies.length > 0 && <p class="tech">{entry.technologies.join("  /  ")}</p>}
+  </div>
+</article>
+
+<style>
+  .entry {
+    margin-top: 5pt;
+    break-inside: avoid;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: var(--when, 9.4em) 1fr;
+  }
+  .when {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: 0.92em;
+    white-space: nowrap;
+  }
+  .when {
+    position: relative;
+  }
+  .when small {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    display: block;
+    font-size: 0.8em;
+  }
+  .role {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 1em;
+    font-weight: 700;
+  }
+  .org {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    font-size: 0.8em;
+    font-weight: 700;
+    align-self: baseline;
+  }
+  .body {
+    margin-left: var(--when, 9.4em);
+  }
+  .tech {
+    font: 400 0.84em/1.5 var(--mono);
+  }
+
+  @media (max-width: 720px) {
+    .row {
+      grid-template-columns: 1fr;
+    }
+    .when,
+    .role,
+    .org {
+      grid-column: 1;
+      grid-row: auto;
+    }
+    .org {
+      justify-self: start;
+    }
+    .body {
+      margin-left: 0;
+    }
+    .when small {
+      position: static;
+      display: inline;
+      margin-left: 0.6em;
+    }
+  }
+</style>

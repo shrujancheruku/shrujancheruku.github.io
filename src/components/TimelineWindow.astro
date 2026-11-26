@@ -1,0 +1,34 @@
+---
+// The timeline: the five career entries, newest first, scrolling inside the
+// window on a short screen.
+import { PDF_PATH } from "../lib/resume";
+import { timeline } from "../lib/timeline";
+import TimelineEntry from "./TimelineEntry.astro";
+import Window from "./Window.astro";
+---
+
+<Window id="timeline" label="timeline" scrolls>
+  <a class="dl" href={PDF_PATH} download>↓ resume.pdf</a>
+  <div class="entries">
+    {timeline.map((entry, i) => <TimelineEntry entry={entry} now={i === 0} />)}
+  </div>
+</Window>
+
+<style>
+  .dl {
+    display: inline-block;
+    margin-bottom: 4px;
+    padding: 3px 9px;
+    border: 1px solid var(--ac);
+    border-radius: 9px;
+    color: var(--ac);
+    font: 500 12px/1.4 var(--mono);
+    text-decoration: none;
+  }
+  .dl:hover,
+  .dl:focus-visible {
+    background: var(--ac);
+    color: var(--bg);
+    outline: none;
+  }
+</style>

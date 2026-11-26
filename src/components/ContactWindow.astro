@@ -1,0 +1,181 @@
+---
+// The contact workspace's terminal: `$ contact`, the contact line, then the
+// four channels as ordinary links (email with a copy button). The command types
+// the first time the workspace is reached in a visit, then shows at once. The
+// typing is the shared one in src/scripts/terminal.ts, started by hand here.
+import { CONTACT_CHANNELS, CONTACT_LINE } from "../lib/contact";
+import Window from "./Window.astro";
+
+const exchanges = [{ command: "contact", replies: [] as string[] }];
+---
+
+<Window id="contact" label="contact — zsh">
+  <div
+    class="term"
+    data-terminal={JSON.stringify(exchanges)}
+    data-manual
+    data-prompt="$ "
+  >
+    <div class="log"></div>
+    <div class="out">
+      <p class="intro">{CONTACT_LINE}</p>
+      <ul class="channels">
+        {
+          CONTACT_CHANNELS.map((c) => (
+            <li class="channel">
+              <span class="label">{c.label}</span>
+              <a
+                href={c.href}
+                target={c.newTab ? "_blank" : undefined}
+                rel={c.newTab ? "noopener noreferrer" : undefined}
+                download={c.download || undefined}
+              >
+                {c.text}
+              </a>
+              {c.copyable && (
+                <button type="button" class="copy" data-copy={c.href.replace("mailto:", "")}>
+                  copy
+                </button>
+              )}
+            </li>
+          ))
+        }
+      </ul>
+      <p class="printed"></p>
+    </div>
+    <div class="line">
+      <span class="p">$ </span><span class="typed"></span><span class="cur"> </span>
+    </div>
+  </div>
+</Window>
+
+<script>
+  import { COPIED_LINE } from "../lib/contact";
+  import { playTerminal } from "../scripts/terminal";
+
+  const CONTACT_WORKSPACE = "4";
+  const area = document.querySelector<HTMLElement>("main.area");
+  const term = document.querySelector<HTMLElement>(
+    '[data-window="contact"] .term',
+  );
+  let played = false;
+
+  // Each time the workspace is entered: the first time in this visit types
+  // the command; after that the command is drawn at once.
+  const onWorkspace = () => {
+    if (!term || area?.dataset.workspace !== CONTACT_WORKSPACE) return;
+    playTerminal(term, played);
+    played = true;
+  };
+  if (area) new MutationObserver(onWorkspace).observe(area, { attributes: true, attributeFilter: ["data-workspace"] });
+  onWorkspace();
+
+  // Copy the email, and print the confirmation under the channels.
+  for (const button of document.querySelectorAll<HTMLButtonElement>(
+    '[data-window="contact"] button.copy',
+  )) {
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(button.dataset.copy ?? "");
+      } catch {
+        return;
+      }
+      const printed = button.closest(".out")?.querySelector<HTMLElement>(".printed");
+      if (printed) printed.textContent = COPIED_LINE;
+    });
+  }
+</script>
+
+<style>
+  .term {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+    white-space: pre-wrap;
+    padding: 34px 18px 16px;
+    font: 400 14px / 1.6 var(--mono);
+  }
+
+  .term :global(.p) {
+    color: var(--hot);
+  }
+
+  .term :global(.reply) {
+    color: var(--ac);
+  }
+
+  .cur {
+    background: var(--fg);
+    animation: blink 1s steps(1) infinite;
+  }
+
+  @keyframes blink {
+    50% {
+      background: transparent;
+    }
+  }
+
+  .out {
+    margin: 12px 0;
+    white-space: normal;
+  }
+
+  .intro {
+    margin: 0 0 10px;
+    max-width: 52ch;
+  }
+
+  .channels {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .channel {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 14px;
+  }
+
+  .label {
+    width: 72px;
+    opacity: 0.5;
+  }
+
+  a {
+    color: var(--ac);
+    text-decoration: none;
+  }
+
+  a:hover,
+  a:focus-visible {
+    text-decoration: underline;
+    outline: none;
+  }
+
+  .copy {
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: none;
+    color: inherit;
+    font: 400 12px / 1.6 var(--mono);
+    cursor: pointer;
+  }
+
+  .copy:hover,
+  .copy:focus-visible {
+    border-color: var(--ac);
+    outline: none;
+  }
+
+  .printed {
+    margin: 6px 0 0;
+    min-height: 1.6em;
+    color: var(--ac);
+  }
+</style>

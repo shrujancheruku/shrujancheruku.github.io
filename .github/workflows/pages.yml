@@ -1,0 +1,94 @@
+name: Pages
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  # Daily rebuild picks up new release versions; the minute is off the hour.
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time; a queued deploy is not cancelled mid-flight.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - name: Resume drift check
+        run: bun scripts/check-resume.ts
+      - name: Biome
+        run: bunx biome ci .
+      - name: astro check
+        run: bunx astro check
+      - name: Tests
+        run: bun test
+      # The build drives Chromium too: it prints the resume PDF, captures the share
+      # cards and measures the first load, so the browser comes before it.
+      - name: Install the browser (the build and the end-to-end tests)
+        run: bunx playwright install --with-deps chromium
+      # The workflow's own token (contents: read, set above) is the only credential:
+      # the project facts and the collision check read public repositories with it.
+      - name: Build (projects, PDF, share cards, then the checks and load budgets)
+        run: bun run build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: End-to-end tests (against the production build)
+        run: bun run test:e2e
+      - name: Upload the Pages artifact
+        if: (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    if: (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
+
+  # Only job with contents: write. Runs on the schedule only, and commits a
+  # timestamp when master has had no commit for over 50 days, so GitHub does not
+  # disable the schedule. Uses the workflow's own token; no PAT.
+  keepalive:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: master
+          fetch-depth: 1
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - id: age
+        run: bun scripts/keepalive.ts
+      - name: Commit the timestamp
+        if: steps.age.outputs.commit == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/keepalive.txt
+          git commit -m "chore: keep the schedule alive"
+          git push origin HEAD:master

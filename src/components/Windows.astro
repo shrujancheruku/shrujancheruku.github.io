@@ -1,0 +1,84 @@
+---
+import { compositions, PENDING } from "../compositions/registry";
+// Every window of the desktop. Which are on show, and where, is decided by the
+// workspaces' tilings (src/lib/workspaces.ts); this file only holds them.
+// Windows other tickets build are placeholders until then.
+import { missingCompositions } from "../lib/composition-rules";
+import { archiveOf, copyOf, stackOf } from "../lib/project-copy";
+import type { Project } from "../lib/projects";
+import ArchiveWindow from "./ArchiveWindow.astro";
+import CompositionSlot from "./CompositionSlot.astro";
+import ContactWindow from "./ContactWindow.astro";
+import EducationWindow from "./EducationWindow.astro";
+import NameWindow from "./NameWindow.astro";
+import NowWindow from "./NowWindow.astro";
+import ProjectCopy from "./ProjectCopy.astro";
+import ProjectStack from "./ProjectStack.astro";
+import SabbaticalPhotos from "./SabbaticalPhotos.astro";
+import SabbaticalWindow from "./SabbaticalWindow.astro";
+import SkillsWindow from "./SkillsWindow.astro";
+import TerminalWindow from "./TerminalWindow.astro";
+import TimelineWindow from "./TimelineWindow.astro";
+import Window from "./Window.astro";
+
+interface Props {
+  /** The featured projects, in order: one copy and composition window each. */
+  featured: Project[];
+  /** The archive projects, in order. */
+  archive: Project[];
+}
+
+const { featured, archive } = Astro.props;
+// the ticket that writes each pending composition, for its placeholder
+const PENDING_TICKETS: Record<string, number> = {};
+
+// the build fails when a featured project has no composition
+const missing = missingCompositions(
+  featured.map((p) => p.repository),
+  Object.keys(compositions),
+  PENDING,
+);
+if (missing.length > 0)
+  throw new Error(
+    `featured project without a composition: ${missing.join(", ")}. Write one in src/compositions and add it to registry.ts.`,
+  );
+---
+
+<!-- opening, and again on contact -->
+<NameWindow />
+<TerminalWindow
+  id="term"
+  label="zsh"
+  exchanges={[
+    { command: "whoami", replies: ["product engineer"] },
+    { command: "cat claim", replies: ["I design and build."] },
+    { command: "cat ask", replies: ["Give me a problem, not a spec."] },
+  ]}
+/>
+<NowWindow />
+
+<!-- projects: one step per featured project -->
+{
+  featured.map((project, i) => (
+    <>
+      <ProjectCopy n={i + 1} copy={copyOf(project, i + 1, featured.length, archive.length)} />
+      <Window id={`comp-${i + 1}`}>
+        <CompositionSlot repository={project.repository} position={i + 1} ticket={PENDING_TICKETS[project.repository]} />
+      </Window>
+    </>
+  ))
+}
+<ProjectStack stack={stackOf(featured, archive.length)} />
+{archive.length > 0 && <ArchiveWindow archive={archiveOf(archive)} />}
+
+<!-- timeline -->
+<TimelineWindow />
+<EducationWindow />
+<SkillsWindow />
+
+<!-- sabbatical -->
+<SabbaticalWindow />
+<SabbaticalPhotos />
+
+<!-- contact -->
+<ContactWindow />

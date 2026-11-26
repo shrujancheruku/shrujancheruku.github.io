@@ -1,0 +1,209 @@
+---
+// The skills window: the skill bars, the languages and the hobbies, all from
+// src/lib/timeline.ts. The bars grow in each time the timeline workspace is
+// entered (the script below); without JS or with reduced motion they are at length.
+import {
+  hobbies,
+  hobbyFades,
+  languages,
+  skillBars,
+  skills,
+} from "../lib/timeline";
+import Window from "./Window.astro";
+
+const bars = skillBars(skills);
+const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
+---
+
+<Window id="skills" label="skills" scrolls>
+  <div class="sk">
+    <div class="bars">
+      {
+        bars.map((b) => (
+          <>
+            <span class="name">{b.name}</span>
+            <span class="track" aria-hidden="true">
+              <i class:list={["fill", { joke: b.joke }]} style={`--len:${b.length}`} />
+            </span>
+          </>
+        ))
+      }
+    </div>
+
+    <h3 class="head">languages</h3>
+    <ul class="langs">
+      {
+        languages.map((l) => (
+          <li class={l.level}>
+            <i aria-hidden="true" />
+            <span>{l.name}</span>
+            <em>{l.level}</em>
+          </li>
+        ))
+      }
+    </ul>
+
+    <h3 class="head">hobbies</h3>
+    <div class="tree row"><span class="prompt">❯</span> tree ~/hobbies</div>
+    <div class="tree" role="list" aria-label="hobbies">
+      {
+        hobbies.map((f, fi) => {
+          const lastF = fi === hobbies.length - 1;
+          return (
+            <>
+              <div class="row" role="listitem">
+                <span class="br" aria-hidden="true">{lastF ? "└──" : "├──"}</span> {f.folder}/
+              </div>
+              {f.items.map((h, k) => (
+                <div class="row" role="listitem">
+                  <span class="br" aria-hidden="true">
+                    {lastF ? "    " : "│   "}
+                    {k === f.items.length - 1 ? "└──" : "├──"}
+                  </span>{" "}
+                  <span
+                    class:list={{ hit: h.resume }}
+                    style={h.resume ? undefined : `color:color-mix(in srgb, var(--fg) ${fade.get(h.name) ?? 50}%, var(--bg))`}
+                    data-hobby={h.name}
+                  >{h.name}</span>
+                </div>
+              ))}
+            </>
+          );
+        })
+      }
+    </div>
+  </div>
+</Window>
+
+<script>
+  import { gsap } from "gsap";
+
+  const pane = document.querySelector<HTMLElement>('[data-window="skills"]');
+  const area = document.querySelector<HTMLElement>("main.area");
+  const fills = [...(pane?.querySelectorAll<HTMLElement>(".fill") ?? [])];
+  const real = fills.filter((f) => !f.classList.contains("joke"));
+  const joke = fills.filter((f) => f.classList.contains("joke"));
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+
+  // timings are starting values, tuned by eye (#26)
+  const GROW = 0.9;
+  const STAGGER = 0.08;
+  const PAUSE = 0.4;
+  const SHOOT = 0.25;
+  const RETILE = 0.35; // let the workspace settle before the bars start
+
+  let tl: gsap.core.Timeline | undefined;
+  function play(): void {
+    tl?.kill();
+    if (reduced.matches) {
+      gsap.set(fills, { clearProps: "transform" });
+      return;
+    }
+    gsap.set(fills, { scaleX: 0, transformOrigin: "left center" });
+    tl = gsap
+      .timeline({ delay: RETILE })
+      .to(real, { scaleX: 1, duration: GROW, stagger: STAGGER, ease: "power3.out" })
+      .to(joke, { scaleX: 1, duration: SHOOT, ease: "back.out(2.2)" }, `>${PAUSE}`);
+  }
+
+  let workspace: string | undefined;
+  function entered(): void {
+    if (!area || !pane) return;
+    const now = area.dataset.workspace;
+    if (now === workspace) return;
+    workspace = now;
+    if (getComputedStyle(pane).display !== "none") play();
+  }
+  if (area) {
+    new MutationObserver(entered).observe(area, {
+      attributes: true,
+      attributeFilter: ["data-workspace"],
+    });
+    entered();
+  }
+</script>
+
+<style>
+  .sk {
+    font: 400 12.5px/1.7 var(--mono);
+  }
+  .bars {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 1.5ch;
+    align-items: center;
+  }
+  .track {
+    display: block;
+    height: 8px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--fg) 8%, var(--bg));
+    /* 100/1.1: a joke bar one point over a full real bar fills the column */
+    width: 90.9%;
+  }
+  .fill {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+    width: calc(var(--len) * 100%);
+    background: linear-gradient(90deg, var(--ac), var(--hot));
+  }
+  .head {
+    margin-top: 14px;
+    font: 500 12.5px var(--mono);
+    opacity: 0.55;
+  }
+  .langs {
+    list-style: none;
+    padding: 0;
+  }
+  .langs li {
+    display: flex;
+    align-items: center;
+    gap: 1.2ch;
+  }
+  .langs i {
+    flex: none;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 2px solid var(--ac);
+    box-sizing: border-box;
+  }
+  .langs em {
+    margin-left: auto;
+    font-style: normal;
+    font-size: 11.5px;
+    opacity: 0.6;
+  }
+  .native i {
+    background: var(--ac);
+  }
+  .native em {
+    color: var(--ac);
+    opacity: 1;
+    font-weight: 700;
+  }
+  .proficient i {
+    background: linear-gradient(90deg, var(--ac) 50%, transparent 50%);
+  }
+  .rudimentary {
+    opacity: 0.6;
+  }
+  .rudimentary i {
+    border-color: var(--line);
+  }
+  .tree {
+    white-space: pre;
+  }
+  .prompt {
+    color: var(--hot);
+  }
+  .br {
+    opacity: 0.55;
+  }
+  .hit {
+    color: var(--ac);
+    font-weight: 700;
+  }
+</style>
