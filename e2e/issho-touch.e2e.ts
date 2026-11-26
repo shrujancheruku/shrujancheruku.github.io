@@ -1,4 +1,5 @@
 import { devices, expect, type Page, test } from "@playwright/test";
+import { toComposition } from "./helpers";
 
 test.use({ ...devices["Pixel 7"] });
 test.describe.configure({ timeout: 90_000 });
@@ -10,6 +11,7 @@ test("on touch the site fills the window as text only, with the phone in front c
   page,
 }) => {
   await page.goto("/work/issho/");
+  await toComposition(page);
   await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
   await expect(slot(page)).toHaveAttribute("data-mounted", "true");
   const sc = scene(page);
@@ -57,6 +59,7 @@ test("on touch the site fills the window as text only, with the phone in front c
 
 test("the scene unit sets text at about 11px on touch", async ({ page }) => {
   await page.goto("/work/issho/");
+  await toComposition(page);
   await expect(slot(page)).toHaveAttribute("data-mounted", "true");
   const size = await scene(page).evaluate((el) =>
     Number.parseFloat(getComputedStyle(el).fontSize),
@@ -69,6 +72,7 @@ test("on touch the site's text does not overflow sideways and the phone stays in
   page,
 }) => {
   await page.goto("/work/issho/");
+  await toComposition(page);
   await expect(slot(page)).toHaveAttribute("data-state", "held", {
     timeout: 50_000,
   });

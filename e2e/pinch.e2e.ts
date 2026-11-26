@@ -1,11 +1,13 @@
 import { devices, expect, type Page, test } from "@playwright/test";
 import {
   area,
+  isOneScreen,
   pinch,
   ready,
   SWIPES,
   settle,
   swipe,
+  swipeScreen,
   warmUpTouch,
 } from "./helpers";
 
@@ -58,16 +60,11 @@ for (const phone of PHONES) {
       await page.waitForTimeout(300);
       expect(await stepOf(page)).toBe(0);
       for (const s of SWIPES) {
-        const before = await stepOf(page);
-        await swipe(page, 1, s);
-        await expect(area(page)).toHaveAttribute(
-          "data-step",
-          String(before + 1),
-        );
-        await page.waitForTimeout(200);
-        expect(await stepOf(page), `${s.name} swipe at scale 1`).toBe(
-          before + 1,
-        );
+        const { before, after } = await swipeScreen(page, 1, s);
+        expect(
+          isOneScreen(before, after, 1),
+          `${s.name} swipe at scale 1`,
+        ).toBe(true);
         await settle(page);
       }
     });

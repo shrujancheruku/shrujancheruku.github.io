@@ -57,23 +57,28 @@ test("tapping a number jumps to its workspace", async ({ page }) => {
   );
 });
 
-test("a featured project is copy, then composition, then stack", async ({
+test("a featured project is its copy, then its composition over the stack", async ({
   page,
 }) => {
   await page.goto("/work/");
   await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
-  const order = await page.$$eval(
-    '[data-window="copy-1"], [data-window="comp-1"], [data-window="stack"]',
-    (els) =>
-      els
-        .map((e) => ({
-          id: (e as HTMLElement).dataset.window,
-          top: e.getBoundingClientRect().top,
-        }))
-        .sort((a, b) => a.top - b.top)
-        .map((e) => e.id),
-  );
-  expect(order).toEqual(["copy-1", "comp-1", "stack"]);
+  const shown = () =>
+    page.$$eval(
+      '[data-window="copy-1"], [data-window="comp-1"], [data-window="stack"]',
+      (els) =>
+        els
+          .filter((e) => getComputedStyle(e).display !== "none")
+          .map((e) => ({
+            id: (e as HTMLElement).dataset.window,
+            top: e.getBoundingClientRect().top,
+          }))
+          .sort((a, b) => a.top - b.top)
+          .map((e) => e.id),
+    );
+  expect(await shown()).toEqual(["copy-1"]);
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("main.area")).toHaveAttribute("data-screen", "1");
+  await expect.poll(shown).toEqual(["comp-1", "stack"]);
 });
 
 test("no hover tooltips and no clock on touch, before or after interaction", async ({
@@ -97,14 +102,16 @@ test("no hover tooltips and no clock on touch, before or after interaction", asy
     await expect(tip).toBeHidden();
 });
 
-test("a featured project is tiled 34 / 48 / 18, and the stack clips under its label band", async ({
+test("a featured project's second screen is the composition 60 / stack 40, with every stack row in view under its label band", async ({
   page,
 }) => {
   await page.goto("/work/");
   await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("main.area")).toHaveAttribute("data-screen", "1");
   await page.waitForTimeout(1100);
   const heights = await page.$$eval(
-    '[data-window="copy-1"], [data-window="comp-1"], [data-window="stack"]',
+    '[data-window="comp-1"], [data-window="stack"]',
     (els) => {
       const total = els.reduce(
         (sum, e) => sum + e.getBoundingClientRect().height,
@@ -115,17 +122,20 @@ test("a featured project is tiled 34 / 48 / 18, and the stack clips under its la
       );
     },
   );
-  expect(heights).toEqual([34, 48, 18]);
+  expect(heights).toEqual([60, 40]);
 
   const stack = page.locator("[data-stack]");
   const band = page.locator('[data-window="stack"] .label');
   expect(
     await band.evaluate((e) => getComputedStyle(e).backgroundColor),
   ).not.toBe("rgba(0, 0, 0, 0)");
-  // too short for every row: the rows clip rather than scroll, so a swipe is never taken
+  // a swipe is never taken by the stack, and every row fits it
   expect(await stack.evaluate((e) => getComputedStyle(e).overflowY)).toBe(
     "hidden",
   );
+  expect(
+    await stack.evaluate((e) => e.scrollHeight <= e.clientHeight + 1),
+  ).toBe(true);
   await expect(
     page.locator('[data-stack] a[data-position="1"]'),
   ).toHaveAttribute("aria-current", "true");

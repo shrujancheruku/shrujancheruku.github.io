@@ -154,14 +154,16 @@ describe("moveBy: one swipe moves one screen, across steps", () => {
     for (let i = 0; i < 20; i++) {
       const next = moveBy(at, 1, count, 3);
       if (next.step === at.step && next.screen === at.screen) break;
-      down.push((at = next));
+      at = next;
+      down.push(at);
     }
     expect(down).toHaveLength(6);
     const up = [at];
     for (let i = 0; i < 20; i++) {
       const next = moveBy(at, -1, count, 3);
       if (next.step === at.step && next.screen === at.screen) break;
-      up.push((at = next));
+      at = next;
+      up.push(at);
     }
     expect(up.reverse()).toEqual(down);
   });

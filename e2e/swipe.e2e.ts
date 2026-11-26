@@ -1,13 +1,19 @@
-import { devices, expect, type Page, test } from "@playwright/test";
-import { area, ready, SWIPES, settle, swipe, warmUpTouch } from "./helpers";
+import { devices, expect, test } from "@playwright/test";
+import {
+  atEnd,
+  isOneScreen,
+  ready,
+  SWIPES,
+  settle,
+  swipeScreen,
+  warmUpTouch,
+  whereOf,
+} from "./helpers";
 
-// One swipe on a phone moves exactly one step. Swipes are real touch events
+// One swipe on a phone moves exactly one screen (a step is one or more). Swipes are real touch events
 // (CDP), so the browser's own scrolling gets its chance to take them.
 
 test.setTimeout(120_000);
-
-const stepOf = async (page: Page) =>
-  Number(await area(page).getAttribute("data-step"));
 
 const PHONES = ["Pixel 7", "iPhone 14"] as const;
 for (const phone of PHONES) {
@@ -17,33 +23,35 @@ for (const phone of PHONES) {
     test.use(emulation);
 
     for (const s of SWIPES) {
-      test(`a ${s.name} swipe moves exactly one step, from every step, both ways`, async ({
+      test(`a ${s.name} swipe moves exactly one screen, from every screen, both ways`, async ({
         page,
       }) => {
         await ready(page, "/");
         await page.waitForLoadState("networkidle");
         await settle(page);
         await warmUpTouch(page);
-        const total = await page.evaluate(() =>
-          JSON.parse(
-            document.getElementById("desktop-model")?.textContent ?? "[]",
-          ).reduce(
-            (n: number, w: { steps: unknown[] }) => n + w.steps.length,
-            0,
-          ),
-        );
-        for (let n = 0; n < total - 1; n++) {
-          await swipe(page, 1, s);
-          await expect(area(page)).toHaveAttribute("data-step", String(n + 1));
-          await page.waitForTimeout(150);
-          expect(await stepOf(page)).toBe(n + 1);
+        let screens = 0;
+        for (let guard = 0; guard < 80; guard++) {
+          const { before, after } = await swipeScreen(page, 1, s);
+          expect(
+            isOneScreen(before, after, 1),
+            `${JSON.stringify([before, after])}`,
+          ).toBe(true);
+          screens++;
+          await settle(page);
+          if (await atEnd(page, after)) break;
         }
-        for (let n = total - 1; n > 0; n--) {
-          await swipe(page, -1, s);
-          await expect(area(page)).toHaveAttribute("data-step", String(n - 1));
-          await page.waitForTimeout(150);
-          expect(await stepOf(page)).toBe(n - 1);
+        // the end is the contact step; every screen was reached on the way
+        expect(screens).toBeGreaterThan(7);
+        for (let n = 0; n < screens; n++) {
+          const { before, after } = await swipeScreen(page, -1, s);
+          expect(
+            isOneScreen(before, after, -1),
+            `${JSON.stringify([before, after])}`,
+          ).toBe(true);
+          await settle(page);
         }
+        expect(await whereOf(page)).toMatchObject({ step: 0, screen: 0 });
       });
     }
 
@@ -56,25 +64,20 @@ for (const phone of PHONES) {
       await warmUpTouch(page);
       const size = page.viewportSize();
       if (!size) throw new Error("no viewport");
-      const total = await page.evaluate(() =>
-        JSON.parse(
-          document.getElementById("desktop-model")?.textContent ?? "[]",
-        ).reduce((n: number, w: { steps: unknown[] }) => n + w.steps.length, 0),
-      );
       await page.setViewportSize({
         width: size.width,
         height: size.height + 90,
       });
-      for (let n = 0; n < total - 1; n++) {
-        await swipe(
-          page,
-          1,
-          SWIPES[1] ?? { name: "long", distance: 380, ms: 400 },
-        );
-        await expect(area(page)).toHaveAttribute("data-step", String(n + 1));
+      const long = SWIPES[1] ?? { name: "long", distance: 380, ms: 400 };
+      for (let guard = 0; guard < 80; guard++) {
+        const { before, after } = await swipeScreen(page, 1, long);
+        expect(isOneScreen(before, after, 1)).toBe(true);
+        if (await atEnd(page, after)) break;
       }
       await page.setViewportSize(size);
-      await expect(area(page)).toHaveAttribute("data-step", String(total - 1));
+      await expect
+        .poll(async () => atEnd(page, await whereOf(page)))
+        .toBe(true);
     });
 
     test("no window scrolls its own content on touch", async ({ page }) => {

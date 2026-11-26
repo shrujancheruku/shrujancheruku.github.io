@@ -1,4 +1,5 @@
 import { devices, expect, type Page, test } from "@playwright/test";
+import { toComposition } from "./helpers";
 
 test.use({ ...devices["Pixel 7"] });
 
@@ -8,6 +9,7 @@ test("on touch it is the same desktop, with the windows clipping their text", as
   page,
 }) => {
   await page.goto("/work/unmacos/");
+  await toComposition(page);
   await expect(slot(page)).toHaveAttribute("data-state", "playing");
   const scene = slot(page).locator(".scene");
   await expect(scene.locator(".tile")).toHaveCount(3);
@@ -35,6 +37,7 @@ test("on touch it is the same desktop, with the windows clipping their text", as
 
 test("on touch the scene unit sets text at about 11px", async ({ page }) => {
   await page.goto("/work/unmacos/");
+  await toComposition(page);
   await expect(slot(page)).toHaveAttribute("data-mounted", "true");
   const size = await slot(page)
     .locator(".scene")
