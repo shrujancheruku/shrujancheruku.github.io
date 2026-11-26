@@ -85,10 +85,10 @@ for (const [name, emulation] of Object.entries(PHONES)) {
         if (at.step === last && at.screen === at.screens - 1) break;
         await move(page, 1);
       }
-      // every step was visited, and the timeline, the sabbatical and the contact have several screens
+      // every step was visited, and each screen once
       const steps = new Set(visited.map((v) => v.split(".")[0]));
       expect(steps.size).toBe(last + 1);
-      expect(visited.length).toBeGreaterThan(last + 1 + 4);
+      expect(new Set(visited).size).toBe(visited.length);
       // and the way back retraces it
       const back: string[] = [];
       for (let guard = 0; guard < 80; guard++) {

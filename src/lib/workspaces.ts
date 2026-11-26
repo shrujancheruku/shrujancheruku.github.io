@@ -159,11 +159,10 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
           education: [62, 0, 38, 40],
           skills: [62, 40, 38, 60],
         },
-        // each window whole, one after another: the timeline over as many
-        // screens as its entries need, then education, then skills
+        // the timeline (its entries collapsed to headings) over education on
+        // one screen, then skills
         [
-          { timeline: [0, 0, 100, 100] },
-          { education: [0, 0, 100, 100] },
+          { timeline: [0, 0, 100, 67], education: [0, 67, 100, 33] },
           { skills: [0, 0, 100, 100] },
         ],
         {
