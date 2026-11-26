@@ -109,7 +109,7 @@ test.describe("desktop", () => {
             localStorage.setItem("theme", t);
             localStorage.setItem("crt", c);
           },
-          [theme, crt],
+          [theme, crt] as [string, string],
         );
         await ready(page);
         await expect(cue(page)).toBeVisible();
