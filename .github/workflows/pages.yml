@@ -34,9 +34,7 @@ jobs:
         run: npm install -g "bun@$(node -p 'require("./package.json").packageManager.split("@")[1]')"
       - run: bun install --frozen-lockfile
       - name: Playwright image matches @playwright/test
-        run: |
-          want="$(node -p 'require("./package.json").devDependencies["@playwright/test"]')"
-          grep -q "image: mcr.microsoft.com/playwright:v$want-noble" .github/workflows/pages.yml
+        run: bun scripts/check-playwright-image.ts
       - name: Resume drift check
         run: bun scripts/check-resume.ts
       - name: Biome
