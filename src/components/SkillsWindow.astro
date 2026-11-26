@@ -247,6 +247,11 @@ const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
     }
     .bars {
       gap: 1px 1.5ch;
+      /* the joke bar overshoots its track as it shoots in; that overshoot is
+         transformed overflow, which widens the window for as long as it lasts
+         (#127). Clip it at the column's edge: the bar still shoots past its
+         track, and the window's width no longer depends on when it is read. */
+      overflow: clip;
     }
     .track {
       height: 6px;
