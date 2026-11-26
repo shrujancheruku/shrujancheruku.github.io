@@ -84,8 +84,7 @@ const archiveEl = area.querySelector<HTMLElement>(
 
 // ---- screens
 // On touch a step is its layouts in order, and a window with more entries than
-// fit (the archive, Education's roles, Skills) is as many screens as its entries
-// need. The pages are measured in the window as it will be tiled, and kept until
+// fit (which ones: src/lib/screens.ts) is as many screens as its entries need. The pages are measured in the window as it will be tiled, and kept until
 // the screen changes size or the fonts arrive. This stays for the timeline step's
 // two phone screens (#108, see src/lib/screens.ts); the archive pages the same way.
 

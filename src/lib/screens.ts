@@ -1,12 +1,11 @@
 // Screens: what a swipe steps through on touch. Pure, no DOM.
 //
 // A step holds one or more screens on a phone. The wide desktop shows a whole
-// step at once; a phone screen is too small for most of them, and nothing may
-// scroll, so a step is split into screens that each fit: its layouts one after
-// another (the stack beside the copy, then the composition), and a window with
-// more entries than fit one screen (the archive, Education's roles) over as many
-// screens as its entries need. The step, and so the address, stays the same
-// across them.
+// step at once; on a phone nothing may scroll, so a step is split into screens
+// that each fit: its layouts one after another, and a window with more entries
+// than fit one screen over as many screens as its entries need. The windows
+// that page are the archive, Education's roles and Skills (src/scripts/paged.ts
+// measures them). The step, and so the address, stays the same across them.
 //
 // Why this stays: the timeline step is two phone screens by design, the
 // timeline and then education over skills (#108), and its screens come from
