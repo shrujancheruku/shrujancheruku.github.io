@@ -1,7 +1,8 @@
 ---
 // The timeline: the five career entries, newest first, scrolling inside the
-// window on a short screen. On touch nothing scrolls: the entries, and the
-// resume download first, are paged over as many screens as they need.
+// window on a short screen. On touch nothing scrolls: the window shares its
+// screen with Education & Internships, and each entry collapses to its heading
+// (a tap opens it, one at a time) so all five fit with the resume download.
 import { PDF_PATH } from "../lib/resume";
 import { timeline } from "../lib/timeline";
 import TimelineEntry from "./TimelineEntry.astro";
@@ -9,15 +10,45 @@ import Window from "./Window.astro";
 ---
 
 <Window id="timeline" label="timeline" scrolls>
-  <div data-paged-root>
-    <div class="entries" data-paged>
-      <div><a class="dl" href={PDF_PATH} download>↓ resume.pdf</a></div>
-      {timeline.map((entry, i) => <TimelineEntry entry={entry} now={i === 0} />)}
-    </div>
+  <div class="entries" data-entries>
+    <div><a class="dl" href={PDF_PATH} download>↓ resume.pdf</a></div>
+    {timeline.map((entry, i) => <TimelineEntry entry={entry} now={i === 0} collapsible />)}
   </div>
 </Window>
 
+<script>
+  // one entry open at a time; a button's own click covers tap and keyboard
+  const list = document.querySelector<HTMLElement>("[data-entries]");
+  list?.addEventListener("click", (e) => {
+    const button = (e.target as Element).closest<HTMLButtonElement>(".tgl");
+    if (!button) return;
+    const open = button.getAttribute("aria-expanded") !== "true";
+    list.toggleAttribute("data-has-open", open);
+    for (const b of list.querySelectorAll<HTMLButtonElement>(".tgl")) {
+      const on = open && b === button;
+      b.setAttribute("aria-expanded", String(on));
+      b.closest<HTMLElement>(".te")?.setAttribute("data-open", String(on));
+    }
+  });
+</script>
+
 <style>
+  /* a phone: the download sits in the window's label band, top right, so the
+     entries have the room under it */
+  @media (max-width: 760px) {
+    .entries {
+      margin: -8px 0 -6px;
+    }
+    .dl {
+      position: absolute;
+      top: 4px;
+      right: 10px;
+      z-index: 3;
+      margin: 0;
+      padding: 1px 8px;
+      font-size: 11px;
+    }
+  }
   .dl {
     display: inline-block;
     margin-bottom: 4px;

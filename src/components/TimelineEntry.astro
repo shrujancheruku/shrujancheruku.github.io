@@ -7,12 +7,30 @@ interface Props {
   entry: Entry;
   /** Marks the current role: its title takes the accent colour. */
   now?: boolean;
+  /** On a phone the entry shows its heading only; a tap opens its detail. */
+  collapsible?: boolean;
 }
 
-const { entry, now = false } = Astro.props;
+const { entry, now = false, collapsible = false } = Astro.props;
+const detailId = `te-${entry.organisation ?? entry.roles[0]?.title}`
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, "-");
 ---
 
-<article class:list={["te", { now }]}>
+<article class:list={["te", { now, collapsible }]} data-open="false">
+  {
+    collapsible && (
+      <button
+        type="button"
+        class="tgl"
+        aria-expanded="false"
+        aria-controls={detailId}
+        aria-label={`${entry.organisation ?? entry.roles[0]?.title}: ${entry.roles[0]?.title}`}
+      >
+        <span class="chev" aria-hidden="true">▸</span>
+      </button>
+    )
+  }
   {
     entry.roles.map((role) => (
       <div class="row">
@@ -22,15 +40,17 @@ const { entry, now = false } = Astro.props;
     ))
   }
   {entry.organisation && <p class="org">{entry.organisation}</p>}
-  <p class="desc">{entry.description}</p>
-  {
-    (entry.tag || entry.technologies.length > 0) && (
-      <ul class="tech">
-        {entry.tag && <li class="tag k">{entry.tag}</li>}
-        {entry.technologies.map((t) => <li class="tag">{t}</li>)}
-      </ul>
-    )
-  }
+  <div class="detail" id={detailId}>
+    <p class="desc">{entry.description}</p>
+    {
+      (entry.tag || entry.technologies.length > 0) && (
+        <ul class="tech">
+          {entry.tag && <li class="tag k">{entry.tag}</li>}
+          {entry.technologies.map((t) => <li class="tag">{t}</li>)}
+        </ul>
+      )
+    }
+  </div>
 </article>
 
 <style>
@@ -64,6 +84,12 @@ const { entry, now = false } = Astro.props;
     color: var(--ac);
     font: 500 13px/1.6 var(--mono);
   }
+  .detail {
+    grid-column: 2;
+  }
+  .tgl {
+    display: none;
+  }
   .desc {
     grid-column: 2;
     font: 400 13px/1.6 var(--mono);
@@ -72,7 +98,6 @@ const { entry, now = false } = Astro.props;
     max-width: 68ch;
   }
   .tech {
-    grid-column: 2;
     list-style: none;
   }
   .tag {
@@ -97,9 +122,117 @@ const { entry, now = false } = Astro.props;
     .when,
     .title,
     .org,
-    .desc,
-    .tech {
+    .detail {
       grid-column: 1;
+    }
+  }
+
+  /* a phone: the entry is its heading (the title, then the organisation and
+     the dates on one line) until a tap opens its detail. A button over the
+     whole entry is the control; its name is the entry's. */
+  @media (max-width: 760px) {
+    .te.collapsible {
+      position: relative;
+      padding: 4px 0;
+      grid-template-columns: 1fr auto;
+    }
+    .te.collapsible .tgl {
+      display: block;
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+    .tgl:focus-visible {
+      outline: 2px solid var(--ac);
+      outline-offset: -2px;
+      border-radius: 6px;
+    }
+    .chev {
+      position: absolute;
+      top: 8px;
+      right: 2px;
+      color: var(--ac);
+      font: 13px/1.6 var(--mono);
+      transition: transform 0.25s;
+    }
+    .te[data-open="true"] .chev {
+      transform: rotate(90deg);
+    }
+    .te.collapsible .title {
+      grid-column: 1 / -1;
+      padding-right: 18px;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .te.collapsible .detail {
+      grid-column: 1 / -1;
+    }
+    .te.collapsible[data-open="false"] .detail,
+    .te.collapsible[data-open="false"] .row:nth-of-type(n + 2) {
+      display: none;
+    }
+    /* the organisation left and the dates right, under each title, whether
+       the entry is open or not */
+    .te.collapsible .org {
+      grid-column: 1;
+      grid-row: 2;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .te.collapsible .when {
+      grid-column: 2;
+      font-size: 11px;
+      line-height: 1.5;
+      text-align: right;
+    }
+    .te.collapsible .row:nth-of-type(1) .title {
+      grid-row: 1;
+    }
+    .te.collapsible .row:nth-of-type(1) .when {
+      grid-row: 2;
+    }
+    .te.collapsible .row:nth-of-type(2) .title {
+      grid-row: 3;
+      grid-column: 1;
+      padding-right: 0;
+      font-size: 13px;
+    }
+    .te.collapsible .row:nth-of-type(2) .when {
+      grid-row: 3;
+    }
+    .te.collapsible .detail {
+      grid-row: 4;
+    }
+    /* while one entry is open the rest shrink to their titles, so the open one
+       has the room */
+    :global([data-has-open]) .te.collapsible[data-open="false"] .org,
+    :global([data-has-open]) .te.collapsible[data-open="false"] .when {
+      display: none;
+    }
+    :global([data-has-open]) .te.collapsible[data-open="false"] {
+      padding: 2px 0;
+    }
+    :global([data-has-open]) .te.collapsible[data-open="false"] .title {
+      line-height: 1.3;
+    }
+    :global([data-has-open]) .te.collapsible[data-open="false"] .chev {
+      top: 4px;
+    }
+    .te.collapsible .desc {
+      font-size: 11px;
+      line-height: 1.45;
+      margin: 0.3em 0 0.4em;
+    }
+    .te.collapsible .tag {
+      font-size: 10px;
+      padding: 2px 5px;
+      margin: 0 3px 3px 0;
     }
   }
 </style>

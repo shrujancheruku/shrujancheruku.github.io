@@ -291,43 +291,39 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
     expect(ids(touch(5))).toEqual([["contact"]]);
   });
 
-  test("a project is its copy, then its composition over the stack", () => {
+  test("a project is one screen: its copy over its composition, no stack", () => {
     for (const i of [0, 1, 2, 3]) {
-      expect(ids(touch(2, i))).toEqual([
-        [`copy-${i + 1}`],
-        [`comp-${i + 1}`, "stack"],
-      ]);
+      expect(ids(touch(2, i))).toEqual([[`copy-${i + 1}`, `comp-${i + 1}`]]);
     }
   });
 
-  test("the stack sits under the composition, with room for its rows", () => {
-    const [, second] = touch(2);
-    expect(tile(second ?? {}, "comp-1")[1]).toBeLessThan(
-      tile(second ?? {}, "stack")[1],
-    );
-    expect(tile(second ?? {}, "stack")[3]).toBeGreaterThanOrEqual(40);
+  test("the timeline workspace is the timeline over education, then skills", () => {
+    expect(ids(touch(3))).toEqual([["timeline", "education"], ["skills"]]);
   });
 
-  test("the timeline workspace is the timeline, then education, then skills, each whole", () => {
-    expect(ids(touch(3))).toEqual([["timeline"], ["education"], ["skills"]]);
-  });
-
-  test("the sabbatical is its copy, then the four photos in a 2 x 2 grid", () => {
-    const [copy, photos] = touch(4);
-    expect(Object.keys(copy ?? {})).toEqual(["sabbatical"]);
-    expect(Object.keys(photos ?? {}).sort()).toEqual([
+  test("the sabbatical is one touch screen: the copy over the four photos in a 2 x 2 grid", () => {
+    const screens = touch(4);
+    expect(screens.length).toBe(1);
+    const [screen] = screens;
+    expect(Object.keys(screen ?? {}).sort()).toEqual([
       "photo-1",
       "photo-2",
       "photo-3",
       "photo-4",
+      "sabbatical",
     ]);
+    // the copy above the grid, the grid filling what the copy leaves
+    expect(tile(screen ?? {}, "sabbatical")[1]).toBe(0);
+    expect(tile(screen ?? {}, "photo-1")[1]).toBeGreaterThanOrEqual(
+      tile(screen ?? {}, "sabbatical")[3],
+    );
   });
 
-  test("wherever the projects count goes, every project has its two screens", () => {
+  test("wherever the projects count goes, every project has its one screen", () => {
     for (const n of [1, 3, 6, 9]) {
       const projects = at(createWorkspaces({ featured: n }), 2);
       expect(projects.steps.map((s) => s.touch.length)).toEqual(
-        Array(n).fill(2),
+        Array(n).fill(1),
       );
     }
   });

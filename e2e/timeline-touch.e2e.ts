@@ -1,5 +1,5 @@
 import { devices, expect, test } from "@playwright/test";
-import { area, ready, settle } from "./helpers";
+import { ready, settle } from "./helpers";
 
 test.use({ ...devices["Pixel 7"] });
 
@@ -14,37 +14,33 @@ const box = (page: import("@playwright/test").Page, id: string) =>
     };
   });
 
-test("the timeline, then education, then skills, each the whole workspace; opening gives education the workspace", async ({
+test("the timeline and education share a screen, then skills; opening gives education the workspace", async ({
   page,
 }) => {
   await ready(page, "/");
   await page.locator(".ws button").nth(3).tap();
   await settle(page);
-  // the timeline screens come first, alone
+  // the first screen: the timeline over education, nothing else
   expect((await box(page, "timeline")).shown).toBe(true);
-  expect((await box(page, "education")).shown).toBe(false);
+  expect((await box(page, "education")).shown).toBe(true);
   expect((await box(page, "skills")).shown).toBe(false);
-  const whole = await box(page, "timeline");
-  expect(Math.round(whole.h * 100)).toBe(100);
-  expect(Math.round(whole.w * 100)).toBe(100);
+  const top = await box(page, "timeline");
+  const edu = await box(page, "education");
+  expect(Math.round(top.w * 100)).toBe(100);
+  expect(Math.round(edu.w * 100)).toBe(100);
+  expect(Math.round((top.h + edu.h) * 100)).toBe(100);
 
-  // then education, then skills
-  const order: string[] = [];
-  for (let guard = 0; guard < 12; guard++) {
-    for (const id of ["timeline", "education", "skills"])
-      if ((await box(page, id)).shown && !order.includes(id)) order.push(id);
-    await page.keyboard.press("ArrowDown");
-    await settle(page);
-    if ((await area(page).getAttribute("data-step")) !== "6") break;
-  }
-  expect(order).toEqual(["timeline", "education", "skills"]);
+  // then skills, whole
+  await page.keyboard.press("ArrowDown");
+  await settle(page);
+  expect((await box(page, "timeline")).shown).toBe(false);
+  expect((await box(page, "education")).shown).toBe(false);
+  const skills = await box(page, "skills");
+  expect(skills.shown).toBe(true);
+  expect(Math.round(skills.h * 100)).toBe(100);
 
   await page.locator(".ws button").nth(3).tap();
   await settle(page);
-  while (!(await box(page, "education")).shown) {
-    await page.keyboard.press("ArrowDown");
-    await settle(page);
-  }
   await page.locator("[data-disclosure=education]").click();
   await settle(page);
   expect((await box(page, "timeline")).shown).toBe(false);
