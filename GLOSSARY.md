@@ -64,6 +64,14 @@ _Avoid_: Description, tagline, blurb
 A short statement of fact under a featured project's pitch that backs the pitch up. A featured project has two to five, each one true when a visitor checks it against the project, and none repeating the pitch.
 _Avoid_: Bullet, feature, highlight
 
+**Claim**:
+The one statement the portfolio makes about Shrujan himself: that he takes a product from the problem to production on his own. It never appears without its evidence beside it. A project's statement is its pitch, not a claim.
+_Avoid_: Tagline, slogan, headline, value proposition
+
+**Positioning line**:
+The claim, the role title and the scope that backs it, in one sentence that can be reused off the portfolio. It names no domain and says nothing about availability.
+_Avoid_: Bio, elevator pitch, summary
+
 **Hero image**:
 The lead visual that represents a featured project in its window. It is always a composition, never a screenshot or recording shown on its own.
 _Avoid_: Banner, cover, thumbnail
