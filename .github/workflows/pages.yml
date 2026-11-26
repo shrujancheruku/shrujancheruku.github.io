@@ -22,12 +22,21 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Chromium and its system libraries ship in the image, so nothing installs
+    # them at run time. The tag must match @playwright/test (checked below).
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
+      options: --ipc=host
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
+      - name: Playwright image matches @playwright/test
+        run: |
+          want="$(bun -e 'console.log(require("./package.json").devDependencies["@playwright/test"])')"
+          grep -q "image: mcr.microsoft.com/playwright:v$want-noble" .github/workflows/pages.yml
       - name: Resume drift check
         run: bun scripts/check-resume.ts
       - name: Biome
@@ -37,9 +46,7 @@ jobs:
       - name: Tests
         run: bun test
       # The build drives Chromium too: it prints the resume PDF, captures the share
-      # cards and measures the first load, so the browser comes before it.
-      - name: Install the browser (the build and the end-to-end tests)
-        run: bunx playwright install --with-deps chromium
+      # cards and measures the first load; the image already has the browser.
       # The workflow's own token (contents: read, set above) is the only credential:
       # the project facts and the collision check read public repositories with it.
       - name: Build (projects, PDF, share cards, then the checks and load budgets)
@@ -66,6 +73,9 @@ jobs:
   e2e:
     needs: build
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
+      options: --ipc=host
     strategy:
       fail-fast: false
       matrix:
@@ -77,7 +87,6 @@ jobs:
         with:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
-      - run: bunx playwright install --with-deps chromium
       - uses: actions/download-artifact@v4
         with:
           name: dist
