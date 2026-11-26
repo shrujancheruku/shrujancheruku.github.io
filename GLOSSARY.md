@@ -36,6 +36,10 @@ _Avoid_: Fade out, dismiss, hide
 How one project gives way to the next. The tiles stay put; inside each one the old project's window slides out and the next one's slides in, like a scroll: forwards, the old goes up and the next comes from below; backwards, the reverse. A window both projects share (the stack) doesn't move.
 _Avoid_: Crossfade, swap, carousel, page turn
 
+**Changing workspace**:
+How the desktop moves from one workspace to another. Nothing opens or closes: the old workspace's windows slide up and off one after another in tiling order, as the next workspace's come up from below in the same order (the reverse going to a lower number). A window on both workspaces (the name) travels with each one rather than staying. A jump across several workspaces travels one screen, like a step to the next.
+_Avoid_: Page transition, slide, scroll, swipe
+
 **Project**:
 A public GitHub repository that Shrujan has selected to appear on the portfolio. Nothing appears without being selected.
 _Avoid_: Repo (when talking about what the visitor sees), work, piece
