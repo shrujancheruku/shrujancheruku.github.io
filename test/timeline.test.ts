@@ -174,10 +174,10 @@ describe("languages and hobbies", () => {
         .filter((h) => h.resume)
         .map((h) => h.name)
         .sort(),
-    ).toEqual(["hiking", "photography", "reading", "watchmaking"]);
+    ).toEqual(["cooking", "hiking", "photography", "reading"]);
     expect(hobbyFades.map((h) => h.name)).toEqual([
       "football",
-      "cooking",
+      "watchmaking",
       "pub quizzes",
       "chess",
       "guitar",

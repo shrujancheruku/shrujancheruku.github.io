@@ -84,7 +84,7 @@ test("hobbies are the tree with three folders and nine hobbies", async ({
   await expect(tree.locator(".hit")).toHaveText([
     "hiking",
     "photography",
-    "watchmaking",
+    "cooking",
     "reading",
   ]);
 });
@@ -107,9 +107,11 @@ test("the making folder reads photography, cooking, watchmaking, guitar", async 
     "watchmaking",
     "guitar",
   ]);
-  // cooking keeps its fade, watchmaking keeps its accent
-  await expect(tree.locator('[data-hobby="cooking"]')).not.toHaveClass(/hit/);
-  await expect(tree.locator('[data-hobby="watchmaking"]')).toHaveClass(/hit/);
+  // cooking takes the accent, watchmaking takes the fade cooking had
+  await expect(tree.locator('[data-hobby="cooking"]')).toHaveClass(/hit/);
+  await expect(tree.locator('[data-hobby="watchmaking"]')).not.toHaveClass(
+    /hit/,
+  );
 });
 
 test("the window scrolls when the content does not fit", async ({ page }) => {
