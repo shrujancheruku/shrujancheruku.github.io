@@ -44,6 +44,10 @@ _Avoid_: Crossfade, swap, carousel, page turn
 How the desktop moves from one workspace to another. Nothing opens or closes: the old workspace's windows slide up and off one after another in tiling order, as the next workspace's come up from below in the same order (the reverse going to a lower number). A window on both workspaces (the name) travels with each one rather than staying. A jump across several workspaces travels one screen, like a step to the next. On a phone, a swipe between screens of one step whose windows all change travels the same way.
 _Avoid_: Page transition, slide, scroll, swipe
 
+**First appearance**:
+How a step's windows come on show when the desktop loads, at any address. Each window slides out of the edge of the desktop its tile sits on (right, else bottom, left, top) straight into its tile, one after another in tiling order; nothing re-tiles. The wheel waits until every window is in. With reduced motion the step is simply there.
+_Avoid_: Launch, boot animation, intro, power-on; "opening a window" (that has neighbours giving up space)
+
 **Project**:
 A public GitHub repository that Shrujan has selected to appear on the portfolio. Nothing appears without being selected.
 _Avoid_: Repo (when talking about what the visitor sees), work, piece
