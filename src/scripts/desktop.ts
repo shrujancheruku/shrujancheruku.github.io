@@ -35,6 +35,12 @@ import {
   type Workspace,
 } from "../lib/workspaces";
 import { measurePages, type Paged, pagedOf, showPage } from "./paged";
+// PROTOTYPE (ticket #112): disclosure motions, dev only
+import {
+  changeOf,
+  currentMotion,
+  runDisclosure,
+} from "./prototype-disclosure-motion";
 
 gsap.registerPlugin(Flip, Observer);
 
@@ -196,8 +202,17 @@ function markStack(index: number): void {
   }
 }
 
+/** PROTOTYPE: the step and disclosure last placed, to tell a disclosure re-tile. */
+let placedStep = -1;
+let placedOpen = false;
+
 /** Put the windows of a step in place; animate from where they are if asked. */
 function place(n: number, animate: boolean): void {
+  const disclosure = placedStep === n && placedOpen !== open;
+  const opening = open;
+  placedStep = n;
+  placedOpen = open;
+  const before = shown;
   const screens = screensAt(n, open);
   screen = Math.max(0, Math.min(screens.length - 1, screen));
   const { layout, pages } = screens[screen] ?? { layout: {}, pages: {} };
@@ -250,7 +265,23 @@ function place(n: number, animate: boolean): void {
     else b.removeAttribute("aria-current");
   }
 
-  if (state) {
+  const motion = currentMotion();
+  if (
+    state &&
+    import.meta.env.DEV &&
+    disclosure &&
+    motion.run &&
+    before &&
+    !touch.matches
+  ) {
+    gate.hold();
+    area.dataset.retiling = "true";
+    gsap.killTweensOf(panes);
+    const tl = runDisclosure(changeOf(panes, before, layout), opening, () =>
+      settled(tl),
+    );
+    latest = tl;
+  } else if (state) {
     // the wheel stays shut for the whole re-tile, which on a busy page starts
     // late and ends well after the wheel event that asked for it
     gate.hold();
