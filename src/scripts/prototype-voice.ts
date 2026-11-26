@@ -112,6 +112,34 @@ const VOICES: Voice[] = [
     now: "on sabbatical, and building things anyway",
     openbench: OPENBENCH,
   },
+  {
+    key: "final",
+    name: "C3's whoami, C2's rest",
+    rules:
+      "VERDICT (founder, 2026-11-27): the whoami from C3, everything else from C2",
+    role: "senior product engineer",
+    exchanges: [
+      {
+        command: "whoami",
+        replies: [
+          "A senior product engineer. I design things and I build them.",
+        ],
+      },
+      {
+        command: "cat how-i-work",
+        replies: [
+          "I talk to the people who have the problem, sketch something, build it and put it in front of them. Then I watch what they do with it and go again.",
+          "Usually that's designs in a day, a prototype in a week and something shipped in a month.",
+        ],
+      },
+      {
+        command: "man shrujan",
+        replies: ["No manual entry for shrujan. Scroll down instead."],
+      },
+    ],
+    now: "on sabbatical, and building things anyway",
+    openbench: OPENBENCH,
+  },
 ];
 
 const STORE = "prototype-voice";
@@ -120,7 +148,7 @@ const asked =
   sessionStorage.getItem(STORE);
 let current: Voice =
   VOICES.find((v) => v.key === asked) ??
-  (VOICES.find((v) => v.key === "C2") as Voice);
+  (VOICES.find((v) => v.key === "final") as Voice);
 
 const q = <T extends HTMLElement>(sel: string) =>
   document.querySelector<T>(sel);
