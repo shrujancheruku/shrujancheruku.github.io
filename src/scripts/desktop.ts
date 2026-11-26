@@ -303,7 +303,9 @@ const inProjects = (): boolean =>
 function announce(): void {
   const kind = inProjects() ? "archive" : "open";
   if (kind === "archive") {
-    for (const b of document.querySelectorAll("[data-archive-open]"))
+    for (const b of document.querySelectorAll(
+      "[data-archive-open], [data-archive-phone]",
+    ))
       b.setAttribute("aria-expanded", String(open));
   }
   document.dispatchEvent(
@@ -409,7 +411,7 @@ document.addEventListener("click", (e) => {
   const target = e.target as Element | null;
   const cue = target?.closest("[data-disclosure]");
   if (cue) setOpen(!open);
-  if (target?.closest("[data-archive-open]")) {
+  if (target?.closest("[data-archive-open], [data-archive-phone]")) {
     if (open) closeArchive();
     else openArchive();
   }

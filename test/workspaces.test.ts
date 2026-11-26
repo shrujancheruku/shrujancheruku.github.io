@@ -279,21 +279,10 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
     expect(ids(touch(4))).toEqual([["contact"]]);
   });
 
-  test("a project is its copy, then its composition over the stack", () => {
+  test("a project is one screen: its copy over its composition, no stack", () => {
     for (const i of [0, 1, 2, 3]) {
-      expect(ids(touch(1, i))).toEqual([
-        [`copy-${i + 1}`],
-        [`comp-${i + 1}`, "stack"],
-      ]);
+      expect(ids(touch(1, i))).toEqual([[`copy-${i + 1}`, `comp-${i + 1}`]]);
     }
-  });
-
-  test("the stack sits under the composition, with room for its rows", () => {
-    const [, second] = touch(1);
-    expect(tile(second ?? {}, "comp-1")[1]).toBeLessThan(
-      tile(second ?? {}, "stack")[1],
-    );
-    expect(tile(second ?? {}, "stack")[3]).toBeGreaterThanOrEqual(40);
   });
 
   test("the timeline workspace is the timeline over education, then skills", () => {
@@ -318,11 +307,11 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
     );
   });
 
-  test("wherever the projects count goes, every project has its two screens", () => {
+  test("wherever the projects count goes, every project has its one screen", () => {
     for (const n of [1, 3, 6, 9]) {
       const projects = at(createWorkspaces({ featured: n }), 1);
       expect(projects.steps.map((s) => s.touch.length)).toEqual(
-        Array(n).fill(2),
+        Array(n).fill(1),
       );
     }
   });

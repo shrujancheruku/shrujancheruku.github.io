@@ -25,6 +25,8 @@ export interface Copy {
   };
   /** The line under the last featured project that opens the archive. */
   archiveMore: string | null;
+  /** The `+N archive` line a phone shows on every project, where it has no stack. */
+  archiveOpen: string | null;
 }
 
 /** `position` is 1-based among `total` featured projects. */
@@ -54,6 +56,7 @@ export function copyOf(
       position === total && archiveCount > 0
         ? `+${archiveCount} more in the archive →`
         : null,
+    archiveOpen: archiveCount > 0 ? `+${archiveCount} archive` : null,
   };
 }
 
