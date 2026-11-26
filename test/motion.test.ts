@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { collapsed, edgeOf, sortChanges } from "../src/lib/motion";
+import { collapsed, edgeOf, rollOf, sortChanges } from "../src/lib/motion";
 import {
   createWorkspaces,
   firstStepOf,
@@ -161,5 +161,24 @@ describe("a tile collapsed onto an edge", () => {
     expect(collapsed(tile, "top")).toEqual([62, 40, 38, 0]);
     expect(collapsed(tile, "right")).toEqual([100, 40, 0, 60]);
     expect(collapsed(tile, "left")).toEqual([62, 40, 0, 60]);
+  });
+});
+
+describe("rolling past", () => {
+  test("forwards the old goes up and out, the next comes from below", () => {
+    const r = rollOf(1, 200);
+    expect(r.out.to).toEqual({ y: -200, clip: "inset(200px 0px 0px 0px)" });
+    expect(r.in.from).toEqual({ y: 200, clip: "inset(0px 0px 200px 0px)" });
+  });
+  test("backwards is the reverse", () => {
+    const r = rollOf(-1, 200);
+    expect(r.out.to).toEqual({ y: 200, clip: "inset(0px 0px 200px 0px)" });
+    expect(r.in.from).toEqual({ y: -200, clip: "inset(200px 0px 0px 0px)" });
+  });
+  test("both rest unclipped", () => {
+    expect(rollOf(1, 50).rest).toEqual({
+      y: 0,
+      clip: "inset(0px 0px 0px 0px)",
+    });
   });
 });

@@ -120,3 +120,31 @@ export function collapsed([l, t, w, h]: Rect, edge: Edge): Rect {
       return [l, t, w, 0];
   }
 }
+
+export interface Roll {
+  y: number;
+  clip: string;
+}
+
+/**
+ * Where a window rolls to and from inside its tile (`height` px tall).
+ * `direction` is +1 forwards: the old goes up and out, the next comes from
+ * below; -1 reverses both.
+ */
+export function rollOf(
+  direction: 1 | -1,
+  height: number,
+): { rest: Roll; out: { to: Roll }; in: { from: Roll } } {
+  const none = "inset(0px 0px 0px 0px)";
+  const top = `inset(${height}px 0px 0px 0px)`;
+  const bottom = `inset(0px 0px ${height}px 0px)`;
+  return {
+    rest: { y: 0, clip: none },
+    out: {
+      to: { y: -height * direction, clip: direction > 0 ? top : bottom },
+    },
+    in: {
+      from: { y: height * direction, clip: direction > 0 ? bottom : top },
+    },
+  };
+}
