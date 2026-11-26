@@ -49,12 +49,12 @@ const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
       <section class="sec">
       <h3 class="head">hobbies</h3>
       <div class="tree row"><span class="prompt">❯</span> tree ~/hobbies</div>
-      <div class="tree" role="list" aria-label="hobbies">
+      <div class="tree folders" role="list" aria-label="hobbies">
         {
           hobbies.map((f, fi) => {
             const lastF = fi === hobbies.length - 1;
             return (
-              <>
+              <div class="folder">
                 <div class="row" role="listitem">
                   <span class="br" aria-hidden="true">{lastF ? "└──" : "├──"}</span> {f.folder}/
                 </div>
@@ -71,7 +71,7 @@ const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
                     >{h.name}</span>
                   </div>
                 ))}
-              </>
+              </div>
             );
           })
         }
@@ -218,5 +218,41 @@ const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
   .hit {
     color: var(--ac);
     font-weight: 700;
+  }
+  /* a folder's rows sit in the tree as before; a phone has no room for the
+     whole tree on a screen it shares with education, so the three folders sit
+     side by side, without the branch lines, */
+  .folder {
+    display: contents;
+  }
+  @media (max-width: 760px) {
+    .folders {
+      display: grid;
+      grid-template-columns: repeat(3, auto);
+      justify-content: space-between;
+      font-size: 11.5px;
+      line-height: 1.6;
+    }
+    .folder {
+      display: block;
+    }
+    .folder .br {
+      display: none;
+    }
+    .folder .row + .row {
+      padding-left: 1.5ch;
+    }
+    .sec {
+      padding-top: 4px;
+    }
+    .bars {
+      gap: 1px 1.5ch;
+    }
+    .track {
+      height: 6px;
+    }
+    .sk {
+      line-height: 1.4;
+    }
   }
 </style>
