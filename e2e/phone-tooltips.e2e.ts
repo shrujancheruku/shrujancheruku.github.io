@@ -69,3 +69,21 @@ test("1280x800 desktop still shows its tooltips while idle", async ({
   await ready(page);
   await expect(page.locator(".ib .tip").first()).toBeVisible();
 });
+
+test.describe("a touch tablet", () => {
+  const { defaultBrowserType: _e, ...ipad } = devices["iPad (gen 7) landscape"];
+  test.use(ipad);
+
+  test("keeps the four tooltips while idle, without key labels or the workspaces tip", async ({
+    page,
+  }) => {
+    await ready(page);
+    await settle(page);
+    await expect(page.locator("body")).toHaveClass(/idle/);
+    await expect(page.locator(".ib .tip")).toHaveCount(4);
+    for (const tip of await page.locator(".ib .tip").all())
+      await expect(tip).toBeVisible();
+    await expect(page.locator(".ws .tip")).toBeHidden();
+    await expect(page.locator(".ib .tip kbd").first()).toBeHidden();
+  });
+});
