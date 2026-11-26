@@ -6,19 +6,22 @@ import {
   hobbies,
   hobbyFades,
   languages,
+  phoneTrack,
   skillBars,
   skills,
 } from "../lib/timeline";
 import Window from "./Window.astro";
 
 const bars = skillBars(skills);
+// a phone's track leaves room for the joke bar's overshoot (the media block)
+const room = `--phone-track:${(phoneTrack(bars) * 100).toFixed(2)}%`;
 const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
 ---
 
 <Window id="skills" label="skills" scrolls>
   <div class="sk" data-paged-root>
     <div data-paged>
-      <div class="bars">
+      <div class="bars" style={room}>
         {
           bars.map((b) => (
             <>
@@ -83,6 +86,7 @@ const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
 
 <script>
   import { gsap } from "gsap";
+  import { JOKE_BACK } from "../lib/timeline";
 
   const pane = document.querySelector<HTMLElement>('[data-window="skills"]');
   const area = document.querySelector<HTMLElement>("main.area");
@@ -98,18 +102,29 @@ const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
   const SHOOT = 0.25;
   const RETILE = 0.35; // let the workspace settle before the bars start
 
+  // data-bars on the pane says whether the bars are growing or at rest, so a
+  // test can read the window once they rest
+  const rest = (): void => {
+    if (pane) pane.dataset.bars = "rest";
+  };
   let tl: gsap.core.Timeline | undefined;
   function play(): void {
     tl?.kill();
     if (reduced.matches) {
       gsap.set(fills, { clearProps: "transform" });
+      rest();
       return;
     }
+    if (pane) pane.dataset.bars = "growing";
     gsap.set(fills, { scaleX: 0, transformOrigin: "left center" });
     tl = gsap
-      .timeline({ delay: RETILE })
+      .timeline({ delay: RETILE, onComplete: rest })
       .to(real, { scaleX: 1, duration: GROW, stagger: STAGGER, ease: "power3.out" })
-      .to(joke, { scaleX: 1, duration: SHOOT, ease: "back.out(2.2)" }, `>${PAUSE}`);
+      .to(
+        joke,
+        { scaleX: 1, duration: SHOOT, ease: `back.out(${JOKE_BACK})` },
+        `>${PAUSE}`,
+      );
   }
 
   // play when the workspace is entered, or, on touch, when the skills' screen
@@ -221,7 +236,7 @@ const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
   }
   /* a folder's rows sit in the tree as before; a phone has no room for the
      whole tree on a screen it shares with education, so the three folders sit
-     side by side, without the branch lines, */
+     side by side, without the branch lines */
   .folder {
     display: contents;
   }
@@ -247,14 +262,16 @@ const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
     }
     .bars {
       gap: 1px 1.5ch;
-      /* the joke bar overshoots its track as it shoots in; that overshoot is
-         transformed overflow, which widens the window for as long as it lasts
-         (#127). Clip it at the column's edge: the bar still shoots past its
-         track, and the window's width no longer depends on when it is read. */
-      overflow: clip;
     }
+    /* the joke bar overshoots its track as it shoots in, and that overshoot is
+       transformed overflow, which would widen the window for as long as it
+       lasts (#127). A phone's column has no room to spare, so the track is
+       short enough (phoneTrack, src/lib/timeline.ts) that even at its peak the
+       joke bar ends inside the column: the whole overshoot shows, and the
+       window's width no longer depends on when it is read. */
     .track {
       height: 6px;
+      width: var(--phone-track);
     }
     .sk {
       line-height: 1.4;

@@ -77,33 +77,60 @@ for (const [name, emulation] of Object.entries(PHONES)) {
     }) => {
       await ready(page, "/timeline/");
       await warmUpTouch(page);
-      await page.keyboard.press("ArrowDown");
-      await settle(page);
       // widths depend on the web fonts: read them once all have loaded
       await page.evaluate(() => document.fonts.ready);
       // sample every frame of the bars' entry (the joke bar overshoots its
-      // track) with the window 8px narrower than it is: nothing may overflow
-      const over = await page.evaluate(
+      // track) with the window 8px narrower than it is, from before the step
+      // until the bars rest: nothing may overflow. Nothing clips the bars, so
+      // an overshoot that leaves the column widens the window and shows here.
+      const sampled = page.evaluate(
         () =>
-          new Promise<number>((done) => {
-            const sk = document.querySelector<HTMLElement>(".sk");
-            if (!sk) return done(Number.POSITIVE_INFINITY);
-            const SLACK = 8;
-            const room = sk.clientWidth;
-            sk.style.width = `${room - SLACK}px`;
-            let worst = 0;
-            const t0 = performance.now();
-            const tick = () => {
-              worst = Math.max(worst, sk.scrollWidth - sk.clientWidth);
-              if (performance.now() - t0 < 3500) requestAnimationFrame(tick);
-              else {
-                sk.style.width = "";
-                done(worst);
-              }
-            };
-            tick();
-          }),
+          new Promise<{ over: number; frames: number; peak: number }>(
+            (done) => {
+              const sk = document.querySelector<HTMLElement>(".sk");
+              const pane = sk?.closest<HTMLElement>(".pane");
+              const joke = sk?.querySelector<HTMLElement>(".fill.joke");
+              if (!sk || !pane || !joke)
+                return done({
+                  over: Number.POSITIVE_INFINITY,
+                  frames: 0,
+                  peak: 0,
+                });
+              const SLACK = 8;
+              let worst = 0;
+              let frames = 0;
+              let peak = 0;
+              let started = false;
+              const t0 = performance.now();
+              const tick = () => {
+                if (getComputedStyle(pane).display !== "none") {
+                  if (!sk.style.width)
+                    sk.style.width = `${sk.clientWidth - SLACK}px`;
+                  worst = Math.max(worst, sk.scrollWidth - sk.clientWidth);
+                  frames++;
+                  peak = Math.max(
+                    peak,
+                    new DOMMatrix(getComputedStyle(joke).transform).a,
+                  );
+                  started ||= pane.dataset.bars === "growing";
+                }
+                const done_ = started && pane.dataset.bars === "rest";
+                if (!done_ && performance.now() - t0 < 10_000)
+                  requestAnimationFrame(tick);
+                else {
+                  sk.style.width = "";
+                  done({ over: worst, frames, peak });
+                }
+              };
+              tick();
+            },
+          ),
       );
+      await page.keyboard.press("ArrowDown");
+      const { over, frames, peak } = await sampled;
+      // the sampling saw the joke bar overshoot, not just its rest
+      expect(frames).toBeGreaterThan(10);
+      expect(peak).toBeGreaterThan(1.05);
       expect(over).toBeLessThanOrEqual(1);
     });
 
