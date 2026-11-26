@@ -43,6 +43,12 @@ const { stack } = Astro.props;
     scrollbar-width: thin;
   }
 
+  @media (max-width: 760px) {
+    .stack {
+      overflow: hidden;
+    }
+  }
+
   .stack > * {
     flex: 1 0 26px;
     max-height: 34px;

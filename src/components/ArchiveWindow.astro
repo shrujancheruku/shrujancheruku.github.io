@@ -57,6 +57,12 @@ const { archive } = Astro.props;
     padding: 22px 26px 18px;
   }
 
+  @media (max-width: 760px) {
+    .archive {
+      overflow: hidden;
+    }
+  }
+
   /* no line under the heading */
   header {
     display: flex;
