@@ -17,67 +17,67 @@ const fade = new Map(hobbyFades.map((h) => [h.name, h.fg]));
 
 <Window id="skills" label="skills" scrolls>
   <div class="sk" data-paged-root>
-   <div data-paged>
-    <div class="bars">
-      {
-        bars.map((b) => (
-          <>
-            <span class="name">{b.name}</span>
-            <span class="track" aria-hidden="true">
-              <i class:list={["fill", { joke: b.joke }]} style={`--len:${b.length}`} />
-            </span>
-          </>
-        ))
-      }
-    </div>
-
-    <section class="sec">
-    <h3 class="head">languages</h3>
-    <ul class="langs">
-      {
-        languages.map((l) => (
-          <li class={l.level}>
-            <i aria-hidden="true" />
-            <span>{l.name}</span>
-            <em>{l.level}</em>
-          </li>
-        ))
-      }
-    </ul>
-    </section>
-
-    <section class="sec">
-    <h3 class="head">hobbies</h3>
-    <div class="tree row"><span class="prompt">❯</span> tree ~/hobbies</div>
-    <div class="tree" role="list" aria-label="hobbies">
-      {
-        hobbies.map((f, fi) => {
-          const lastF = fi === hobbies.length - 1;
-          return (
+    <div data-paged>
+      <div class="bars">
+        {
+          bars.map((b) => (
             <>
-              <div class="row" role="listitem">
-                <span class="br" aria-hidden="true">{lastF ? "└──" : "├──"}</span> {f.folder}/
-              </div>
-              {f.items.map((h, k) => (
-                <div class="row" role="listitem">
-                  <span class="br" aria-hidden="true">
-                    {lastF ? "    " : "│   "}
-                    {k === f.items.length - 1 ? "└──" : "├──"}
-                  </span>{" "}
-                  <span
-                    class:list={{ hit: h.resume }}
-                    style={h.resume ? undefined : `color:color-mix(in srgb, var(--fg) ${fade.get(h.name) ?? 50}%, var(--bg))`}
-                    data-hobby={h.name}
-                  >{h.name}</span>
-                </div>
-              ))}
+              <span class="name">{b.name}</span>
+              <span class="track" aria-hidden="true">
+                <i class:list={["fill", { joke: b.joke }]} style={`--len:${b.length}`} />
+              </span>
             </>
-          );
-        })
-      }
+          ))
+        }
+      </div>
+
+      <section class="sec">
+      <h3 class="head">languages</h3>
+      <ul class="langs">
+        {
+          languages.map((l) => (
+            <li class={l.level}>
+              <i aria-hidden="true" />
+              <span>{l.name}</span>
+              <em>{l.level}</em>
+            </li>
+          ))
+        }
+      </ul>
+      </section>
+
+      <section class="sec">
+      <h3 class="head">hobbies</h3>
+      <div class="tree row"><span class="prompt">❯</span> tree ~/hobbies</div>
+      <div class="tree" role="list" aria-label="hobbies">
+        {
+          hobbies.map((f, fi) => {
+            const lastF = fi === hobbies.length - 1;
+            return (
+              <>
+                <div class="row" role="listitem">
+                  <span class="br" aria-hidden="true">{lastF ? "└──" : "├──"}</span> {f.folder}/
+                </div>
+                {f.items.map((h, k) => (
+                  <div class="row" role="listitem">
+                    <span class="br" aria-hidden="true">
+                      {lastF ? "    " : "│   "}
+                      {k === f.items.length - 1 ? "└──" : "├──"}
+                    </span>{" "}
+                    <span
+                      class:list={{ hit: h.resume }}
+                      style={h.resume ? undefined : `color:color-mix(in srgb, var(--fg) ${fade.get(h.name) ?? 50}%, var(--bg))`}
+                      data-hobby={h.name}
+                    >{h.name}</span>
+                  </div>
+                ))}
+              </>
+            );
+          })
+        }
+      </div>
+      </section>
     </div>
-    </section>
-   </div>
   </div>
 </Window>
 
