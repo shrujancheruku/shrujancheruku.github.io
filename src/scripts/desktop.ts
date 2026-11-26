@@ -8,7 +8,13 @@ import { gsap } from "gsap";
 import { Observer } from "gsap/Observer";
 import { notFoundTitle as NOT_FOUND_TITLE } from "../lib/addresses";
 import { interpretKey } from "../lib/keys";
-import { collapsed, edgeOf, rollOf, sortChanges } from "../lib/motion";
+import {
+  collapsed,
+  edgeOf,
+  rollOf,
+  sortChanges,
+  travelOf,
+} from "../lib/motion";
 import {
   anchorOf,
   type EntriesOf,
@@ -45,6 +51,14 @@ const EASE = "power3.out";
 /** Rolling past: one project gives way to the next inside its tile. */
 const ROLL = 0.38;
 const ROLL_EASE = "power3.inOut";
+/**
+ * Changing workspace: each window takes this long, starting this long after
+ * the one before, and the whole workspace travels one screen plus this gap.
+ */
+const SLIDE = 0.27;
+const SLIDE_GAP = 0.032;
+const SLIDE_EASE = "power3.inOut";
+const SCREEN_GAP = 14;
 /** A window opening fades in over its first this long; closing, its last. */
 const FADE = 0.12;
 /** Reduced motion: no timeline, the windows are simply there. */
@@ -323,6 +337,7 @@ function motionBetween(
   sameWorkspace: boolean,
   direction: 1 | -1,
 ): gsap.core.Timeline {
+  if (!sameWorkspace) return travelBetween(before, after, direction);
   const leaving: HTMLElement[] = [];
   const faded: HTMLElement[] = [];
   const rolled: HTMLElement[] = [];
@@ -395,6 +410,77 @@ function motionBetween(
     for (const pane of leaving) pane.style.display = "none";
     gsap.set(faded, { clearProps: "opacity" });
     gsap.set(rolled, { clearProps: "transform,clipPath" });
+  };
+  return timeline;
+}
+
+/**
+ * Changing workspace, as one timeline. The old workspace's windows slide up
+ * and off one after another in tiling order as the next workspace's come up
+ * from below in the same order (the reverse going to a lower one), `direction`
+ * giving which. However many workspaces the jump crosses, it travels one
+ * screen. The area is clipped while it runs, so no window passes over the
+ * status bar. A window on both workspaces leaves as a clone of its pane while
+ * the real pane arrives; the clone goes when the motion ends or is stopped.
+ */
+function travelBetween(
+  before: Layout,
+  after: Layout,
+  direction: 1 | -1,
+): gsap.core.Timeline {
+  const { leaving, arriving } = travelOf(before, after);
+  const away = (area.clientHeight + SCREEN_GAP) * direction;
+  const goes: HTMLElement[] = [];
+  const clones: HTMLElement[] = [];
+  const comes: HTMLElement[] = [];
+  const clipped = area.style.overflow;
+  area.style.overflow = "hidden";
+  const timeline = gsap.timeline({
+    onComplete: () => {
+      if (timeline !== latest) return;
+      rest?.();
+      rest = null;
+      settled(timeline);
+    },
+  });
+  const slide = (pane: HTMLElement, from: number, to: number, at: number) =>
+    timeline.fromTo(
+      pane,
+      { y: from },
+      { y: to, duration: SLIDE, ease: SLIDE_EASE },
+      at,
+    );
+  for (const [i, w] of leaving.entries()) {
+    const pane = windowOf.get(w.id);
+    if (!pane) continue;
+    let mover = pane;
+    if (w.shared) {
+      // the pane is already on its new tile: a copy leaves from the old one
+      mover = pane.cloneNode(true) as HTMLElement;
+      mover.removeAttribute("data-window");
+      mover.dataset.clone = "true";
+      mover.setAttribute("aria-hidden", "true");
+      mover.inert = true;
+      for (const e of mover.querySelectorAll("[id]")) e.removeAttribute("id");
+      mover.removeAttribute("id");
+      area.append(mover);
+      clones.push(mover);
+    } else goes.push(pane);
+    mover.style.display = "block";
+    Object.assign(mover.style, css(w.tile));
+    slide(mover, 0, -away, i * SLIDE_GAP);
+  }
+  for (const [i, w] of arriving.entries()) {
+    const pane = windowOf.get(w.id);
+    if (!pane) continue;
+    comes.push(pane);
+    slide(pane, away, 0, (i + 1) * SLIDE_GAP);
+  }
+  rest = () => {
+    for (const pane of goes) pane.style.display = "none";
+    for (const clone of clones) clone.remove();
+    gsap.set([...goes, ...comes], { clearProps: "transform" });
+    area.style.overflow = clipped;
   };
   return timeline;
 }
