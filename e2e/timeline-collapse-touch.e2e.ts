@@ -72,6 +72,41 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       ).toHaveCount(9);
     });
 
+    test("the skills window fits with 8px to spare, while the joke bar shoots in and once it rests", async ({
+      page,
+    }) => {
+      await ready(page, "/timeline/");
+      await warmUpTouch(page);
+      await page.keyboard.press("ArrowDown");
+      await settle(page);
+      // widths depend on the web fonts: read them once all have loaded
+      await page.evaluate(() => document.fonts.ready);
+      // sample every frame of the bars' entry (the joke bar overshoots its
+      // track) with the window 8px narrower than it is: nothing may overflow
+      const over = await page.evaluate(
+        () =>
+          new Promise<number>((done) => {
+            const sk = document.querySelector<HTMLElement>(".sk");
+            if (!sk) return done(Number.POSITIVE_INFINITY);
+            const SLACK = 8;
+            const room = sk.clientWidth;
+            sk.style.width = `${room - SLACK}px`;
+            let worst = 0;
+            const t0 = performance.now();
+            const tick = () => {
+              worst = Math.max(worst, sk.scrollWidth - sk.clientWidth);
+              if (performance.now() - t0 < 3500) requestAnimationFrame(tick);
+              else {
+                sk.style.width = "";
+                done(worst);
+              }
+            };
+            tick();
+          }),
+      );
+      expect(over).toBeLessThanOrEqual(1);
+    });
+
     test("entries open by tap and by keyboard, one at a time, and everything still fits", async ({
       page,
     }) => {

@@ -5,8 +5,10 @@ import { expect, type Page } from "@playwright/test";
 // cut off, as strings, none when all of it shows.
 
 /** What is cut off in every window on show: strings, none when all fits. */
-export const cutOff = (page: Page) =>
-  page.evaluate(() => {
+export const cutOff = async (page: Page) => {
+  // widths depend on the web fonts: read them once they have all loaded
+  await page.evaluate(() => document.fonts.ready);
+  return page.evaluate(() => {
     const problems: string[] = [];
     for (const pane of document.querySelectorAll<HTMLElement>(".pane")) {
       if (getComputedStyle(pane).display === "none") continue;
@@ -69,6 +71,7 @@ export const cutOff = (page: Page) =>
     }
     return problems;
   });
+};
 
 /** Waits until every typed terminal on show has typed all it will. */
 export const typed = (page: Page) =>
