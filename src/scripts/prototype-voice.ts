@@ -114,9 +114,9 @@ const VOICES: Voice[] = [
   },
   {
     key: "final",
-    name: "C3's whoami, C2's rest",
+    name: "C3's terminal, C2's style elsewhere",
     rules:
-      "VERDICT (founder, 2026-11-27): the whoami from C3, everything else from C2",
+      "VERDICT (founder, 2026-11-27): the whole terminal window from C3; everything else in C2's style",
     role: "senior product engineer",
     exchanges: [
       {
@@ -126,15 +126,12 @@ const VOICES: Voice[] = [
         ],
       },
       {
-        command: "cat how-i-work",
-        replies: [
-          "I talk to the people who have the problem, sketch something, build it and put it in front of them. Then I watch what they do with it and go again.",
-          "Usually that's designs in a day, a prototype in a week and something shipped in a month.",
-        ],
+        command: "cat ask",
+        replies: ["Give me a problem, not a spec. Here's what comes back:"],
       },
       {
-        command: "man shrujan",
-        replies: ["No manual entry for shrujan. Scroll down instead."],
+        command: "ls -t ~/your-problem",
+        replies: ["day-1    designs", "week-1   prototype", "month-1  shipped"],
       },
     ],
     now: "on sabbatical, and building things anyway",
