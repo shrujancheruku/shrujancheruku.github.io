@@ -20,7 +20,8 @@ test("a composition is not part of the first load: it is asked for after the pag
     if (/\/_astro\/(orca-flow|kit)\./.test(r.url()))
       asked.push({ url: r.url(), afterLoad: loaded });
   });
-  await ready(page);
+  // /about/ is next to the projects workspace, so it is the first to preload
+  await ready(page, "/about/");
   // the test is about order, not speed: a busy machine may take a while
   await expect(slot(page)).toHaveAttribute("data-mounted", "true", {
     timeout: 20_000,
@@ -29,7 +30,7 @@ test("a composition is not part of the first load: it is asked for after the pag
   for (const r of asked) expect(r.afterLoad).toBe(true);
 });
 
-test("a composition next to the opening still preloads when the page never goes idle", async ({
+test("a composition next to the current workspace still preloads when the page never goes idle", async ({
   page,
 }) => {
   // a main thread too busy to go idle: idle callbacks fire only at their timeout
@@ -45,7 +46,7 @@ test("a composition next to the opening still preloads when the page never goes 
           )
         : 0) as typeof window.requestIdleCallback;
   });
-  await ready(page);
+  await ready(page, "/about/");
   await expect(slot(page)).toHaveAttribute("data-mounted", "true", {
     timeout: 10_000,
   });
@@ -61,11 +62,11 @@ test("compositions are not loaded while the projects workspace is far off, and a
   await ready(page, "/contact/");
   await page.waitForTimeout(1500);
   expect(asked).toEqual([]);
-  await page.keyboard.press("4"); // sabbatical: still two away
+  await page.keyboard.press("5"); // sabbatical: still two away
   await settle(page);
   await page.waitForTimeout(500);
   expect(asked).toEqual([]);
-  await page.keyboard.press("3"); // timeline: next to projects
+  await page.keyboard.press("4"); // timeline: next to projects
   await expect(slot(page)).toHaveAttribute("data-mounted", "true");
   expect(asked).toHaveLength(1);
 });

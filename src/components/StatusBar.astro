@@ -2,7 +2,8 @@
 // The status bar strip. Left: the workspace numbers with their names (numbers
 // only on touch). Right: four icon toggles (home, contact, crt effect, theme)
 // and a clock on desktop. Each toggle carries a tooltip that shows on hover or
-// focus, and is written out as a staircase until the first interaction.
+// focus, and is written out as a staircase until the first interaction (on
+// desktop only: a phone has no keys to name, so it never shows one).
 import { swatch, THEME_NAMES, THEMES } from "../lib/themes";
 import type { Workspace } from "../lib/workspaces";
 
@@ -27,6 +28,14 @@ const { workspaces } = Astro.props;
       workspaces <kbd>1</kbd> – <kbd>{workspaces.length}</kbd>
     </span>
   </nav>
+  <!-- the cue to move between steps: arrows with a short text. Decoration (the
+       tooltips and the swipe do the work), so no screen reader reads it and it
+       never takes focus. It sits in the bar, which no window ever covers. -->
+  <div class="cue" data-cue data-edge="first" aria-hidden="true">
+    <span class="dir" data-cue-dir="back">↑</span>
+    <span class="dir" data-cue-dir="forward">↓</span>
+    <span class="cue-text" data-cue-text data-keys="arrow keys" data-touch="swipe"></span>
+  </div>
   <div class="rt">
     <div class="tg">
       <button type="button" class="ib" data-act="home" aria-label="home" style="--i:0">
@@ -199,6 +208,75 @@ const { workspaces } = Astro.props;
     }
   }
 
+  /* the cue: two arrows, one for each way, and a text that goes with the
+     tooltips. Quiet once it has been read, and an arrow with nowhere to go
+     is quieter still */
+  .cue {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-right: auto;
+    color: var(--fg);
+    font: 500 11.5px var(--mono);
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .dir {
+    padding: 0 4px;
+    border: 1px solid currentColor;
+    border-radius: 5px;
+    line-height: 15px;
+    opacity: 0.45;
+    transition: opacity 0.3s;
+  }
+
+  :global(body.idle) .dir {
+    opacity: 0.9;
+  }
+
+  .cue[data-edge="first"] .dir[data-cue-dir="back"],
+  .cue[data-edge="last"] .dir[data-cue-dir="forward"] {
+    opacity: 0.15;
+  }
+
+  .cue-text {
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    max-width: 0;
+    margin-left: 0;
+    transition:
+      opacity 0.3s,
+      max-width 0.3s,
+      margin 0.3s,
+      visibility 0s 0.3s;
+  }
+
+  :global(body.idle) .cue-text {
+    max-width: 12ch;
+    margin-left: 4px;
+    opacity: 0.9;
+    visibility: visible;
+    transition: none;
+  }
+
+  /* on touch the keycaps give way to bare arrows */
+  @media (hover: none) {
+    .dir {
+      border-color: transparent;
+      padding: 0 1px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dir,
+    .cue-text {
+      transition: none;
+    }
+  }
+
   .clock {
     font-variant-numeric: tabular-nums;
   }
@@ -318,13 +396,9 @@ const { workspaces } = Astro.props;
     }
   }
 
-  /* on touch: the four without key labels, and no workspaces tip (no keys there) */
+  /* on touch there are no keys to name, so no tooltip is written out, idle or not */
   @media (hover: none) {
-    :global(body.idle) .tip kbd {
-      display: none;
-    }
-
-    :global(body.idle) .ws .tip {
+    :global(body.idle) .tip {
       display: none;
     }
   }

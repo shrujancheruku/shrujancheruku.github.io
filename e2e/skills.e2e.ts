@@ -13,7 +13,7 @@ const fills = (page: Page) =>
 async function enter(page: Page) {
   await page.goto("/");
   await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
-  await page.keyboard.press("3");
+  await page.keyboard.press("4");
 }
 
 test("five bars on tracks, no number, Comedic Talent last at full length", async ({
@@ -43,9 +43,9 @@ test("the bars grow in on entry, the joke bar last; replays on re-entry", async 
   expect(early.some((f) => f.w < 0.5)).toBe(true);
   await page.waitForTimeout(3500);
   expect((await fills(page)).every((f) => f.w > 0.69)).toBe(true);
-  await page.keyboard.press("4");
+  await page.keyboard.press("5");
   await settle(page);
-  await page.keyboard.press("3");
+  await page.keyboard.press("4");
   await page.waitForTimeout(500);
   expect((await fills(page)).some((f) => f.w < 0.5)).toBe(true);
 });
@@ -75,18 +75,45 @@ test("hobbies are the tree with three folders and nine hobbies", async ({
   await expect(skills).toContainText("tree ~/hobbies");
   const tree = skills.getByRole("list", { name: "hobbies" });
   await expect(tree.locator("[data-hobby]")).toHaveCount(9);
-  // every row the list owns is an item: three folders and nine hobbies, and
-  // the prompt line sits outside it
-  const roles = await tree.evaluate((el) =>
-    [...el.children].map((c) => c.getAttribute("role")),
+  // every row the list owns is an item (inside the folder wrappers, which are
+  // plain boxes): three folders and nine hobbies, and the prompt line sits
+  // outside it
+  await expect(tree.getByRole("listitem")).toHaveCount(12);
+  const rows = await tree.evaluate((el) =>
+    [...el.querySelectorAll(".row")].map((c) => c.getAttribute("role")),
   );
-  expect(roles).toEqual(Array(12).fill("listitem"));
+  expect(rows).toEqual(Array(12).fill("listitem"));
   await expect(tree.locator(".hit")).toHaveText([
     "hiking",
     "photography",
-    "watchmaking",
+    "cooking",
     "reading",
   ]);
+});
+
+test("the making folder reads photography, cooking, watchmaking, guitar", async ({
+  page,
+}) => {
+  await enter(page);
+  await settle(page);
+  const tree = page
+    .locator('[data-window="skills"]')
+    .getByRole("list", { name: "hobbies" });
+  const names = await tree
+    .locator("[data-hobby]")
+    .evaluateAll((els) => els.map((el) => el.getAttribute("data-hobby")));
+  const at = names.indexOf("photography");
+  expect(names.slice(at, at + 4)).toEqual([
+    "photography",
+    "cooking",
+    "watchmaking",
+    "guitar",
+  ]);
+  // cooking takes the accent, watchmaking takes the fade cooking had
+  await expect(tree.locator('[data-hobby="cooking"]')).toHaveClass(/hit/);
+  await expect(tree.locator('[data-hobby="watchmaking"]')).not.toHaveClass(
+    /hit/,
+  );
 });
 
 test("the window scrolls when the content does not fit", async ({ page }) => {

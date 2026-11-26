@@ -4,6 +4,10 @@
 // The markup: a `[data-paged-root]` box with the window's room, holding any
 // fixed chrome (a heading) and one `[data-paged]` list. The list's direct
 // children are the entries, and they carry no margin of their own.
+//
+// Kept for the timeline step's two phone screens (#108: education's roles and
+// skills share the second) and for the archive's pages on touch. See
+// src/lib/screens.ts for why the multi-screen code stays.
 
 import { paginate } from "../lib/screens";
 

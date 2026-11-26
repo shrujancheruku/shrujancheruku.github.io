@@ -97,7 +97,26 @@ import Window from "./Window.astro";
   }
   /* on a phone the cue is wider than the window: it wraps rather than being cut off */
   @media (max-width: 760px) {
+    /* tuck the heading up under the label: a phone screen shares it with the timeline */
+    .edu {
+      margin-top: 0;
+    }
+    .deg {
+      font-size: 13px;
+      line-height: 1.3;
+    }
+    .uni {
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .sub {
+      font-size: 11px;
+      line-height: 1.4;
+    }
     .cue {
+      margin-top: 4px;
+      padding: 3px 10px;
+      font-size: 11px;
       display: block;
       white-space: normal;
       text-align: left;

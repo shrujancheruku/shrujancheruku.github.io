@@ -119,6 +119,7 @@ export function createAddressBook(
 
   const primary: Address[] = [
     place("opening", "/", OPENING_TITLE),
+    place("about", "/about/", titleFor("About")),
     place("projects", "/work/", titleFor("Projects")),
     place("timeline", "/timeline/", titleFor("Timeline")),
     place("sabbatical", "/now/", titleFor("Sabbatical")),

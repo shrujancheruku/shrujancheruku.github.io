@@ -64,7 +64,7 @@ test("~/now is a one-line teaser; clicking it jumps to sabbatical and adds a his
 
   const before = await page.evaluate(() => history.length);
   await teaser.click();
-  await expect(area(page)).toHaveAttribute("data-workspace", "3");
+  await expect(area(page)).toHaveAttribute("data-workspace", "4");
   await expect(page).toHaveURL(/\/now\/$/);
   expect(await page.evaluate(() => history.length)).toBe(before + 1);
 

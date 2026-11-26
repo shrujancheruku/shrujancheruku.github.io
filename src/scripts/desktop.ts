@@ -84,9 +84,10 @@ const archiveEl = area.querySelector<HTMLElement>(
 
 // ---- screens
 // On touch a step is its layouts in order, and a window with more entries than
-// fit (the timeline, the archive) is as many screens as its entries need. The
-// pages are measured in the window as it will be tiled, and kept until the
-// screen changes size or the fonts arrive.
+// fit (the archive, Education's roles, Skills) is as many screens as its entries
+// need. The pages are measured in the window as it will be tiled, and kept until
+// the screen changes size or the fonts arrive. This stays for the timeline step's
+// two phone screens (#108, see src/lib/screens.ts); the archive pages the same way.
 
 const windowOf = new Map(panes.map((p) => [p.dataset.window ?? "", p]));
 const pagedByWindow = new Map<string, Paged | undefined>();
@@ -303,7 +304,9 @@ const inProjects = (): boolean =>
 function announce(): void {
   const kind = inProjects() ? "archive" : "open";
   if (kind === "archive") {
-    for (const b of document.querySelectorAll("[data-archive-open]"))
+    for (const b of document.querySelectorAll(
+      "[data-archive-open], [data-archive-phone]",
+    ))
       b.setAttribute("aria-expanded", String(open));
   }
   document.dispatchEvent(
@@ -409,7 +412,7 @@ document.addEventListener("click", (e) => {
   const target = e.target as Element | null;
   const cue = target?.closest("[data-disclosure]");
   if (cue) setOpen(!open);
-  if (target?.closest("[data-archive-open]")) {
+  if (target?.closest("[data-archive-open], [data-archive-phone]")) {
     if (open) closeArchive();
     else openArchive();
   }
@@ -688,6 +691,10 @@ addEventListener("keydown", (e: KeyboardEvent) => {
     t instanceof HTMLElement &&
     t.matches("input, textarea, select, [contenteditable]")
   )
+    return;
+  // Space activates a focused button or link (a timeline entry's toggle), it
+  // does not move on
+  if (e.key === " " && t instanceof HTMLElement && t.closest("button, a"))
     return;
   if (e.key === "Escape" && open && inProjects()) {
     e.preventDefault();

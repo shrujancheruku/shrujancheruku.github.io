@@ -76,7 +76,7 @@ test("the stack lists every project, marks the current, jumps on click, ends wit
 
   await items.nth(2).click();
   await settle(page);
-  await expect(area(page)).toHaveAttribute("data-step", "3");
+  await expect(area(page)).toHaveAttribute("data-step", "4");
   await expect(stack.locator("[aria-current]")).toHaveText("orca-flow");
   await expect(page).toHaveURL(/\/work\/orca-flow\/$/);
 
@@ -98,7 +98,7 @@ test("only the last featured project has the archive line, inert for now", async
   await expect(page.locator("[data-archive-open]")).toHaveCount(2);
   await ready(page, "/work/rapid-radiology/");
   await page.locator("#archive-more").click();
-  await expect(area(page)).toHaveAttribute("data-step", "4");
+  await expect(area(page)).toHaveAttribute("data-step", "5");
 });
 
 test("each address is titled by the repository and described by the pitch", async ({
@@ -110,7 +110,7 @@ test("each address is titled by the repository and described by the pitch", asyn
     "content",
     /shorthand findings into a finished report/,
   );
-  await expect(area(page)).toHaveAttribute("data-step", "4");
+  await expect(area(page)).toHaveAttribute("data-step", "5");
 });
 
 test("a composition slot is told when its step comes on show and goes", async ({

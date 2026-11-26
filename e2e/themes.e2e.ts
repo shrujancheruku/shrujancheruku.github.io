@@ -96,7 +96,7 @@ test("home and contact jump to their workspaces", async ({ page }) => {
   await page.getByRole("button", { name: "contact", exact: true }).click();
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "4",
+    "5",
   );
   await page.keyboard.press("h");
   await expect(page.locator("main.area")).toHaveAttribute(
@@ -106,7 +106,7 @@ test("home and contact jump to their workspaces", async ({ page }) => {
   await page.keyboard.press("c");
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "4",
+    "5",
   );
 });
 
@@ -160,7 +160,7 @@ for (const [kind, interact] of FIRST) {
     for (const tip of await tips.all())
       await expect(tip).toHaveCSS("opacity", "1");
     await expect(page.locator(".tip[data-tip]")).toContainText(
-      "workspaces 1 – 5",
+      "workspaces 1 – 6",
     );
     const animation = () =>
       page
@@ -174,7 +174,7 @@ for (const [kind, interact] of FIRST) {
   });
 }
 
-test("on touch the written-out tooltips vanish on the first touch", async ({
+test("on touch no tooltip is written out, before or after the first touch", async ({
   browser,
 }) => {
   const page = await (
@@ -186,8 +186,8 @@ test("on touch the written-out tooltips vanish on the first touch", async ({
   ).newPage();
   await ready(page);
   const shown = page.locator(".tip:visible");
-  // the workspaces tooltip is not shown on touch
-  await expect(shown).toHaveCount(4);
+  // a phone has no keys to name, so none of the tooltips shows while idle
+  await expect(shown).toHaveCount(0);
   // a touch alone, with no pointer or key event alongside it
   await page.evaluate(() =>
     document.body.dispatchEvent(
@@ -262,10 +262,10 @@ test("Back after H returns to the previous place, and C is a jump too", async ({
   page,
 }) => {
   await ready(page);
-  await page.keyboard.press("3");
+  await page.keyboard.press("4");
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "2",
+    "3",
   );
   const where = new URL(page.url()).pathname;
   await page.keyboard.press("h");
@@ -277,18 +277,18 @@ test("Back after H returns to the previous place, and C is a jump too", async ({
   await page.goBack();
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "2",
+    "3",
   );
   expect(new URL(page.url()).pathname).toBe(where);
   await page.getByRole("button", { name: "contact", exact: true }).click();
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "4",
+    "5",
   );
   await page.goBack();
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "2",
+    "3",
   );
 });
 

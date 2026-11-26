@@ -22,12 +22,6 @@ const shown = (page: Page, id: string) =>
     .locator(`[data-window="${id}"]`)
     .evaluate((e) => getComputedStyle(e).display !== "none");
 
-/** The timeline entries on show, by index in the list. */
-const timelineEntries = (page: Page) =>
-  page.$$eval('[data-window="timeline"] [data-paged] > *', (items) =>
-    items.flatMap((e, i) => ((e as HTMLElement).hidden ? [] : [i])),
-  );
-
 async function resize(page: Page, size: typeof WIDE): Promise<void> {
   await page.setViewportSize(size);
   await expect.poll(() => page.evaluate(() => innerWidth)).toBe(size.width);
@@ -71,36 +65,29 @@ test("a project's step survives the breakpoint both ways", async ({ page }) => {
   await expect(page).toHaveURL(/\/work\/unmacos\/$/);
 });
 
-test("a taller phone screen keeps the timeline entries on show, not the screen index", async ({
+test("a taller phone screen keeps the timeline step's two screens, and the one you are on", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 667 });
   await ready(page, "/timeline/");
   await settle(page);
-  // a timeline screen past the second, so fewer pages would put the same
-  // index on Education or Skills
-  for (let i = 0; i < 3; i++) {
-    await page.keyboard.press("ArrowDown");
-    await settle(page);
-  }
-  const before = await whereOf(page);
-  expect(before.screen).toBe(3);
+  expect(await whereOf(page)).toMatchObject({ screen: 0, screens: 2 });
   expect(await shown(page, "timeline")).toBe(true);
-  const [first] = await timelineEntries(page);
-  expect(first).toBeDefined();
+  expect(await shown(page, "education")).toBe(false);
 
   await resize(page, { width: 390, height: 1000 });
-  const after = await whereOf(page);
-  expect(after.step).toBe(before.step);
-  expect(after.screens).toBeLessThan(before.screens);
+  expect(await whereOf(page)).toMatchObject({ screen: 0, screens: 2 });
   expect(await shown(page, "timeline")).toBe(true);
-  const tall = await timelineEntries(page);
-  expect(tall).toContain(first);
 
-  // and back: the first entry the taller screen showed is still on show
+  // on the second screen, education over skills, a resize stays there
+  await page.keyboard.press("ArrowDown");
+  await settle(page);
+  expect(await whereOf(page)).toMatchObject({ screen: 1, screens: 2 });
   await resize(page, { width: 390, height: 667 });
-  expect(await shown(page, "timeline")).toBe(true);
-  expect(await timelineEntries(page)).toContain(tall[0]);
+  expect(await whereOf(page)).toMatchObject({ screen: 1, screens: 2 });
+  expect(await shown(page, "education")).toBe(true);
+  expect(await shown(page, "skills")).toBe(true);
+  expect(await shown(page, "timeline")).toBe(false);
 });
 
 test.describe("reduced motion on touch", () => {
