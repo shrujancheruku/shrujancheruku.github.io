@@ -12,6 +12,18 @@ _Avoid_: Page, site shell, app
 One part of the portfolio's story, shown as a numbered workspace of the desktop. The set is fixed and does not change when the featured projects change; all featured projects share one workspace.
 _Avoid_: Section, page, screen, slide
 
+**Step**:
+One stop in the desktop's story, a single arrangement of windows within a workspace. Every workspace is one step except the projects workspace, which has one step per featured project.
+_Avoid_: Stop, scroll position, workspace
+
+**Screen**:
+What a phone shows of a step at once. A phone cannot fit a whole step, so on a phone a step is one or more screens in order, and one swipe moves one screen. On a wide screen, each step is a single screen.
+_Avoid_: Slide, view, workspace, page
+
+**Page**:
+The share of a window's entries that fits one screen on a phone. A window with more entries than fit (the timeline, the archive) has several pages, each on a screen of its own.
+_Avoid_: Screen, slide; never the desktop or a workspace
+
 **Project**:
 A public GitHub repository that Shrujan has selected to appear on the portfolio. Nothing appears without being selected.
 _Avoid_: Repo (when talking about what the visitor sees), work, piece
