@@ -183,7 +183,7 @@ const asked =
   sessionStorage.getItem(STORE);
 let current: Variant =
   VARIANTS.find((v) => v.key === asked) ??
-  (VARIANTS.find((v) => v.key === "A") as Variant);
+  (VARIANTS.find((v) => v.key === "C") as Variant);
 
 // what the build rendered, kept so "today" can be restored
 interface Original {
@@ -293,18 +293,8 @@ function cycle(d: number): void {
   apply();
 }
 
-if (import.meta.env.DEV) {
-  document.body.append(bar);
-  addEventListener("keydown", (e: KeyboardEvent) => {
-    const t = e.target;
-    if (
-      t instanceof HTMLElement &&
-      t.matches("input, textarea, select, [contenteditable]")
-    )
-      return;
-    if (e.key === "[") cycle(-1);
-    if (e.key === "]") cycle(1);
-  });
-  render();
-  apply();
-}
+// The wording is settled (#134): the bar and its keys are gone, and the final
+// set (C) is applied so the layout prototype (#141) has the real copy to fit.
+void bar;
+void render;
+if (import.meta.env.DEV) apply();
