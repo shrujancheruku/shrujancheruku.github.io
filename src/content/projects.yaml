@@ -7,9 +7,9 @@
 - id: featured
   projects:
     - issho
-    - unmacos
-    - orca-flow
     - rapid-radiology
+    - orca-flow
+    - unmacos
 
 - id: archive
   projects:
