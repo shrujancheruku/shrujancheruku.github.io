@@ -1,12 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
+import { area, ready, settle } from "./helpers";
 
 const SLUGS = ["issho", "unmacos", "orca-flow", "rapid-radiology"];
-const area = (page: Page) => page.locator("main.area");
-const ready = async (page: Page, path = "/") => {
-  await page.goto(path);
-  await expect(area(page)).toHaveAttribute("data-ready", "true");
-};
-const settle = (page: Page) => page.waitForTimeout(1100);
 const shown = (page: Page) =>
   page.$$eval(".pane", (els) =>
     els

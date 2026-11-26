@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
+import { area } from "./helpers";
 
-const area = (page: Page) => page.locator("main.area");
 const shown = (page: Page) =>
   page.$$eval(".pane", (els) =>
     els

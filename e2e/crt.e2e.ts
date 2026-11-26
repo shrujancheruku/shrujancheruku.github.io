@@ -1,13 +1,10 @@
 import { expect, type Page, test } from "@playwright/test";
+import { ready } from "./helpers";
 
 const frames = (page: Page) =>
   page
     .locator("#crt-canvas")
     .evaluate((c) => Number((c as HTMLElement).dataset.frames ?? 0));
-const ready = async (page: Page) => {
-  await page.goto("/");
-  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
-};
 
 test("the overlay draws by default and never takes clicks", async ({
   page,

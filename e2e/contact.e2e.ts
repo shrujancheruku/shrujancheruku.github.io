@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
+import { area } from "./helpers";
 
-const area = (page: Page) => page.locator("main.area");
 const win = (page: Page, id: string) => page.locator(`[data-window="${id}"]`);
 const box = (page: Page, id: string) => win(page, id).boundingBox();
 

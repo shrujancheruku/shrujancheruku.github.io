@@ -1,15 +1,12 @@
 import { expect, type Page, test } from "@playwright/test";
+import { ready as boot } from "./helpers";
 
 // the play-through takes about 24 s and some tests play it twice
 test.describe.configure({ timeout: 90_000 });
 
-const area = (page: Page) => page.locator("main.area");
 const slot = (page: Page) => page.locator('[data-composition="issho"]');
 const scene = (page: Page) => slot(page).locator(".scene");
-const ready = async (page: Page, path = "/work/issho/") => {
-  await page.goto(path);
-  await expect(area(page)).toHaveAttribute("data-ready", "true");
-};
+const ready = (page: Page, path = "/work/issho/") => boot(page, path);
 /** The play-through takes about 24 s; allow for a busy machine. */
 const HELD = { timeout: 50_000 };
 

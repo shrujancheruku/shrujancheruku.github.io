@@ -1,10 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
+import { ready } from "./helpers";
 
 const root = (page: Page) => page.locator("html");
-const ready = async (page: Page) => {
-  await page.goto("/");
-  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
-};
 
 for (const scheme of ["light", "dark"] as const) {
   test(`with nothing stored the theme is paper in ${scheme} system mode`, async ({
