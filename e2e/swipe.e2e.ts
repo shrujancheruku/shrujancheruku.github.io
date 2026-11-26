@@ -13,7 +13,8 @@ import {
 // One swipe on a phone moves exactly one screen (a step is one or more). Swipes are real touch events
 // (CDP), so the browser's own scrolling gets its chance to take them.
 
-test.setTimeout(120_000);
+// a walk over every screen both ways takes 1.5 to 2 minutes on the CI runner
+test.setTimeout(240_000);
 
 const PHONES = ["Pixel 7", "iPhone 14"] as const;
 for (const phone of PHONES) {
