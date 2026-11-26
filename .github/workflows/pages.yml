@@ -12,20 +12,31 @@ on:
 permissions:
   contents: read
 
-# One deploy at a time; a queued deploy is not cancelled mid-flight.
+# One run per ref at a time. A newer commit on a pull request cancels that PR's
+# older run; every other event (master push, schedule, dispatch) deploys, so it
+# is never cancelled and a newer one queues behind it.
 concurrency:
   group: pages-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Chromium and its system libraries ship in the image, so nothing installs
+    # them at run time. The tag must match @playwright/test (checked below).
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
+      options: --ipc=host
     steps:
       - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
+      # setup-bun needs unzip, which the image lacks; npm ships in the image.
+      - name: Install bun (the version in package.json)
+        run: npm install -g "bun@$(node -p 'require("./package.json").packageManager.split("@")[1]')"
       - run: bun install --frozen-lockfile
+      - name: Playwright image matches @playwright/test
+        run: |
+          want="$(node -p 'require("./package.json").devDependencies["@playwright/test"]')"
+          grep -q "image: mcr.microsoft.com/playwright:v$want-noble" .github/workflows/pages.yml
       - name: Resume drift check
         run: bun scripts/check-resume.ts
       - name: Biome
@@ -35,25 +46,56 @@ jobs:
       - name: Tests
         run: bun test
       # The build drives Chromium too: it prints the resume PDF, captures the share
-      # cards and measures the first load, so the browser comes before it.
-      - name: Install the browser (the build and the end-to-end tests)
-        run: bunx playwright install --with-deps chromium
+      # cards and measures the first load; the image already has the browser.
       # The workflow's own token (contents: read, set above) is the only credential:
       # the project facts and the collision check read public repositories with it.
       - name: Build (projects, PDF, share cards, then the checks and load budgets)
         run: bun run build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: End-to-end tests (against the production build)
-        run: bun run test:e2e
+      # The shards test this exact build; hidden files are kept so dist is whole.
+      - name: Keep dist for the end-to-end shards
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          include-hidden-files: true
+          retention-days: 1
       - name: Upload the Pages artifact
         if: (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
         uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
-  deploy:
+  # The end-to-end tests, 4 shards in parallel against the build's dist. Two
+  # workers per shard (the --workers=2 flag on the test step): a busier runner
+  # slows the CRT's frames and makes the timing tests flaky.
+  e2e:
     needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
+      options: --ipc=host
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    name: e2e (${{ matrix.shard }}/4)
+    steps:
+      - uses: actions/checkout@v7
+      # setup-bun needs unzip, which the image lacks; npm ships in the image.
+      - name: Install bun (the version in package.json)
+        run: npm install -g "bun@$(node -p 'require("./package.json").packageManager.split("@")[1]')"
+      - run: bun install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: End-to-end tests (shard ${{ matrix.shard }} of 4, against the production build)
+        run: bunx playwright test --shard=${{ matrix.shard }}/4 --workers=2
+
+  deploy:
+    needs: [build, e2e]
     if: (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
