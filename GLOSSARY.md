@@ -24,8 +24,12 @@ _Avoid_: Slide, view, workspace, page
 The share of a window's entries that fits one screen on a phone. A window whose entries do not all fit (the archive, and Education's roles or Skills if they are too long for their screen) has several pages, each on a screen of its own. The timeline's entries collapse to their headings and never page.
 _Avoid_: Screen, slide; never the desktop or a workspace
 
+**Tiling order**:
+The order a step's windows are tiled in, set by hand for each step rather than read off where they sit. Windows leave and arrive in this order when the desktop changes workspace.
+_Avoid_: Reading order, z-order, DOM order
+
 **Opening a window**:
-A window coming on show in a step while its neighbours stay: it slides out of the edge of the desktop it sits against, and its neighbours give up the space as it comes, sharing one moving border with it.
+A window coming on show in a step while its neighbours stay: it slides out of the edge of the desktop on the far side from the neighbours that give up their space to it, and they give it up as it comes, sharing one moving border with it.
 _Avoid_: Fade in, pop in, launch; "the opening" (that is the first workspace)
 
 **Closing a window**:
