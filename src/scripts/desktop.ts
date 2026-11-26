@@ -437,53 +437,67 @@ document.addEventListener("click", (e) => {
 });
 
 // ---- touch: one step per swipe, through the pure gesture rule
-// The page never scrolls on touch (`touch-action: none`, see Desktop.astro), so
-// the browser has no scroll position to lose when its URL bar shows or hides.
+// The page never scrolls on touch (`touch-action: pinch-zoom`, see
+// Desktop.astro), so the browser has no scroll position to lose when its URL
+// bar shows or hides. Pinch-zoom stays the browser's: the rule ignores a
+// gesture with a second finger, and one on a zoomed-in page.
 const swipe = createSwipe({ distance: 48, flick: 16, speed: 0.4 });
 
-/** The pointer of the swipe on its way: a second finger spends the gesture. */
-let finger: number | null = null;
+/** The page's pinch-zoom: 1 unless the visitor zoomed in. */
+const zoom = (): number => window.visualViewport?.scale ?? 1;
+
+// Zoomed in, one finger pans the zoomed page (Desktop.astro's `data-zoomed`).
+const markZoom = () => {
+  document.documentElement.dataset.zoomed = String(zoom() > 1.01);
+};
+window.visualViewport?.addEventListener("resize", markZoom);
+markZoom();
 
 /** Touch input only: a mouse on a narrow window has the wheel. */
 const fingerEvent = (e: PointerEvent): boolean =>
   touch.matches && e.pointerType === "touch";
+
+const fingerOf = (e: PointerEvent) => ({
+  id: e.pointerId,
+  x: e.clientX,
+  y: e.clientY,
+  time: e.timeStamp,
+});
 
 // Pointer events, not touch events: the browser can hand a gesture to its own
 // handling and stop sending `touchmove`, but the pointer stream keeps coming.
 document.addEventListener(
   "pointerdown",
   (e) => {
-    if (!fingerEvent(e)) return;
-    if (finger !== null) {
-      swipe.cancel();
-      return;
-    }
-    finger = e.pointerId;
-    swipe.start(e.clientX, e.clientY, e.timeStamp);
+    if (fingerEvent(e)) swipe.down(fingerOf(e), e.isPrimary, zoom());
   },
   { passive: true },
 );
 document.addEventListener(
   "pointermove",
   (e) => {
-    if (!fingerEvent(e) || e.pointerId !== finger) return;
-    const direction = swipe.move(e.clientX, e.clientY, e.timeStamp);
+    if (!fingerEvent(e)) return;
+    const direction = swipe.move(fingerOf(e));
     if (direction) scrollStep(direction);
   },
   { passive: true },
 );
-const lift = (e: PointerEvent) => {
-  if (e.pointerId !== finger) return;
-  finger = null;
-  if (e.type === "pointercancel") {
-    swipe.cancel();
-    return;
-  }
-  const direction = swipe.end(e.clientX, e.clientY, e.timeStamp);
-  if (direction) scrollStep(direction);
-};
-document.addEventListener("pointerup", lift, { passive: true });
-document.addEventListener("pointercancel", lift, { passive: true });
+document.addEventListener(
+  "pointerup",
+  (e) => {
+    if (!fingerEvent(e)) return;
+    const direction = swipe.up(fingerOf(e));
+    if (direction) scrollStep(direction);
+  },
+  { passive: true },
+);
+document.addEventListener(
+  "pointercancel",
+  (e) => {
+    if (fingerEvent(e)) swipe.cancel(e.pointerId);
+  },
+  { passive: true },
+);
 
 // ---- wide: one step per wheel gesture, through Observer (the gate is above)
 
@@ -602,8 +616,7 @@ for (const [act, index] of [
 
 // ---- layout changes between wide and touch
 function onLayoutChange(): void {
-  swipe.cancel();
-  finger = null;
+  swipe.reset();
   place(step, false);
 }
 touch.addEventListener("change", onLayoutChange);

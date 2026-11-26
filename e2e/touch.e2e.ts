@@ -38,7 +38,7 @@ test("the page does not scroll on touch: a swipe is a step", async ({
     return { snap: html.scrollSnapType, action: html.touchAction };
   });
   expect(css.snap).toBe("none");
-  expect(css.action).toBe("none");
+  expect(css.action).toBe("pinch-zoom");
   await page.keyboard.press("ArrowDown");
   await expect(page.locator("main.area")).toHaveAttribute("data-step", "1");
 });

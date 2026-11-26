@@ -157,3 +157,36 @@ export async function warmUpTouch(page: Page): Promise<void> {
   });
   await cdp.detach();
 }
+
+/**
+ * A two-finger pinch (CDP) about the middle of what is on screen: `scale` above 1
+ * spreads the fingers (zoom in), below 1 brings them together (zoom out).
+ * Resolves when the page's zoom has come to rest.
+ */
+export async function pinch(page: Page, scale: number): Promise<number> {
+  // CDP places the pinch in the visible part of a zoomed page
+  const { w, h } = await page.evaluate(() => ({
+    w: window.visualViewport?.width ?? innerWidth,
+    h: window.visualViewport?.height ?? innerHeight,
+  }));
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Input.synthesizePinchGesture", {
+    x: Math.round(w / 2),
+    y: Math.round(h / 2),
+    scaleFactor: scale,
+    relativeSpeed: 800,
+    gestureSourceType: "touch",
+  });
+  await cdp.detach();
+  let last = 0;
+  // the zoom settles over a few frames after the fingers lift
+  await expect
+    .poll(async () => {
+      const now = await page.evaluate(() => window.visualViewport?.scale ?? 1);
+      const still = now === last;
+      last = now;
+      return still;
+    })
+    .toBe(true);
+  return last;
+}

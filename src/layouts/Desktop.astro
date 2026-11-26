@@ -174,7 +174,8 @@ const workspacePaths = workspaces.map(
     margin: 0 7px 7px;
   }
 
-  /* Touch: the page never scrolls; a swipe is one step (src/lib/swipe.ts). */
+  /* Touch: the page never scrolls; a swipe is one step (src/lib/swipe.ts).
+     Pinch-zoom stays the browser's, and on a zoomed-in page one finger pans. */
   @media (max-width: 760px) {
     .area {
       margin: 0 5px 5px;
@@ -183,7 +184,12 @@ const workspacePaths = workspaces.map(
     :global(html),
     :global(body) {
       overscroll-behavior: none;
-      touch-action: none;
+      touch-action: pinch-zoom;
+    }
+
+    :global(html[data-zoomed="true"]),
+    :global(html[data-zoomed="true"] body) {
+      touch-action: manipulation;
     }
   }
 </style>
