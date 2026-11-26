@@ -1,7 +1,7 @@
 // The window manager: places the windows of the current step, re-tiles them
 // with GSAP Flip when the step changes, and turns wheel, keys and clicks into
-// steps. On touch the document scrolls natively with scroll-snap and this
-// script only follows the scroll position.
+// steps. On touch nothing scrolls: a swipe is one gesture and moves one step,
+// like a wheel flick (src/lib/swipe.ts).
 import { gsap } from "gsap";
 import { Flip } from "gsap/Flip";
 import { Observer } from "gsap/Observer";
@@ -11,6 +11,7 @@ import {
 } from "../lib/addresses";
 import { interpretKey } from "../lib/keys";
 import { windowChanges } from "../lib/signals";
+import { createSwipe } from "../lib/swipe";
 import { createWheelGate } from "../lib/wheel-gate";
 import {
   firstStepOf,
@@ -62,8 +63,6 @@ let open = false;
 let notFound = area.dataset.notFound === "true";
 /** The archive entered the address bar as a history entry of its own (Back closes it). */
 let archivePushed = false;
-/** An archive open that waits for a scroll to its step (touch). */
-let pendingArchive: string | null = null;
 const archiveEl = area.querySelector<HTMLElement>(
   '.pane[data-window="archive"]',
 );
@@ -326,14 +325,9 @@ document.addEventListener("click", (e) => {
   if (target?.closest("[data-archive-close]")) closeArchive();
 });
 
-/** Move to a step: re-tile on a wide screen, scroll the page on touch. */
+/** Move to a step and re-tile (wide screen and touch alike). */
 function goTo(n: number): void {
   const next = Math.max(0, Math.min(steps - 1, n));
-  if (touch.matches) {
-    // the scroll handler follows
-    window.scrollTo({ top: next * innerHeight, behavior: "instant" });
-    return;
-  }
   if (next === step) return;
   leave();
   step = next;
@@ -376,8 +370,6 @@ function restore(): void {
     staggerEntries();
   }
   place(step, true);
-  if (touch.matches)
-    window.scrollTo({ top: step * innerHeight, behavior: "instant" });
 }
 addEventListener("popstate", restore);
 
@@ -413,13 +405,8 @@ export function jumpToPath(path: string): boolean {
     return true;
   }
   // an archive address: go to its step, then open the archive on its entry
-  if (n !== step) {
-    jump(n);
-    if (touch.matches) pendingArchive = archive;
-    else openArchive(archive);
-  } else {
-    openArchive(archive);
-  }
+  if (n !== step) jump(n);
+  openArchive(archive);
   return true;
 }
 
@@ -449,28 +436,54 @@ document.addEventListener("click", (e) => {
   jumpToPath(url.pathname);
 });
 
-// ---- touch: follow native scroll-snap
-addEventListener(
-  "scroll",
-  () => {
-    if (!touch.matches) return;
-    const n = Math.max(
-      0,
-      Math.min(steps - 1, Math.round(scrollY / innerHeight)),
-    );
-    if (n === step) return;
-    leave();
-    step = n;
-    place(step, true);
-    follow(step);
-    if (pendingArchive !== null) {
-      const slug = pendingArchive;
-      pendingArchive = null;
-      openArchive(slug);
+// ---- touch: one step per swipe, through the pure gesture rule
+// The page never scrolls on touch (`touch-action: none`, see Desktop.astro), so
+// the browser has no scroll position to lose when its URL bar shows or hides.
+const swipe = createSwipe({ distance: 48, flick: 16, speed: 0.4 });
+
+/** The pointer of the swipe on its way: a second finger spends the gesture. */
+let finger: number | null = null;
+
+/** Touch input only: a mouse on a narrow window has the wheel. */
+const fingerEvent = (e: PointerEvent): boolean =>
+  touch.matches && e.pointerType === "touch";
+
+// Pointer events, not touch events: the browser can hand a gesture to its own
+// handling and stop sending `touchmove`, but the pointer stream keeps coming.
+document.addEventListener(
+  "pointerdown",
+  (e) => {
+    if (!fingerEvent(e)) return;
+    if (finger !== null) {
+      swipe.cancel();
+      return;
     }
+    finger = e.pointerId;
+    swipe.start(e.clientX, e.clientY, e.timeStamp);
   },
   { passive: true },
 );
+document.addEventListener(
+  "pointermove",
+  (e) => {
+    if (!fingerEvent(e) || e.pointerId !== finger) return;
+    const direction = swipe.move(e.clientX, e.clientY, e.timeStamp);
+    if (direction) scrollStep(direction);
+  },
+  { passive: true },
+);
+const lift = (e: PointerEvent) => {
+  if (e.pointerId !== finger) return;
+  finger = null;
+  if (e.type === "pointercancel") {
+    swipe.cancel();
+    return;
+  }
+  const direction = swipe.end(e.clientX, e.clientY, e.timeStamp);
+  if (direction) scrollStep(direction);
+};
+document.addEventListener("pointerup", lift, { passive: true });
+document.addEventListener("pointercancel", lift, { passive: true });
 
 // ---- wide: one step per wheel gesture, through Observer (the gate is above)
 
@@ -524,7 +537,7 @@ const stalls = (() => {
   };
 })();
 
-const wheel = Observer.create({
+Observer.create({
   target: window,
   type: "wheel",
   // every event, as it comes: debounced, Observer calls onWheel once a frame
@@ -589,34 +602,16 @@ for (const [act, index] of [
 
 // ---- layout changes between wide and touch
 function onLayoutChange(): void {
-  if (touch.matches) {
-    wheel.disable();
-    window.scrollTo({ top: step * innerHeight, behavior: "instant" });
-  } else {
-    wheel.enable();
-  }
+  swipe.cancel();
+  finger = null;
   place(step, false);
 }
 touch.addEventListener("change", onLayoutChange);
-
-let resizing: ReturnType<typeof setTimeout>;
-addEventListener("resize", () => {
-  clearTimeout(resizing);
-  resizing = setTimeout(() => {
-    if (touch.matches) {
-      window.scrollTo({ top: step * innerHeight, behavior: "instant" });
-    }
-  }, 120);
-});
 
 // ---- boot
 // the entry page says which step its address opens
 history.scrollRestoration = "manual";
 step = Math.max(0, Math.min(steps - 1, Number(area.dataset.bootStep ?? 0)));
-if (touch.matches) {
-  window.scrollTo({ top: step * innerHeight, behavior: "instant" });
-  wheel.disable();
-}
 area.dataset.open = "false";
 // /archive/ and an archive project's address boot with the archive open
 const bootArchive = notFound

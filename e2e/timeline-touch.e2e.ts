@@ -19,9 +19,7 @@ test("timeline, then education, then the lower window; opening gives education t
 }) => {
   await page.goto("/");
   await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
-  await page.evaluate(() =>
-    window.scrollTo({ top: 5 * innerHeight, behavior: "instant" }),
-  );
+  await page.locator(".ws button").nth(2).tap();
   await page.waitForTimeout(1300);
   const [t, e, s] = await Promise.all(
     ["timeline", "education", "skills"].map((id) => box(page, id)),

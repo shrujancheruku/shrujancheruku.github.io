@@ -66,17 +66,11 @@
   padding: 0;
 }
 
-/* A wide screen never scrolls: the desktop steps. Touch scrolls natively (see Desktop.astro). */
+/* The desktop steps; the page never scrolls, wide or touch (see Desktop.astro). */
 html,
 body {
   height: 100%;
-}
-
-@media (min-width: 761px) {
-  html,
-  body {
-    overflow: hidden;
-  }
+  overflow: hidden;
 }
 
 body {

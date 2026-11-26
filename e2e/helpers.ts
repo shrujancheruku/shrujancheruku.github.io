@@ -107,3 +107,53 @@ export async function flick(
   await Promise.all(sent);
   await cdp.detach();
 }
+
+/** Real touch swipes (CDP): the browser's own scrolling gets its chance to take them. */
+export type Swipe = { name: string; distance: number; ms: number };
+export const SWIPES: Swipe[] = [
+  { name: "short", distance: 60, ms: 120 },
+  { name: "long", distance: 380, ms: 400 },
+  { name: "fast", distance: 220, ms: 40 },
+];
+
+export async function swipe(page: Page, dir: 1 | -1, s: Swipe): Promise<void> {
+  const cdp = await page.context().newCDPSession(page);
+  const { w, h } = await page.evaluate(() => ({
+    w: innerWidth,
+    h: innerHeight,
+  }));
+  // finger moves up to go down a step
+  const x = Math.round(w / 2);
+  const y0 = Math.round(h / 2 + (dir * s.distance) / 2);
+  const frames = 4;
+  const touch = (type: "touchStart" | "touchMove" | "touchEnd", y: number) =>
+    cdp.send("Input.dispatchTouchEvent", {
+      type,
+      touchPoints: type === "touchEnd" ? [] : [{ x, y }],
+    });
+  await touch("touchStart", y0);
+  for (let i = 1; i <= frames; i++) {
+    await page.waitForTimeout(s.ms / frames);
+    await touch("touchMove", y0 - (dir * s.distance * i) / frames);
+  }
+  await touch("touchEnd", 0);
+  await cdp.detach();
+}
+
+/**
+ * The first touch in a fresh browser can be lost by the emulation, whatever
+ * the page does: spend it on a tap that moves nothing.
+ */
+export async function warmUpTouch(page: Page): Promise<void> {
+  const cdp = await page.context().newCDPSession(page);
+  const touchPoints = [{ x: 4, y: 4 }];
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints,
+  });
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
+  await cdp.detach();
+}
