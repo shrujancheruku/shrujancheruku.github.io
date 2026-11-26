@@ -11,7 +11,7 @@ test("at touch width the windows stack in one column and the bar shows numbers a
   expect(bar?.height).toBe(40);
   // numbers only: the names are not shown
   const names = page.locator(".ws .name");
-  await expect(names).toHaveCount(5);
+  await expect(names).toHaveCount(6);
   for (const name of await names.all()) await expect(name).toBeHidden();
 
   const boxes = await page.$$eval(".pane", (els) =>
@@ -46,12 +46,12 @@ test("the page does not scroll on touch: a swipe is a step", async ({
 test("tapping a number jumps to its workspace", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
-  await page.locator(".ws button").nth(4).tap();
+  await page.locator(".ws button").nth(5).tap();
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "4",
+    "5",
   );
-  await expect(page.locator(".ws button").nth(4)).toHaveAttribute(
+  await expect(page.locator(".ws button").nth(5)).toHaveAttribute(
     "aria-current",
     "true",
   );

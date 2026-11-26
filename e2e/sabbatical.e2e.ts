@@ -13,8 +13,8 @@ const shown = (page: Page) =>
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(area(page)).toHaveAttribute("data-ready", "true");
-  // key 4: the sabbatical workspace (step 6 of 8 on the way to touch scrolling)
-  await page.keyboard.press("4");
+  // key 5: the sabbatical workspace
+  await page.keyboard.press("5");
   await page.waitForTimeout(1100);
 });
 
@@ -87,8 +87,8 @@ for (const [name, emulation] of Object.entries(PHONES)) {
     const page = await browser.newPage(phone);
     await page.goto("/");
     await expect(area(page)).toHaveAttribute("data-ready", "true");
-    await page.locator(".ws button").nth(3).click();
-    await expect(area(page)).toHaveAttribute("data-workspace", "3");
+    await page.locator(".ws button").nth(4).click();
+    await expect(area(page)).toHaveAttribute("data-workspace", "4");
     await settle(page);
     await expect(area(page)).toHaveAttribute("data-screens", "1");
     expect(await shown(page)).toEqual([

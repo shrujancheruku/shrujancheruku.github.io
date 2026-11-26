@@ -97,6 +97,7 @@ const PROJECT_COPY_SHARE = 56;
 
 const WORKSPACE_NAMES = [
   ["opening", "opening"],
+  ["about", "about"],
   ["projects", "projects"],
   ["timeline", "timeline"],
   ["sabbatical", "sabbatical"],
@@ -149,6 +150,11 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
           },
         ],
       ),
+    ],
+    about: [
+      stepOf("about", { about: [0, 0, 100, 100] }, [
+        { about: [0, 0, 100, 100] },
+      ]),
     ],
     projects: projectSteps,
     timeline: [

@@ -6,6 +6,7 @@ import { compositions, PENDING } from "../compositions/registry";
 import { missingCompositions } from "../lib/composition-rules";
 import { archiveOf, copyOf, stackOf } from "../lib/project-copy";
 import type { Project } from "../lib/projects";
+import AboutWindow from "./AboutWindow.astro";
 import ArchiveWindow from "./ArchiveWindow.astro";
 import CompositionSlot from "./CompositionSlot.astro";
 import ContactWindow from "./ContactWindow.astro";
@@ -56,6 +57,9 @@ if (missing.length > 0)
   ]}
 />
 <NowWindow />
+
+<!-- about -->
+<AboutWindow />
 
 <!-- projects: one step per featured project -->
 {
