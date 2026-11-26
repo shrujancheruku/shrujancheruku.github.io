@@ -12,7 +12,7 @@ import {
   STEPS,
   STOPS,
 } from "./issho-session";
-import type { Composition, Kit } from "./kit";
+import { type Composition, type Kit, onPhone } from "./kit";
 
 const dots = (n: number): string =>
   `<span class="dash">${"<i></i>".repeat(n)}</span>`;
@@ -149,8 +149,6 @@ interface View {
 }
 
 let view: View;
-/** Whether the scene is on a phone; the kit knows, once the scene is built. */
-let onPhone = (): boolean => false;
 /** The index in STOPS the scene is on. */
 let at = 0;
 
@@ -194,7 +192,6 @@ function jump(kit: Kit, i: number, still: boolean): void {
 function build(kit: Kit): void {
   const { root, el } = kit;
   root.classList.add("is");
-  onPhone = () => kit.touch;
   const site = kit.pane("site", "site");
   const app = kit.pane("app", "app");
   const cities = kit.pane("launch cities", "cities");

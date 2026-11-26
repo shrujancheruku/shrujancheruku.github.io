@@ -4,7 +4,7 @@
 // seam. It shows its own theme switching on the scene only: the site's theme
 // is never touched. The rules and numbers are in unmacos-session.ts.
 import { THEMES, type ThemeName } from "../lib/themes";
-import type { Composition, Kit } from "./kit";
+import { type Composition, type Kit, onPhone } from "./kit";
 import {
   arrange,
   BEAT_MS,
@@ -309,8 +309,6 @@ function fit(tile: HTMLElement): void {
   }
 }
 
-/** Whether the scene is on a phone; the kit knows, once the scene is built. */
-let onPhone = (): boolean => false;
 /** Refits a tile whenever its size changes (a window moves, the screen turns). */
 let fitting: ResizeObserver | undefined;
 
@@ -418,7 +416,6 @@ function build(kit: Kit): void {
   const menu = el("div", "menu", "", root);
   const keys = el("div", "keys", "", root);
   view = { tn, desk, menu, keys };
-  onPhone = () => kit.touch;
   fitting = new ResizeObserver((entries) => {
     for (const e of entries) fit(e.target as HTMLElement);
   });

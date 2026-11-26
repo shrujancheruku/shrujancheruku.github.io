@@ -50,7 +50,7 @@ export interface Swipe {
 }
 
 /** Zoom within this of 1 is not zoomed in: float noise at the default scale. */
-const UNZOOMED = 1.01;
+export const UNZOOMED = 1.01;
 
 export function createSwipe({ distance, flick, speed }: SwipeOptions): Swipe {
   /** The fingers on the screen in this gesture. */

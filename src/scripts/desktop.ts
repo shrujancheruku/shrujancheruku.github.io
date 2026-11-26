@@ -13,7 +13,7 @@ import {
 import { interpretKey } from "../lib/keys";
 import { expandScreens, focusAmong, moveBy, type Screen } from "../lib/screens";
 import { windowChanges } from "../lib/signals";
-import { createSwipe } from "../lib/swipe";
+import { createSwipe, UNZOOMED } from "../lib/swipe";
 import { createWheelGate } from "../lib/wheel-gate";
 import {
   firstStepOf,
@@ -284,7 +284,7 @@ function settled(retiling: gsap.core.Timeline): void {
   if (retiling !== latest) return;
   area.dataset.retiling = "false";
   const waiting = gate.release();
-  if (waiting) scrollStep(waiting);
+  if (waiting) moveOneScreen(waiting);
 }
 
 /** Whether the step's disclosure is the archive (the projects workspace's). */
@@ -504,7 +504,7 @@ export function jumpToPath(path: string): boolean {
  * One screen up or down: on a wide screen a step is one screen, so this is one
  * step. Follows the address without a history entry.
  */
-export function scrollStep(direction: 1 | -1): void {
+export function moveOneScreen(direction: 1 | -1): void {
   const next = moveBy(
     { step, screen },
     direction,
@@ -547,7 +547,7 @@ const zoom = (): number => window.visualViewport?.scale ?? 1;
 
 // Zoomed in, one finger pans the zoomed page (Desktop.astro's `data-zoomed`).
 const markZoom = () => {
-  document.documentElement.dataset.zoomed = String(zoom() > 1.01);
+  document.documentElement.dataset.zoomed = String(zoom() > UNZOOMED);
 };
 window.visualViewport?.addEventListener("resize", markZoom);
 markZoom();
@@ -577,7 +577,7 @@ document.addEventListener(
   (e) => {
     if (!fingerEvent(e)) return;
     const direction = swipe.move(fingerOf(e));
-    if (direction) scrollStep(direction);
+    if (direction) moveOneScreen(direction);
   },
   { passive: true },
 );
@@ -586,7 +586,7 @@ document.addEventListener(
   (e) => {
     if (!fingerEvent(e)) return;
     const direction = swipe.up(fingerOf(e));
-    if (direction) scrollStep(direction);
+    if (direction) moveOneScreen(direction);
   },
   { passive: true },
 );
@@ -669,7 +669,7 @@ Observer.create({
       return;
     }
     const direction = gate.feed(e.timeStamp, e.deltaY, stall);
-    if (direction) scrollStep(direction);
+    if (direction) moveOneScreen(direction);
   },
 });
 
@@ -693,7 +693,7 @@ addEventListener("keydown", (e: KeyboardEvent) => {
     jump(firstStepOf(workspaces, command.index));
   } else if (command.type === "step" && !e.repeat) {
     e.preventDefault();
-    scrollStep(command.direction);
+    moveOneScreen(command.direction);
   }
 });
 
