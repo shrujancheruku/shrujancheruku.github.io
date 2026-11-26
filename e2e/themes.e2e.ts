@@ -160,7 +160,7 @@ for (const [kind, interact] of FIRST) {
     for (const tip of await tips.all())
       await expect(tip).toHaveCSS("opacity", "1");
     await expect(page.locator(".tip[data-tip]")).toContainText(
-      "workspaces 1 – 5",
+      "workspaces 1 – 6",
     );
     const animation = () =>
       page

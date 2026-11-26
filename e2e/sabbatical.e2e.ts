@@ -12,8 +12,8 @@ const shown = (page: Page) =>
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(area(page)).toHaveAttribute("data-ready", "true");
-  // key 4: the sabbatical workspace (step 6 of 8 on the way to touch scrolling)
-  await page.keyboard.press("4");
+  // key 5: the sabbatical workspace
+  await page.keyboard.press("5");
   await page.waitForTimeout(1100);
 });
 
@@ -69,8 +69,8 @@ test("on touch the copy window is one screen and the 2 × 2 grid the next", asyn
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await page.goto("/");
   await expect(area(page)).toHaveAttribute("data-ready", "true");
-  await page.locator(".ws button").nth(3).click();
-  await expect(area(page)).toHaveAttribute("data-workspace", "3");
+  await page.locator(".ws button").nth(4).click();
+  await expect(area(page)).toHaveAttribute("data-workspace", "4");
   await settle(page);
   await expect(page.locator('.pane[data-window="sabbatical"]')).toBeVisible();
   await expect(page.locator('.pane[data-window="photo-1"]')).toBeHidden();

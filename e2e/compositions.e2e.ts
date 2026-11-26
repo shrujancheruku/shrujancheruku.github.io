@@ -61,11 +61,11 @@ test("compositions are not loaded while the projects workspace is far off, and a
   await ready(page, "/contact/");
   await page.waitForTimeout(1500);
   expect(asked).toEqual([]);
-  await page.keyboard.press("4"); // sabbatical: still two away
+  await page.keyboard.press("5"); // sabbatical: still two away
   await settle(page);
   await page.waitForTimeout(500);
   expect(asked).toEqual([]);
-  await page.keyboard.press("3"); // timeline: next to projects
+  await page.keyboard.press("4"); // timeline: next to projects
   await expect(slot(page)).toHaveAttribute("data-mounted", "true");
   expect(asked).toHaveLength(1);
 });

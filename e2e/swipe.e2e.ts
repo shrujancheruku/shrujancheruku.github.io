@@ -98,6 +98,7 @@ for (const phone of PHONES) {
     // archive project opens on the last featured step with the archive open.
     const OPENS = [
       ["/", "opening", 0],
+      ["/about/", "about", 0],
       ["/work/", "projects", 0],
       ["/work/unmacos/", "projects", "unmacos"],
       ["/work/claude-orchestrate/", "projects", "last"],

@@ -8,7 +8,7 @@ test.describe("arriving directly at /contact/", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/contact/");
     await expect(area(page)).toHaveAttribute("data-ready", "true");
-    await expect(area(page)).toHaveAttribute("data-workspace", "4");
+    await expect(area(page)).toHaveAttribute("data-workspace", "5");
   });
 
   test("the terminal types $ contact, then the contact line and the four channels", async ({
@@ -86,9 +86,9 @@ test("returning to contact after leaving shows the command at once, without typi
 }) => {
   await page.goto("/");
   await expect(area(page)).toHaveAttribute("data-ready", "true");
-  // key 5 jumps to the contact workspace
-  await page.keyboard.press("5");
-  await expect(area(page)).toHaveAttribute("data-workspace", "4");
+  // key 6 jumps to the contact workspace
+  await page.keyboard.press("6");
+  await expect(area(page)).toHaveAttribute("data-workspace", "5");
   // the first arrival types the command; wait for it to finish
   await expect(win(page, "contact").locator(".row")).toHaveText(["$ contact"], {
     timeout: 4000,
@@ -96,8 +96,8 @@ test("returning to contact after leaving shows the command at once, without typi
 
   await page.keyboard.press("1");
   await expect(area(page)).toHaveAttribute("data-workspace", "0");
-  await page.keyboard.press("5");
-  await expect(area(page)).toHaveAttribute("data-workspace", "4");
+  await page.keyboard.press("6");
+  await expect(area(page)).toHaveAttribute("data-workspace", "5");
   // already typed once in this visit: the row is there at once
   await expect(win(page, "contact").locator(".row")).toHaveText(["$ contact"], {
     timeout: 100,

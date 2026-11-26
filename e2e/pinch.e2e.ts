@@ -119,8 +119,8 @@ for (const phone of PHONES) {
       await expect(page).toHaveURL(/\/contact\/$/);
       await settle(page);
       // a button: a workspace number
-      await page.locator(".ws button").nth(2).tap();
-      await expect(area(page)).toHaveAttribute("data-workspace", "2");
+      await page.locator(".ws button").nth(3).tap();
+      await expect(area(page)).toHaveAttribute("data-workspace", "3");
     });
   });
 }

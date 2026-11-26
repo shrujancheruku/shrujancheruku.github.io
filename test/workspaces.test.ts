@@ -26,12 +26,13 @@ const tile = (layout: Layout, id: string): Rect => {
   return r;
 };
 
-describe("the five workspaces", () => {
+describe("the six workspaces", () => {
   const ws = createWorkspaces({ featured: 4 });
 
   test("are fixed, in order", () => {
     expect(ws.map((w) => w.id)).toEqual([
       "opening",
+      "about",
       "projects",
       "timeline",
       "sabbatical",
@@ -41,7 +42,7 @@ describe("the five workspaces", () => {
 
   test("every workspace but projects is one step", () => {
     expect(ws.filter((w) => w.id !== "projects").map(stepsIn)).toEqual([
-      1, 1, 1, 1,
+      1, 1, 1, 1, 1,
     ]);
   });
 });
@@ -50,8 +51,8 @@ describe("steps inside the projects workspace", () => {
   test("hold one step per featured project, whatever the count", () => {
     for (const n of [3, 4, 6, 9]) {
       const ws = createWorkspaces({ featured: n });
-      expect(stepsIn(at(ws, 1))).toBe(n);
-      expect(stepCount(ws)).toBe(n + 4);
+      expect(stepsIn(at(ws, 2))).toBe(n);
+      expect(stepCount(ws)).toBe(n + 5);
     }
   });
 
@@ -66,23 +67,24 @@ describe("addressing steps", () => {
   const ws = createWorkspaces({ featured: 4 });
 
   test("firstStepOf gives the step a workspace begins on", () => {
-    expect([0, 1, 2, 3, 4].map((i) => firstStepOf(ws, i))).toEqual([
-      0, 1, 5, 6, 7,
+    expect([0, 1, 2, 3, 4, 5].map((i) => firstStepOf(ws, i))).toEqual([
+      0, 1, 2, 6, 7, 8,
     ]);
   });
 
   test("locate says which workspace a step is in, and where inside it", () => {
     expect(locate(ws, 0)).toEqual({ workspace: 0, index: 0, count: 1 });
-    expect(locate(ws, 3)).toEqual({ workspace: 1, index: 2, count: 4 });
-    expect(locate(ws, 7)).toEqual({ workspace: 4, index: 0, count: 1 });
+    expect(locate(ws, 1)).toEqual({ workspace: 1, index: 0, count: 1 });
+    expect(locate(ws, 4)).toEqual({ workspace: 2, index: 2, count: 4 });
+    expect(locate(ws, 8)).toEqual({ workspace: 5, index: 0, count: 1 });
   });
 
   test("stepAfter moves one step and stops at both ends", () => {
     expect(stepAfter(ws, 0, 1)).toBe(1);
-    expect(stepAfter(ws, 4, 1)).toBe(5);
-    expect(stepAfter(ws, 5, -1)).toBe(4);
+    expect(stepAfter(ws, 5, 1)).toBe(6);
+    expect(stepAfter(ws, 6, -1)).toBe(5);
     expect(stepAfter(ws, 0, -1)).toBe(0);
-    expect(stepAfter(ws, 7, 1)).toBe(7);
+    expect(stepAfter(ws, 8, 1)).toBe(8);
   });
 });
 
@@ -158,40 +160,46 @@ describe("the decided proportions", () => {
     expect(tile(desktop(0), "now")[1]).toBe(tile(desktop(0), "term")[3]);
   });
 
+  test("about: one window across the whole workspace", () => {
+    expect(desktop(1)).toEqual({ about: [0, 0, 100, 100] });
+    expect(at(at(ws, 1).steps, 0).focus).toBe("about");
+    expect(at(at(ws, 1).steps, 0).touch).toEqual([{ about: [0, 0, 100, 100] }]);
+  });
+
   test("a project step: copy 30% above the stack, composition 70%", () => {
-    const l = desktop(1);
+    const l = desktop(2);
     expect(tile(l, "copy-1")[2]).toBe(30);
     expect(tile(l, "stack")[2]).toBe(30);
     expect(tile(l, "comp-1")).toEqual([30, 0, 70, 100]);
   });
 
   test("the stack stays put from one project to the next", () => {
-    expect(tile(desktop(1, 0), "stack")).toEqual(tile(desktop(1, 3), "stack"));
+    expect(tile(desktop(2, 0), "stack")).toEqual(tile(desktop(2, 3), "stack"));
   });
 
   test("timeline: 62% window, 38% x 40% above 38% x 60%", () => {
-    const l = desktop(2);
+    const l = desktop(3);
     expect(tile(l, "timeline")[2]).toBe(62);
     expect(tile(l, "education").slice(2)).toEqual([38, 40]);
     expect(tile(l, "skills").slice(2)).toEqual([38, 60]);
   });
 
   test("sabbatical: copy 34%, four photos in a 2 x 2 grid", () => {
-    const l = desktop(3);
+    const l = desktop(4);
     expect(tile(l, "sabbatical")[2]).toBe(34);
     expect(tile(l, "photo-1").slice(2)).toEqual([33, 50]);
     expect(tile(l, "photo-4").slice(0, 2)).toEqual([67, 50]);
   });
 
   test("contact: terminal 58%, the opening's name (62%) above its terminal (38%)", () => {
-    const l = desktop(4);
+    const l = desktop(5);
     expect(tile(l, "contact")[2]).toBe(58);
     expect(tile(l, "name")[3]).toBe(62);
     expect(tile(l, "term")[3]).toBe(38);
   });
 
   test("touch contact: the terminal whole, then the name (62%) over the whoami terminal (38%)", () => {
-    const [first, second] = at(at(ws, 4).steps, 0).touch;
+    const [first, second] = at(at(ws, 5).steps, 0).touch;
     if (!first || !second) throw new Error("no touch screens");
     expect(first).toEqual({ contact: [0, 0, 100, 100] });
     expect(tile(second, "name")).toEqual([0, 0, 100, 62]);
@@ -201,7 +209,7 @@ describe("the decided proportions", () => {
 
 describe("the timeline's open variant (Education & Internships)", () => {
   const ws = createWorkspaces({ featured: 4 });
-  const step = at(at(ws, 2).steps, 0);
+  const step = at(at(ws, 3).steps, 0);
 
   test("closed it is the decided tiling", () => {
     expect(tilingOf(step, false)).toBe(step.desktop);
@@ -219,7 +227,7 @@ describe("the timeline's open variant (Education & Internships)", () => {
   });
 
   test("a step with no variant keeps its tiling when asked to open", () => {
-    const s = at(at(ws, 4).steps, 0);
+    const s = at(at(ws, 5).steps, 0);
     expect(tilingOf(s, true)).toBe(s.desktop);
     expect(screensOf(s, true)).toBe(s.touch);
     expect(focusOf(s, true)).toBe(s.focus);
@@ -236,7 +244,7 @@ describe("the timeline's open variant (Education & Internships)", () => {
 
 describe("the archive's open variant (projects)", () => {
   const ws = createWorkspaces({ featured: 4 });
-  const projects = at(ws, 1);
+  const projects = at(ws, 2);
 
   test("every project step squeezes into the left 42% and the archive takes the right 58%", () => {
     for (const step of projects.steps) {
@@ -278,13 +286,17 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
     expect(touch(0)).toHaveLength(1);
   });
 
+  test("about is one screen, its window whole", () => {
+    expect(ids(touch(1))).toEqual([["about"]]);
+  });
+
   test("contact is its terminal, then the name over the whoami terminal", () => {
-    expect(ids(touch(4))).toEqual([["contact"], ["name", "term"]]);
+    expect(ids(touch(5))).toEqual([["contact"], ["name", "term"]]);
   });
 
   test("a project is its copy, then its composition over the stack", () => {
     for (const i of [0, 1, 2, 3]) {
-      expect(ids(touch(1, i))).toEqual([
+      expect(ids(touch(2, i))).toEqual([
         [`copy-${i + 1}`],
         [`comp-${i + 1}`, "stack"],
       ]);
@@ -292,7 +304,7 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
   });
 
   test("the stack sits under the composition, with room for its rows", () => {
-    const [, second] = touch(1);
+    const [, second] = touch(2);
     expect(tile(second ?? {}, "comp-1")[1]).toBeLessThan(
       tile(second ?? {}, "stack")[1],
     );
@@ -300,11 +312,11 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
   });
 
   test("the timeline workspace is the timeline, then education, then skills, each whole", () => {
-    expect(ids(touch(2))).toEqual([["timeline"], ["education"], ["skills"]]);
+    expect(ids(touch(3))).toEqual([["timeline"], ["education"], ["skills"]]);
   });
 
   test("the sabbatical is its copy, then the four photos in a 2 x 2 grid", () => {
-    const [copy, photos] = touch(3);
+    const [copy, photos] = touch(4);
     expect(Object.keys(copy ?? {})).toEqual(["sabbatical"]);
     expect(Object.keys(photos ?? {}).sort()).toEqual([
       "photo-1",
@@ -316,7 +328,7 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
 
   test("wherever the projects count goes, every project has its two screens", () => {
     for (const n of [1, 3, 6, 9]) {
-      const projects = at(createWorkspaces({ featured: n }), 1);
+      const projects = at(createWorkspaces({ featured: n }), 2);
       expect(projects.steps.map((s) => s.touch.length)).toEqual(
         Array(n).fill(2),
       );

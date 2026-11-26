@@ -18,7 +18,7 @@ test("the timeline, then education, then skills, each the whole workspace; openi
   page,
 }) => {
   await ready(page, "/");
-  await page.locator(".ws button").nth(2).tap();
+  await page.locator(".ws button").nth(3).tap();
   await settle(page);
   // the timeline screens come first, alone
   expect((await box(page, "timeline")).shown).toBe(true);
@@ -35,11 +35,11 @@ test("the timeline, then education, then skills, each the whole workspace; openi
       if ((await box(page, id)).shown && !order.includes(id)) order.push(id);
     await page.keyboard.press("ArrowDown");
     await settle(page);
-    if ((await area(page).getAttribute("data-step")) !== "5") break;
+    if ((await area(page).getAttribute("data-step")) !== "6") break;
   }
   expect(order).toEqual(["timeline", "education", "skills"]);
 
-  await page.locator(".ws button").nth(2).tap();
+  await page.locator(".ws button").nth(3).tap();
   await settle(page);
   while (!(await box(page, "education")).shown) {
     await page.keyboard.press("ArrowDown");

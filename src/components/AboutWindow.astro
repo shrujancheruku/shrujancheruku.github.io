@@ -1,0 +1,78 @@
+---
+// The about window: a phone-screen amount of text about the founder, ending in
+// a highlighted line that leads into the projects. The text is in
+// src/lib/about.ts. The link is a real address; the desktop script turns a
+// click or tap into a jump.
+import { ABOUT } from "../lib/about";
+import Window from "./Window.astro";
+---
+
+<Window id="about" label={ABOUT.label}>
+  <div class="copy">
+    <h2>{ABOUT.heading}</h2>
+    <div class="text">
+      {ABOUT.paragraphs.map((p) => <p>{p}</p>)}
+    </div>
+    <a class="closing" href={ABOUT.closing.href}>{ABOUT.closing.text}</a>
+  </div>
+</Window>
+
+<style>
+  .copy {
+    position: absolute;
+    inset: 0;
+    padding: 34px 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  h2 {
+    font: 700 clamp(30px, 4.2cqw, 56px) / 1 var(--title);
+    letter-spacing: -0.02em;
+  }
+
+  .text {
+    max-width: 58ch;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    font: 400 clamp(15px, 1.6cqw, 20px) / 1.65 var(--mono);
+  }
+
+  .closing {
+    margin-top: auto;
+    align-self: flex-start;
+    color: var(--ac);
+    font: 500 16px / 1.45 var(--mono);
+    text-decoration: none;
+  }
+
+  .closing:hover,
+  .closing:focus-visible {
+    text-decoration: underline;
+    outline: none;
+  }
+
+  /* a phone screen holds the whole text with nothing to scroll */
+  @media (max-width: 760px) {
+    .copy {
+      padding: 32px 16px 16px;
+      gap: 12px;
+    }
+
+    h2 {
+      font-size: 30px;
+    }
+
+    .text {
+      gap: 10px;
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
+
+    .closing {
+      font-size: 15px;
+    }
+  }
+</style>
