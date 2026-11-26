@@ -4,8 +4,15 @@
 // step at once; a phone screen is too small for most of them, and nothing may
 // scroll, so a step is split into screens that each fit: its layouts one after
 // another (the stack beside the copy, then the composition), and a window with
-// more entries than fit one screen (the timeline) over as many screens as its
-// entries need. The step, and so the address, stays the same across them.
+// more entries than fit one screen (the archive, Education's roles) over as many
+// screens as its entries need. The step, and so the address, stays the same
+// across them.
+//
+// Why this stays: the timeline step is two phone screens by design, the
+// timeline and then education over skills (#108), and its screens come from
+// here. Every other step is one screen, and test/workspaces.test.ts pins that
+// premise, so a second screen elsewhere fails the test. The archive's pages on
+// touch also come from here.
 
 import type { Layout } from "./workspaces";
 

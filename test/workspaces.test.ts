@@ -328,3 +328,34 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
     }
   });
 });
+
+// The premise of the phone layout (#95): every step is one phone screen except
+// the timeline, which is two (the timeline, then education over skills, #108).
+// The multi-screen machinery in src/lib/screens.ts exists for that step alone,
+// so a second screen anywhere else, or a timeline of any other count, fails here.
+describe("the phone premise: one touch screen per step, two for the timeline", () => {
+  for (const featured of [1, 4, 6]) {
+    test(`with ${featured} featured: every step is one screen, the timeline's two`, () => {
+      for (const w of createWorkspaces({ featured })) {
+        for (const [i, step] of w.steps.entries()) {
+          const name = `${w.id} step ${i + 1}`;
+          const want = w.id === "timeline" ? 2 : 1;
+          expect({ step: name, screens: step.touch.length }).toEqual({
+            step: name,
+            screens: want,
+          });
+          // an open variant (Education, the archive) is one screen on touch
+          if (step.open) {
+            expect({
+              step: `${name} open`,
+              screens: step.open.touch.length,
+            }).toEqual({
+              step: `${name} open`,
+              screens: 1,
+            });
+          }
+        }
+      }
+    });
+  }
+});
