@@ -1,9 +1,9 @@
 import { devices, expect, type Page, test } from "@playwright/test";
 import { unseen } from "./fit";
-import { ready, settle, warmUpTouch, whereOf } from "./helpers";
+import { area, ready, settle, warmUpTouch, whereOf } from "./helpers";
 
-// On a phone the timeline and Education & Internships share one screen, and
-// the timeline's entries collapse to their headings: a tap opens one.
+// On a phone the timeline step is two screens: the timeline alone, its entries
+// collapsed to their headings (a tap opens one), then education over skills.
 
 const PHONES = {
   "Pixel 7": devices["Pixel 7"],
@@ -36,28 +36,40 @@ for (const [name, emulation] of Object.entries(PHONES)) {
     };
     test.use(phone);
 
-    test("the timeline step is two screens: timeline with education, then skills", async ({
+    test("the timeline step is exactly two screens, neither paged: the timeline, then education over skills", async ({
       page,
     }) => {
       await ready(page, "/timeline/");
       await warmUpTouch(page);
-      // the timeline and education are one screen; skills (which pages itself
-      // where it overflows, as before) follows
+      const screens = () =>
+        area(page).evaluate((a) => Number(a.dataset.screens));
+      expect(await screens()).toBe(2);
       expect((await whereOf(page)).screen).toBe(0);
       expect(await shown(page, "timeline")).toBe(true);
-      expect(await shown(page, "education")).toBe(true);
+      expect(await shown(page, "education")).toBe(false);
       expect(await shown(page, "skills")).toBe(false);
-      await expect(
-        page.locator('[data-window="timeline"] article'),
-      ).toHaveCount(5);
       await expect(
         page.locator('[data-window="timeline"] article:not([hidden])'),
       ).toHaveCount(5);
       expect(await unseen(page)).toEqual([]);
+
       await page.keyboard.press("ArrowDown");
       await settle(page);
-      expect(await shown(page, "skills")).toBe(true);
+      expect((await whereOf(page)).screen).toBe(1);
       expect(await shown(page, "timeline")).toBe(false);
+      expect(await shown(page, "education")).toBe(true);
+      expect(await shown(page, "skills")).toBe(true);
+      expect(await unseen(page)).toEqual([]);
+      // no window pages: one more step moves on, never to a third screen
+      expect(await screens()).toBe(2);
+      // every skill, language and hobby is still there
+      await expect(page.locator('[data-window="skills"] .fill')).toHaveCount(5);
+      await expect(
+        page.locator('[data-window="skills"] .langs li'),
+      ).toHaveCount(5);
+      await expect(
+        page.locator('[data-window="skills"] [data-hobby]'),
+      ).toHaveCount(9);
     });
 
     test("entries open by tap and by keyboard, one at a time, and everything still fits", async ({
@@ -111,15 +123,20 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       const box = await dl.boundingBox();
       expect(box && first && box.y < first.y).toBe(true);
 
+      // education is on the second screen; opening it takes the workspace
+      await page.keyboard.press("ArrowDown");
+      await settle(page);
       await page.locator("[data-disclosure=education]").tap();
       await settle(page);
       expect(await shown(page, "timeline")).toBe(false);
+      expect(await shown(page, "skills")).toBe(false);
       expect(await shown(page, "education")).toBe(true);
       expect(await unseen(page)).toEqual([]);
       await page.locator("[data-disclosure=education]").tap();
       await settle(page);
-      expect(await shown(page, "timeline")).toBe(true);
-      expect((await whereOf(page)).screen).toBe(0);
+      expect(await shown(page, "education")).toBe(true);
+      expect(await shown(page, "skills")).toBe(true);
+      expect((await whereOf(page)).screen).toBe(1);
     });
   });
 }

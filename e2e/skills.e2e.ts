@@ -75,12 +75,14 @@ test("hobbies are the tree with three folders and nine hobbies", async ({
   await expect(skills).toContainText("tree ~/hobbies");
   const tree = skills.getByRole("list", { name: "hobbies" });
   await expect(tree.locator("[data-hobby]")).toHaveCount(9);
-  // every row the list owns is an item: three folders and nine hobbies, and
-  // the prompt line sits outside it
-  const roles = await tree.evaluate((el) =>
-    [...el.children].map((c) => c.getAttribute("role")),
+  // every row the list owns is an item (inside the folder wrappers, which are
+  // plain boxes): three folders and nine hobbies, and the prompt line sits
+  // outside it
+  await expect(tree.getByRole("listitem")).toHaveCount(12);
+  const rows = await tree.evaluate((el) =>
+    [...el.querySelectorAll(".row")].map((c) => c.getAttribute("role")),
   );
-  expect(roles).toEqual(Array(12).fill("listitem"));
+  expect(rows).toEqual(Array(12).fill("listitem"));
   await expect(tree.locator(".hit")).toHaveText([
     "hiking",
     "photography",

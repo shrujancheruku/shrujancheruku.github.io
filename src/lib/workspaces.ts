@@ -165,11 +165,11 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
           education: [62, 0, 38, 40],
           skills: [62, 40, 38, 60],
         },
-        // the timeline (its entries collapsed to headings) over education on
-        // one screen, then skills
+        // two screens: the timeline alone (its entries collapsed to headings),
+        // then education over skills
         [
-          { timeline: [0, 0, 100, 67], education: [0, 67, 100, 33] },
-          { skills: [0, 0, 100, 100] },
+          { timeline: [0, 0, 100, 100] },
+          { education: [0, 0, 100, 31], skills: [0, 31, 100, 69] },
         ],
         {
           // Education & Internships open: it takes the right column and the
