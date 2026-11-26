@@ -2,7 +2,8 @@
 // The status bar strip. Left: the workspace numbers with their names (numbers
 // only on touch). Right: four icon toggles (home, contact, crt effect, theme)
 // and a clock on desktop. Each toggle carries a tooltip that shows on hover or
-// focus, and is written out as a staircase until the first interaction.
+// focus, and is written out as a staircase until the first interaction (on
+// desktop only: a phone has no keys to name, so it never shows one).
 import { swatch, THEME_NAMES, THEMES } from "../lib/themes";
 import type { Workspace } from "../lib/workspaces";
 
@@ -395,13 +396,9 @@ const { workspaces } = Astro.props;
     }
   }
 
-  /* on touch: the four without key labels, and no workspaces tip (no keys there) */
+  /* on touch there are no keys to name, so no tooltip is written out, idle or not */
   @media (hover: none) {
-    :global(body.idle) .tip kbd {
-      display: none;
-    }
-
-    :global(body.idle) .ws .tip {
+    :global(body.idle) .tip {
       display: none;
     }
   }

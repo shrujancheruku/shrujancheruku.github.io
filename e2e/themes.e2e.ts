@@ -174,7 +174,7 @@ for (const [kind, interact] of FIRST) {
   });
 }
 
-test("on touch the written-out tooltips vanish on the first touch", async ({
+test("on touch no tooltip is written out, before or after the first touch", async ({
   browser,
 }) => {
   const page = await (
@@ -186,8 +186,8 @@ test("on touch the written-out tooltips vanish on the first touch", async ({
   ).newPage();
   await ready(page);
   const shown = page.locator(".tip:visible");
-  // the workspaces tooltip is not shown on touch
-  await expect(shown).toHaveCount(4);
+  // a phone has no keys to name, so none of the tooltips shows while idle
+  await expect(shown).toHaveCount(0);
   // a touch alone, with no pointer or key event alongside it
   await page.evaluate(() =>
     document.body.dispatchEvent(
