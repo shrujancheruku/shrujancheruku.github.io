@@ -31,6 +31,9 @@ export async function settle(page: Page): Promise<void> {
  * `selector` on every frame until the re-tile it starts has ended. A reading
  * per frame catches an animation part way, however fast or slow the machine
  * runs it, where one sample after a fixed sleep may land before or after it.
+ * The first reading is taken, and a frame recorded, before `action` runs: on a
+ * busy machine the recorder's first frame can otherwise come after the re-tile
+ * has started, so the "before" reading is already part way or at the end.
  */
 export async function framesOf(
   page: Page,
@@ -47,11 +50,17 @@ export async function framesOf(
         what === "left"
           ? e.getBoundingClientRect().left
           : Number(getComputedStyle(e).opacity);
-      const tick = () => {
+      const record = () =>
         w.__frames.push([...document.querySelectorAll(sel)].map(read));
-        if (!w.__stop) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
+      record();
+      return new Promise<void>((recording) => {
+        const tick = () => {
+          record();
+          recording();
+          if (!w.__stop) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
     },
     [selector, measure] as const,
   );
