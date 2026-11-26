@@ -16,7 +16,7 @@ const { id, label, exchanges } = Astro.props;
 ---
 
 <Window id={id} label={label}>
-  <div class="term" data-terminal={JSON.stringify(exchanges)}>
+  <div class="term" data-terminal={JSON.stringify(exchanges)} data-manual={id === "term" && import.meta.env.DEV ? "" : undefined}>
     <div class="log"></div>
     <div class="line">
       <span class="p">❯ </span><span class="typed"></span><span class="cur"> </span>
