@@ -8,7 +8,7 @@ import { gsap } from "gsap";
 import { Observer } from "gsap/Observer";
 import { notFoundTitle as NOT_FOUND_TITLE } from "../lib/addresses";
 import { interpretKey } from "../lib/keys";
-import { collapsed, edgeOf, sortChanges } from "../lib/motion";
+import { collapsed, edgeOf, rollOf, sortChanges } from "../lib/motion";
 import {
   anchorOf,
   type EntriesOf,
@@ -42,6 +42,9 @@ gsap.registerPlugin(Observer);
 /** How long a step's motion takes, in seconds. */
 const MOVE = 0.32;
 const EASE = "power3.out";
+/** Rolling past: one project gives way to the next inside its tile. */
+const ROLL = 0.38;
+const ROLL_EASE = "power3.inOut";
 /** A window opening fades in over its first this long; closing, its last. */
 const FADE = 0.12;
 /** Reduced motion: no timeline, the windows are simply there. */
@@ -78,6 +81,8 @@ let screenBeforeOpen = 0;
 let shown: Layout | null = null;
 /** The workspace of the layout on show. */
 let shownWorkspace = -1;
+/** Where the layout on show sits in the order of steps and screens. */
+let shownOrder = -1;
 /** The current step's disclosure (Education & Internships) is open. */
 let open = false;
 /** An unknown path booted the desktop: the not-found terminal is on show. */
@@ -210,6 +215,9 @@ function place(n: number, animate: boolean): void {
   const focus = focusAmong(layout, focusOf(stepAt(workspaces, n), open));
   const before = shown;
   const beforeWorkspace = shownWorkspace;
+  const order = n * 1000 + screen;
+  const direction = order >= shownOrder ? 1 : -1;
+  shownOrder = order;
   // a motion still running ends here: its windows go to rest first
   const interrupted = stopMotion();
 
@@ -266,7 +274,12 @@ function place(n: number, animate: boolean): void {
     gate.hold();
     // for the page and its tests: a motion is running until `settled`
     area.dataset.retiling = "true";
-    latest = motionBetween(before, layout, workspace === beforeWorkspace);
+    latest = motionBetween(
+      before,
+      layout,
+      workspace === beforeWorkspace,
+      direction,
+    );
   } else if (interrupted) {
     area.dataset.retiling = "false";
     gate.release();
@@ -308,9 +321,11 @@ function motionBetween(
   before: Layout,
   after: Layout,
   sameWorkspace: boolean,
+  direction: 1 | -1,
 ): gsap.core.Timeline {
   const leaving: HTMLElement[] = [];
   const faded: HTMLElement[] = [];
+  const rolled: HTMLElement[] = [];
   const timeline = gsap.timeline({
     onComplete: () => {
       if (timeline !== latest) return;
@@ -331,6 +346,24 @@ function motionBetween(
     if (!pane) continue;
     if (c.from && c.to) {
       tween(pane, c.from, c.to);
+    } else if (c.motion === "rolling past") {
+      // the tile stays; the window slides through it, clipped to the tile
+      if (c.from) {
+        pane.style.display = "block";
+        Object.assign(pane.style, css(c.from));
+        leaving.push(pane);
+      }
+      const roll = rollOf(direction, pane.offsetHeight);
+      const [start, end] = c.to
+        ? [roll.in.from, roll.rest]
+        : [roll.rest, roll.out.to];
+      timeline.fromTo(
+        pane,
+        { y: start.y, clipPath: start.clip },
+        { y: end.y, clipPath: end.clip, duration: ROLL, ease: ROLL_EASE },
+        0,
+      );
+      rolled.push(pane);
     } else if (touch.matches) {
       // the phone's motions are their own ticket
     } else if (c.motion === "opening" && c.to) {
@@ -357,10 +390,11 @@ function motionBetween(
     }
   }
   // a step whose windows only appear and go still takes the step's time
-  timeline.set({}, {}, MOVE);
+  timeline.set({}, {}, rolled.length > 0 ? ROLL : MOVE);
   rest = () => {
     for (const pane of leaving) pane.style.display = "none";
     gsap.set(faded, { clearProps: "opacity" });
+    gsap.set(rolled, { clearProps: "transform,clipPath" });
   };
   return timeline;
 }
