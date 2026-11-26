@@ -26,6 +26,14 @@ export async function settle(page: Page): Promise<void> {
   });
 }
 
+/** A window's rectangle on the screen, in px. */
+export interface Box {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 /**
  * Run `action`, and record `measure`'s reading of the elements matching
  * `selector` on every frame until the re-tile it starts has ended. A reading
@@ -34,22 +42,41 @@ export async function settle(page: Page): Promise<void> {
  * The first reading is taken, and a frame recorded, before `action` runs: on a
  * busy machine the recorder's first frame can otherwise come after the re-tile
  * has started, so the "before" reading is already part way or at the end.
+ * `rect` reads each element's whole rectangle, `left` and `top` one side.
  */
 export async function framesOf(
   page: Page,
   selector: string,
-  measure: "opacity" | "left",
+  measure: "opacity" | "left" | "top",
   action: () => Promise<unknown>,
-): Promise<number[][]> {
+): Promise<number[][]>;
+export async function framesOf(
+  page: Page,
+  selector: string,
+  measure: "rect",
+  action: () => Promise<unknown>,
+): Promise<Box[][]>;
+export async function framesOf(
+  page: Page,
+  selector: string,
+  measure: "opacity" | "left" | "top" | "rect",
+  action: () => Promise<unknown>,
+): Promise<(number | Box)[][]> {
   await page.evaluate(
     ([sel, what]) => {
-      const w = window as unknown as { __frames: number[][]; __stop: boolean };
+      const w = window as unknown as {
+        __frames: unknown[][];
+        __stop: boolean;
+      };
       w.__frames = [];
       w.__stop = false;
-      const read = (e: Element) =>
-        what === "left"
-          ? e.getBoundingClientRect().left
-          : Number(getComputedStyle(e).opacity);
+      const read = (e: Element) => {
+        if (what === "opacity") return Number(getComputedStyle(e).opacity);
+        const { left, top, width, height } = e.getBoundingClientRect();
+        if (what === "left") return left;
+        if (what === "top") return top;
+        return { left, top, width, height };
+      };
       const record = () =>
         w.__frames.push([...document.querySelectorAll(sel)].map(read));
       record();
@@ -67,7 +94,10 @@ export async function framesOf(
   await action();
   await settle(page);
   return page.evaluate(() => {
-    const w = window as unknown as { __frames: number[][]; __stop: boolean };
+    const w = window as unknown as {
+      __frames: (number | Box)[][];
+      __stop: boolean;
+    };
     w.__stop = true;
     return w.__frames;
   });
