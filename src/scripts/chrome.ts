@@ -113,5 +113,45 @@ const wake = (): void => {
 for (const type of ["pointerdown", "keydown", "wheel", "touchstart"])
   addEventListener(type, wake, { capture: true, passive: true });
 
+// ---- the cue to move between steps: its text for this device, and the edges
+// a step cannot go past (the first screen of the first step, the last of the last)
+const cue = document.querySelector<HTMLElement>("[data-cue]");
+const cueText = cue?.querySelector<HTMLElement>("[data-cue-text]");
+const area = document.querySelector<HTMLElement>("main.area");
+const swiping = matchMedia("(hover: none) and (max-width: 760px)");
+const lastStep: number = (() => {
+  try {
+    const book = JSON.parse(
+      document.getElementById("desktop-addresses")?.textContent ?? "{}",
+    );
+    return (book.byStep?.length ?? 1) - 1;
+  } catch {
+    return 0;
+  }
+})();
+
+function showCue(): void {
+  if (!cue || !area) return;
+  if (cueText)
+    cueText.textContent =
+      (swiping.matches ? cueText.dataset.touch : cueText.dataset.keys) ?? "";
+  const step = Number(area.dataset.step ?? 0);
+  const screen = Number(area.dataset.screen ?? 0);
+  const screens = Number(area.dataset.screens ?? 1);
+  cue.dataset.edge =
+    step === 0 && screen === 0
+      ? "first"
+      : step >= lastStep && screen >= screens - 1
+        ? "last"
+        : "";
+}
+if (area)
+  new MutationObserver(showCue).observe(area, {
+    attributes: true,
+    attributeFilter: ["data-step", "data-screen", "data-screens"],
+  });
+swiping.addEventListener("change", showCue);
+showCue();
+
 showTheme();
 showCrt();
