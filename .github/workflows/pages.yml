@@ -12,10 +12,12 @@ on:
 permissions:
   contents: read
 
-# One deploy at a time; a queued deploy is not cancelled mid-flight.
+# One run per ref at a time. A newer commit on a pull request cancels that PR's
+# older run; every other event (master push, schedule, dispatch) deploys, so it
+# is never cancelled and a newer one queues behind it.
 concurrency:
   group: pages-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -44,16 +46,47 @@ jobs:
         run: bun run build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: End-to-end tests (against the production build)
-        run: bun run test:e2e
+      # The shards test this exact build; hidden files are kept so dist is whole.
+      - name: Keep dist for the end-to-end shards
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          include-hidden-files: true
+          retention-days: 1
       - name: Upload the Pages artifact
         if: (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
         uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
-  deploy:
+  # The end-to-end tests, 4 shards in parallel against the build's dist. Two
+  # workers per shard (playwright.config.ts): a busier runner slows the CRT's
+  # frames and makes the timing tests flaky.
+  e2e:
     needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    name: e2e (${{ matrix.shard }}/4)
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: End-to-end tests (shard ${{ matrix.shard }} of 4, against the production build)
+        run: bunx playwright test --shard=${{ matrix.shard }}/4 --workers=2
+
+  deploy:
+    needs: [build, e2e]
     if: (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
