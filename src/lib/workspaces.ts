@@ -92,6 +92,9 @@ const squeeze = (layout: Layout, share: number): Layout =>
     ]),
   );
 
+/** The share of a phone screen a project's copy takes; the composition has the rest. */
+const PROJECT_COPY_SHARE = 56;
+
 const WORKSPACE_NAMES = [
   ["opening", "opening"],
   ["projects", "projects"],
@@ -112,11 +115,13 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
     return stepOf(
       comp,
       desktop,
-      // a phone cannot hold the three windows: the copy, then the composition
-      // over the stack (its rows need a window of their own height)
+      // a phone drops the stack and holds the project on one screen: the copy
+      // over the composition (the archive opens from the copy)
       [
-        { [copy]: [0, 0, 100, 100] },
-        { [comp]: [0, 0, 100, 60], stack: [0, 60, 100, 40] },
+        {
+          [copy]: [0, 0, 100, PROJECT_COPY_SHARE],
+          [comp]: [0, PROJECT_COPY_SHARE, 100, 100 - PROJECT_COPY_SHARE],
+        },
       ],
       // the archive open: the workspace squeezes into the left 42%, the archive
       // takes the right 58% and focus; on touch it takes the whole workspace
