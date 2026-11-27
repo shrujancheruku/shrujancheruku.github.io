@@ -1,8 +1,8 @@
 // The window manager: places the windows of the current step, moves them when
 // the step changes (src/lib/motion.ts plans the motion, src/scripts/
-// motion-player.ts plays it), and turns wheel, keys and clicks into steps. On touch nothing scrolls: a swipe is
-// one gesture and moves one screen, like a wheel flick moves one step
-// (src/lib/swipe.ts). A step is one or more screens on touch
+// motion-player.ts plays it), and turns wheel, keys and clicks into steps. On
+// touch nothing scrolls: a swipe is one gesture and moves one screen, like a
+// wheel flick moves one step (src/lib/swipe.ts). A step is one or more screens on touch
 // (src/lib/screens.ts), the same step and address.
 // Where the visitor is, and what to do with each input (wait, run, or turn the
 // running motion back), is the navigator's (src/lib/navigator.ts): this script
