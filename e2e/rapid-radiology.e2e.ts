@@ -1,12 +1,12 @@
 import { expect, type Page, test } from "@playwright/test";
+import { ready } from "./helpers";
 
 test.describe.configure({ timeout: 120_000 });
 
 const slot = (page: Page) =>
   page.locator('[data-composition="rapid-radiology"]');
 const open = async (page: Page) => {
-  await page.goto("/work/rapid-radiology/");
-  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
+  await ready(page, "/work/rapid-radiology/");
 };
 const KEY = "■ from your findings · the rest is your template, word for word";
 
