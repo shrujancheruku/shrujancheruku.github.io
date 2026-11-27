@@ -7,7 +7,20 @@
 // the order windows start moving in, how far they travel, no frame jumping,
 // and the final rectangles.
 import { expect, type Page, test } from "@playwright/test";
-import { area, type Box, framesOf, ready, settle } from "./helpers";
+import {
+  areaBox,
+  areaOverflow,
+  expectWorkspace,
+  goTo,
+  type InPage,
+  isRetiling,
+  keyOf,
+  probe,
+  ready,
+  settle,
+  type WorkspaceId,
+} from "./desktop";
+import { type Box, framesOf } from "./helpers";
 
 /** The desktop's opening and contact windows, by workspace. */
 const OPENING = ["name", "term", "now"] as const;
@@ -38,7 +51,7 @@ async function sample(
   ids: readonly string[],
   action: () => Promise<unknown>,
 ): Promise<Run> {
-  const a = await area(page).boundingBox();
+  const a = await areaBox(page);
   if (!a) throw new Error("no area");
   const selector = ids.map((id) => `.pane[data-window="${id}"]`).join(", ");
   const order = await page.$$eval(selector, (els) =>
@@ -62,11 +75,7 @@ async function sample(
     const now = await page.evaluate(() => Date.now());
     await page.clock.pauseAt(new Date(now + 1000));
     await action();
-    for (
-      let f = 0;
-      f < 400 && (await area(page).getAttribute("data-retiling")) !== "false";
-      f++
-    )
+    for (let f = 0; f < 400 && (await isRetiling(page)); f++)
       await page.clock.runFor(FRAME);
     await page.clock.resume();
   });
@@ -100,17 +109,19 @@ async function sample(
  * from the area's top, as the key builds the timeline (GSAP draws a tween's
  * start at once), not on a sampled frame that may come after it moved.
  */
-function pressReading(
+async function pressReading(
   page: Page,
-  key: string,
+  to: WorkspaceId,
   ids: readonly string[],
 ): Promise<Record<string, number>> {
+  const key = await keyOf(page, to);
+  await probe(page);
   return page.evaluate(
     ([key, ids]) => {
       document.body.dispatchEvent(
         new KeyboardEvent("keydown", { key, bubbles: true }),
       );
-      const a = document.querySelector("main.area")?.getBoundingClientRect();
+      const a = (window as unknown as InPage).desktopNow()?.box;
       return Object.fromEntries(
         ids.map((id) => {
           const p = document
@@ -126,7 +137,7 @@ function pressReading(
 
 const near = (a: number, b: number, within = 1) => Math.abs(a - b) <= within;
 
-const shown = (tops: (number | null)[]): number[] =>
+const present = (tops: (number | null)[]): number[] =>
   tops.filter((t): t is number => t !== null);
 
 /** The first frame on which a window has moved more than a pixel from where it began. */
@@ -152,17 +163,17 @@ test("going to a higher workspace, the old windows slide up and off in tiling or
   await settle(page);
   let start: Record<string, number> = {};
   const run = await sample(page, [...OPENING, ...ABOUT], async () => {
-    start = await pressReading(page, "4", ABOUT);
+    start = await pressReading(page, "about", ABOUT);
   });
 
   // the old windows only go up, and end off the area
   for (const id of OPENING) {
-    const tops = shown(run.tops[id] ?? []);
+    const tops = present(run.tops[id] ?? []);
     expect(monotone(tops, -1)).toBe(true);
     expect(tops.at(-1) ?? 0).toBeLessThan(0);
   }
   // the next come up from below, and land on their tile
-  const arriving = shown(run.tops.about ?? []);
+  const arriving = present(run.tops.about ?? []);
   expect(start.about).toBeGreaterThanOrEqual(run.height);
   expect(Math.max(...arriving)).toBeLessThanOrEqual((start.about ?? 0) + 0.5);
   expect(monotone(arriving, -1)).toBe(true);
@@ -183,7 +194,7 @@ test("going to a higher workspace, the old windows slide up and off in tiling or
 
   // no frame jumps: a step between frames is never the whole screen
   for (const id of [...OPENING, ...ABOUT])
-    shown(run.tops[id] ?? []).forEach((t, i, all) => {
+    present(run.tops[id] ?? []).forEach((t, i, all) => {
       if (i > 0)
         expect(Math.abs(t - (all[i - 1] ?? t))).toBeLessThan(run.height);
     });
@@ -197,14 +208,14 @@ test("going to a lower workspace is the reverse: the old go down and the next co
   await settle(page);
   let start: Record<string, number> = {};
   const run = await sample(page, [...OPENING, ...ABOUT], async () => {
-    start = await pressReading(page, "1", OPENING);
+    start = await pressReading(page, "opening", OPENING);
   });
 
-  const leaving = shown(run.tops.about ?? []);
+  const leaving = present(run.tops.about ?? []);
   expect(monotone(leaving, 1)).toBe(true);
   expect(leaving.at(-1) ?? 0).toBeGreaterThanOrEqual(run.height);
   for (const id of OPENING) {
-    const tops = shown(run.tops[id] ?? []);
+    const tops = present(run.tops[id] ?? []);
     expect(start[id]).toBeLessThan(0);
     expect(Math.min(...tops)).toBeGreaterThanOrEqual((start[id] ?? 0) - 0.5);
     expect(monotone(tops, 1)).toBe(true);
@@ -233,9 +244,10 @@ test("a jump of several workspaces travels one screen, like a jump of one", asyn
   await settle(page);
   let start = Number.NaN;
   const far = await sample(page, [...CONTACT], async () => {
-    start = (await pressReading(page, "6", ["contact"])).contact ?? Number.NaN;
+    start =
+      (await pressReading(page, "contact", ["contact"])).contact ?? Number.NaN;
   });
-  const arriving = shown(far.tops.contact ?? []);
+  const arriving = present(far.tops.contact ?? []);
   // it comes from one screen below, not five
   expect(start).toBeGreaterThanOrEqual(far.height);
   expect(start).toBeLessThan(far.height * 1.2);
@@ -245,8 +257,8 @@ test("a jump of several workspaces travels one screen, like a jump of one", asyn
   expect(near(far.last.contact?.width ?? -1, 58)).toBe(true);
 
   // and back, down one screen
-  const back = await sample(page, [...CONTACT], () => page.keyboard.press("1"));
-  const leaving = shown(back.tops.contact ?? []);
+  const back = await sample(page, [...CONTACT], () => goTo(page, "opening"));
+  const leaving = present(back.tops.contact ?? []);
   expect(monotone(leaving, 1)).toBe(true);
   expect(leaving.at(-1) ?? 0).toBeGreaterThanOrEqual(back.height);
   expect(leaving.at(-1) ?? 0).toBeLessThan(back.height * 1.2);
@@ -258,11 +270,11 @@ test("the name travels with each workspace: a clone leaves while the real pane a
 }) => {
   await ready(page, "/");
   await settle(page);
-  const run = await sample(page, [...CONTACT], () => page.keyboard.press("6"));
+  const run = await sample(page, [...CONTACT], () => goTo(page, "contact"));
 
   // the real name comes up from below onto the contact workspace's tile
   // (before it moves, the real pane stands on the old tile, hidden by its clone)
-  const all = shown(run.tops.name ?? []);
+  const all = present(run.tops.name ?? []);
   const name = all.slice(all.findIndex((t) => t >= run.height));
   expect(name.length).toBeGreaterThan(1);
   expect(name[0] ?? 0).toBeGreaterThanOrEqual(run.height);
@@ -282,28 +294,31 @@ test("the area is clipped during the change and the clip is gone afterwards", as
 }) => {
   await ready(page, "/");
   await settle(page);
-  const before = await area(page).evaluate((e) => e.style.overflow);
+  const before = await areaOverflow(page);
+  const key = await keyOf(page, "timeline");
+  await probe(page);
   const clip = await page.evaluate(
-    () =>
+    (key) =>
       new Promise<string[]>((done) => {
-        const el = document.querySelector<HTMLElement>("main.area");
-        if (!el) throw new Error("no area");
+        const now = (window as unknown as InPage).desktopNow;
+        if (!now()) throw new Error("no area");
         const seen: string[] = [];
         const read = () => {
-          if (el.dataset.retiling === "true") seen.push(el.style.overflow);
-          if (el.dataset.retiling === "false" && seen.length > 0)
-            return done(seen);
+          const d = now();
+          if (d?.retiling) seen.push(d.overflow);
+          if (d && !d.retiling && seen.length > 0) return done(seen);
           requestAnimationFrame(read);
         };
         requestAnimationFrame(read);
         document.dispatchEvent(
-          new KeyboardEvent("keydown", { key: "2", bubbles: true }),
+          new KeyboardEvent("keydown", { key, bubbles: true }),
         );
       }),
+    key,
   );
   expect(clip.length).toBeGreaterThan(0);
   expect(new Set(clip)).toEqual(new Set(["hidden"]));
-  expect(await area(page).evaluate((e) => e.style.overflow)).toBe(before);
+  expect(await areaOverflow(page)).toBe(before);
 });
 
 test("Back after a workspace change settles on the workspace before with no clone left", async ({
@@ -311,11 +326,11 @@ test("Back after a workspace change settles on the workspace before with no clon
 }) => {
   await ready(page, "/");
   await settle(page);
-  await page.keyboard.press("6");
+  await goTo(page, "contact");
   await settle(page);
   await page.goBack();
   await settle(page);
-  await expect(area(page)).toHaveAttribute("data-workspace", "0");
+  await expectWorkspace(page, "opening");
   await expectNoClone(page);
 });
 
@@ -324,13 +339,13 @@ test("a change turned back by another leaves no clone and every window at rest",
 }) => {
   await ready(page, "/");
   await settle(page);
-  await page.keyboard.press("6");
+  await goTo(page, "contact");
   await page.waitForFunction(
     () => document.querySelectorAll(".pane[data-clone]").length > 0,
   );
-  await page.keyboard.press("1");
+  await goTo(page, "opening");
   await settle(page);
   await expectNoClone(page);
-  await expect(area(page)).toHaveAttribute("data-workspace", "0");
-  expect(await area(page).evaluate((e) => e.style.overflow)).toBe("");
+  await expectWorkspace(page, "opening");
+  expect(await areaOverflow(page)).toBe("");
 });

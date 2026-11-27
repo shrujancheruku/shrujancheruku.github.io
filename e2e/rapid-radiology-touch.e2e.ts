@@ -1,7 +1,7 @@
-import { devices, expect, type Page, test } from "@playwright/test";
-import { toComposition } from "./helpers";
+import { expect, type Page, test } from "@playwright/test";
+import { PHONES, toComposition } from "./desktop";
 
-test.use({ ...devices["Pixel 7"] });
+test.use(PHONES["Pixel 7"]);
 test.describe.configure({ timeout: 120_000 });
 
 const slot = (page: Page) =>
@@ -9,7 +9,6 @@ const slot = (page: Page) =>
 const open = async (page: Page) => {
   await page.goto("/work/rapid-radiology/");
   await toComposition(page);
-  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
 };
 
 test("two beats: the findings are typed, then the OpenAI report takes their place; Gemini is dropped", async ({

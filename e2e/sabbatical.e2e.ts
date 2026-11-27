@@ -1,20 +1,19 @@
-import { devices, expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import {
+  expectScreens,
+  expectWorkspace,
+  goTo,
+  phones,
+  ready,
+  settle,
+  shown,
+} from "./desktop";
 import { typed, unseen } from "./fit";
-import { area, ready, settle } from "./helpers";
-
-const shown = (page: Page) =>
-  page.$$eval(".pane", (els) =>
-    els
-      .filter((e) => getComputedStyle(e).display !== "none")
-      .map((e) => (e as HTMLElement).dataset.window)
-      .sort(),
-  );
 
 test.beforeEach(async ({ page }) => {
   await ready(page, "/");
-  // key 5: the sabbatical workspace
-  await page.keyboard.press("5");
-  await page.waitForTimeout(1100);
+  await goTo(page, "sabbatical");
+  await settle(page);
 });
 
 test("the sabbatical workspace shows the copy and four photo windows", async ({
@@ -101,29 +100,16 @@ test("each photo window fills its tile and carries a place · date caption", asy
 // On a phone the copy and the four photos are one screen: nothing to swipe to,
 // and nothing cut off. Pixel 7 and iPhone 14 are the phones; 375x667 is the
 // smallest the site is held to.
-const PHONES = {
-  "Pixel 7": devices["Pixel 7"],
-  "375x667": {
-    viewport: { width: 375, height: 667 },
-    hasTouch: true,
-    isMobile: true,
-    deviceScaleFactor: 2,
-  },
-} as const;
-
-for (const [name, emulation] of Object.entries(PHONES)) {
+for (const [name, phone] of phones("Pixel 7", "375x667")) {
   test(`on ${name} the copy and the four photos are one screen, with nothing cut off`, async ({
     browser,
   }) => {
-    const { defaultBrowserType: _engine, ...phone } = emulation as {
-      defaultBrowserType?: string;
-    };
     const page = await browser.newPage(phone);
     await ready(page, "/");
-    await page.locator(".ws button").nth(4).click();
-    await expect(area(page)).toHaveAttribute("data-workspace", "4");
+    await goTo(page, "sabbatical", "click");
+    await expectWorkspace(page, "sabbatical");
     await settle(page);
-    await expect(area(page)).toHaveAttribute("data-screens", "1");
+    await expectScreens(page, 1);
     expect(await shown(page)).toEqual([
       "photo-1",
       "photo-2",

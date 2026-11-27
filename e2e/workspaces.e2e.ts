@@ -1,5 +1,15 @@
-import { expect, type Page, test } from "@playwright/test";
-import { area, flick, framesOf, ready, settle } from "./helpers";
+import { expect, test } from "@playwright/test";
+import {
+  goTo,
+  modelOf,
+  notchesInOneGo,
+  ready,
+  settle,
+  shown,
+  stepNow,
+  workspaceOf,
+} from "./desktop";
+import { flick, framesOf } from "./helpers";
 
 const NAMES = [
   "opening",
@@ -10,19 +20,6 @@ const NAMES = [
   "contact",
 ];
 
-const current = async (page: Page) => ({
-  step: Number(await area(page).getAttribute("data-step")),
-  workspace: Number(await area(page).getAttribute("data-workspace")),
-});
-/** The windows on show, by id. */
-const shown = (page: Page) =>
-  page.$$eval(".pane", (els) =>
-    els
-      .filter((e) => getComputedStyle(e).display !== "none")
-      .map((e) => (e as HTMLElement).dataset.window)
-      .sort(),
-  );
-
 test.beforeEach(async ({ page }) => {
   await ready(page, "/");
 });
@@ -30,7 +27,8 @@ test.beforeEach(async ({ page }) => {
 test("boots on the opening workspace with its three windows", async ({
   page,
 }) => {
-  expect(await current(page)).toEqual({ step: 0, workspace: 0 });
+  expect(await stepNow(page)).toBe(0);
+  expect(await workspaceOf(page)).toBe("opening");
   expect(await shown(page)).toEqual(["name", "now", "term"]);
 });
 
@@ -43,21 +41,32 @@ test("wheel scrolling moves one step at a time through all six workspaces", asyn
   // content first: how far a flick's tail scrolled it would decide the next
   const bar = await page.locator("header.bar").boundingBox();
   const over = { x: 640, y: (bar?.y ?? 0) + (bar?.height ?? 0) / 2 };
-  const seen: number[] = [];
+  const seen: string[] = [];
   for (let i = 0; i < 4 + 5; i++) {
     await flick(page, over);
     await settle(page);
-    seen.push((await current(page)).workspace);
+    seen.push(await workspaceOf(page));
   }
   // 4 featured projects + 5 other workspaces = 9 steps; the last flick has nowhere to go
-  expect(seen).toEqual([1, 2, 2, 2, 2, 3, 4, 5, 5]);
+  expect(seen).toEqual([
+    "timeline",
+    "projects",
+    "projects",
+    "projects",
+    "projects",
+    "about",
+    "sabbatical",
+    "contact",
+    "contact",
+  ]);
 
   await page.mouse.move(over.x, over.y);
   for (let i = 0; i < 9; i++) {
     await page.mouse.wheel(0, -120);
     await settle(page);
   }
-  expect(await current(page)).toEqual({ step: 0, workspace: 0 });
+  expect(await stepNow(page)).toBe(0);
+  expect(await workspaceOf(page)).toBe("opening");
 });
 
 test("mouse notches that come during a re-tile end as one step, the latest", async ({
@@ -66,28 +75,12 @@ test("mouse notches that come during a re-tile end as one step, the latest", asy
   // three notches down, each its own gesture (equal, 200 ms apart), sent in
   // one go so that the second and third surely come while the first one's
   // motion runs, whatever the machine: they are stamped as a mouse would
-  const during = await page.evaluate(() => {
-    const bar = document.querySelector("header.bar") ?? document.body;
-    const area = document.querySelector<HTMLElement>("main.area");
-    const start = performance.now();
-    const steps: string[] = [];
-    for (let i = 0; i < 3; i++) {
-      const e = new WheelEvent("wheel", {
-        deltaY: 120,
-        bubbles: true,
-        cancelable: true,
-      });
-      Object.defineProperty(e, "timeStamp", { value: start + i * 200 });
-      bar.dispatchEvent(e);
-      steps.push(`${area?.dataset.step}:${area?.dataset.retiling}`);
-    }
-    return steps;
-  });
+  const during = await notchesInOneGo(page, 3, 200);
   // the first steps; the others wait, and the wheel steps no more until it settles
   expect(during).toEqual(["1:true", "1:true", "1:true"]);
   await settle(page);
   // the waiting notch ran from rest: one step, not two
-  expect((await current(page)).step).toBe(2);
+  expect(await stepNow(page)).toBe(2);
 });
 
 test("keyboard scrolling moves one step at a time", async ({ page }) => {
@@ -95,7 +88,7 @@ test("keyboard scrolling moves one step at a time", async ({ page }) => {
   for (const key of ["ArrowDown", "PageDown", "Space", "ArrowUp", "PageUp"]) {
     await page.keyboard.press(key);
     await settle(page);
-    steps.push((await current(page)).step);
+    steps.push(await stepNow(page));
   }
   expect(steps).toEqual([1, 2, 3, 2, 1]);
 });
@@ -103,46 +96,44 @@ test("keyboard scrolling moves one step at a time", async ({ page }) => {
 test("Space after clicking a status bar number moves one step", async ({
   page,
 }) => {
-  await page.locator('.ws button[data-workspace="2"]').click();
+  await goTo(page, "projects", "click");
   await settle(page);
-  const before = (await current(page)).step;
+  const before = await stepNow(page);
   await page.keyboard.press("Space");
   await settle(page);
-  expect((await current(page)).step).toBe(before + 1);
+  expect(await stepNow(page)).toBe(before + 1);
 });
 
 test("number keys jump to a workspace, and are ignored with a modifier held", async ({
   page,
 }) => {
   for (const [key, ws] of [
-    ["3", 2],
-    ["6", 5],
-    ["1", 0],
-    ["5", 4],
-    ["2", 1],
-    ["4", 3],
+    ["3", "projects"],
+    ["6", "contact"],
+    ["1", "opening"],
+    ["5", "sabbatical"],
+    ["2", "timeline"],
+    ["4", "about"],
   ] as const) {
     await page.keyboard.press(key);
     await settle(page);
-    expect((await current(page)).workspace).toBe(ws);
+    expect(await workspaceOf(page)).toBe(ws);
   }
   await page.keyboard.press("Meta+5");
   await page.keyboard.press("Control+6");
   await page.keyboard.press("Alt+3");
   await settle(page);
-  expect((await current(page)).workspace).toBe(3);
+  expect(await workspaceOf(page)).toBe("about");
 });
 
 test("each workspace shows exactly its windows", async ({ page }) => {
-  const model = await page.$eval("#desktop-model", (e) =>
-    JSON.parse(e.textContent ?? "[]"),
-  );
+  const model = await modelOf(page);
   let step = 0;
-  for (const [wi, w] of model.entries()) {
+  for (const w of model) {
     for (const s of w.steps) {
-      await page.keyboard.press(
-        wi === 2 && step > 1 ? "ArrowDown" : String(wi + 1),
-      );
+      // the projects' steps are one scroll apart; the others are a jump
+      if (w.id === "projects") await page.keyboard.press("ArrowDown");
+      else await goTo(page, w.id);
       await settle(page);
       expect(await shown(page)).toEqual(Object.keys(s.desktop).sort());
       await expect(page.locator(`[data-window="${s.focus}"]`)).toHaveClass(
@@ -165,7 +156,7 @@ test("the status bar lists the numbers with names and marks the current workspac
   await expect(buttons.nth(0)).toHaveAttribute("aria-current", "true");
   await buttons.nth(4).click();
   await settle(page);
-  expect((await current(page)).workspace).toBe(4);
+  expect(await workspaceOf(page)).toBe("sabbatical");
   await expect(buttons.nth(4)).toHaveAttribute("aria-current", "true");
   await expect(buttons.nth(0)).not.toHaveAttribute("aria-current", "true");
 });
@@ -173,7 +164,7 @@ test("the status bar lists the numbers with names and marks the current workspac
 test("windows animate between tilings, not cut", async ({ page }) => {
   // the name travels with its workspace: it comes up from below onto its tile
   const frames = await framesOf(page, '[data-window="name"]', "top", () =>
-    page.keyboard.press("6"),
+    goTo(page, "contact"),
   );
   const tops = frames.map(([t]) => t ?? 0);
   const after = tops[tops.length - 1] ?? 0;
@@ -209,7 +200,7 @@ test("windows have the decided gap, border, radius and focus gradient", async ({
 });
 
 test("a scrolling window's label sits on an opaque band", async ({ page }) => {
-  await page.keyboard.press("2");
+  await goTo(page, "timeline");
   await settle(page);
   const band = page.locator('[data-window="timeline"] .label');
   expect(
@@ -223,10 +214,8 @@ test("a scrolling window's label sits on an opaque band", async ({ page }) => {
 test("the production build ships all six workspaces from one model with steps inside", async ({
   page,
 }) => {
-  const model = await page.$eval("#desktop-model", (e) =>
-    JSON.parse(e.textContent ?? "[]"),
-  );
-  expect(model.map((w: { id: string }) => w.id)).toEqual([
+  const model = await modelOf(page);
+  expect(model.map((w) => w.id)).toEqual([
     "opening",
     "timeline",
     "projects",
@@ -234,5 +223,5 @@ test("the production build ships all six workspaces from one model with steps in
     "sabbatical",
     "contact",
   ]);
-  expect(model[2].steps.length).toBe(4);
+  expect(model[2]?.steps.length).toBe(4);
 });

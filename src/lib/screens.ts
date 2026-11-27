@@ -76,6 +76,10 @@ export interface Position {
   screen: number;
 }
 
+/** Screen `screen` brought in to the `count` screens a step has (0 if none). */
+export const fitScreen = (screen: number, count: number): number =>
+  Math.max(0, Math.min(count - 1, screen));
+
 /**
  * The position one screen away, held at the first and the last. `count` says
  * how many screens a step has; a step with one is a plain step move.

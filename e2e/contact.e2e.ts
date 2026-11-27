@@ -1,5 +1,15 @@
-import { devices, expect, type Page, test } from "@playwright/test";
-import { area, ready, SWIPES, settle, swipe, warmUpTouch } from "./helpers";
+import { expect, type Page, test } from "@playwright/test";
+import {
+  allPhones,
+  areaText,
+  expectScreen,
+  expectScreens,
+  expectWorkspace,
+  goTo,
+  ready,
+  settle,
+} from "./desktop";
+import { SWIPES, swipe, warmUpTouch } from "./helpers";
 
 const win = (page: Page, id: string) => page.locator(`[data-window="${id}"]`);
 const box = (page: Page, id: string) => win(page, id).boundingBox();
@@ -7,7 +17,7 @@ const box = (page: Page, id: string) => win(page, id).boundingBox();
 test.describe("arriving directly at /contact/", () => {
   test.beforeEach(async ({ page }) => {
     await ready(page, "/contact/");
-    await expect(area(page)).toHaveAttribute("data-workspace", "5");
+    await expectWorkspace(page, "contact");
   });
 
   test("the terminal types $ contact, then the contact line and the four channels", async ({
@@ -52,7 +62,7 @@ test.describe("arriving directly at /contact/", () => {
   test("no phone number, form, or availability on the page", async ({
     page,
   }) => {
-    const text = (await page.locator("main.area").textContent()) ?? "";
+    const text = await areaText(page);
     expect(text).not.toMatch(/availab|hiring|booking|phone|\+\d{6,}/i);
     await expect(page.locator("form")).toHaveCount(0);
     await expect(page.locator('a[href^="tel:"]')).toHaveCount(0);
@@ -84,48 +94,33 @@ test("returning to contact after leaving shows the command at once, without typi
   page,
 }) => {
   await ready(page, "/");
-  // key 6 jumps to the contact workspace
-  await page.keyboard.press("6");
-  await expect(area(page)).toHaveAttribute("data-workspace", "5");
+  await goTo(page, "contact");
+  await expectWorkspace(page, "contact");
   // the first arrival types the command; wait for it to finish
   await expect(win(page, "contact").locator(".row")).toHaveText(["$ contact"], {
     timeout: 4000,
   });
 
-  await page.keyboard.press("1");
-  await expect(area(page)).toHaveAttribute("data-workspace", "0");
-  await page.keyboard.press("6");
-  await expect(area(page)).toHaveAttribute("data-workspace", "5");
+  await goTo(page, "opening");
+  await expectWorkspace(page, "opening");
+  await goTo(page, "contact");
+  await expectWorkspace(page, "contact");
   // already typed once in this visit: the row is there at once
   await expect(win(page, "contact").locator(".row")).toHaveText(["$ contact"], {
     timeout: 100,
   });
 });
 
-const PHONES = {
-  "Pixel 7": devices["Pixel 7"],
-  "iPhone 14": devices["iPhone 14"],
-  "375x667": {
-    viewport: { width: 375, height: 667 },
-    hasTouch: true,
-    isMobile: true,
-    deviceScaleFactor: 2,
-  },
-} as const;
-
-for (const [name, emulation] of Object.entries(PHONES))
+for (const [name, phone] of allPhones())
   test(`${name}: contact is one screen under the status bar: the terminal, and a forward swipe stays put`, async ({
     browser,
   }) => {
-    const { defaultBrowserType: _engine, ...phone } = emulation as {
-      defaultBrowserType?: string;
-    };
     const context = await browser.newContext(phone);
     const page = await context.newPage();
     await ready(page, "/contact/");
     // contact is the last step and one screen: no second screen for the name
-    await expect(area(page)).toHaveAttribute("data-screens", "1");
-    await expect(area(page)).toHaveAttribute("data-screen", "0");
+    await expectScreens(page, 1);
+    await expectScreen(page, 0);
     expect(await box(page, "contact")).not.toBeNull();
     expect(await box(page, "name")).toBeNull();
     expect(await box(page, "term")).toBeNull();
@@ -135,8 +130,8 @@ for (const [name, emulation] of Object.entries(PHONES))
     // a forward swipe on the last screen stays put
     await swipe(page, 1, SWIPES[0] as (typeof SWIPES)[number]);
     await settle(page);
-    await expect(area(page)).toHaveAttribute("data-screen", "0");
-    await expect(area(page)).toHaveAttribute("data-workspace", "5");
+    await expectScreen(page, 0);
+    await expectWorkspace(page, "contact");
     expect(await box(page, "contact")).not.toBeNull();
     expect(await box(page, "name")).toBeNull();
     expect(new URL(page.url()).pathname).toBe("/contact/");

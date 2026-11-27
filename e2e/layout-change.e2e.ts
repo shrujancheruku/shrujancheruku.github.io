@@ -1,14 +1,14 @@
-import { devices, expect, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import {
-  area,
+  expectNotRetiling,
   isOneScreen,
+  isShown,
+  PHONES,
   ready,
-  SWIPES,
   settle,
-  swipeScreen,
-  warmUpTouch,
   whereOf,
-} from "./helpers";
+} from "./desktop";
+import { SWIPES, swipeScreen, warmUpTouch } from "./helpers";
 
 // The window crossing the touch breakpoint (760px) and back, and a phone
 // screen changing size: the onLayoutChange and remeasure paths of
@@ -16,11 +16,6 @@ import {
 
 const WIDE = { width: 1280, height: 800 };
 const PHONE = { width: 390, height: 844 };
-
-const shown = (page: Page, id: string) =>
-  page
-    .locator(`[data-window="${id}"]`)
-    .evaluate((e) => getComputedStyle(e).display !== "none");
 
 async function resize(page: Page, size: typeof WIDE): Promise<void> {
   await page.setViewportSize(size);
@@ -40,8 +35,8 @@ test("wide to touch and back keeps the step, and each layout starts on its first
   const phone = await whereOf(page);
   expect(phone).toMatchObject({ step, screen: 0 });
   expect(phone.screens).toBeGreaterThan(1);
-  expect(await shown(page, "timeline")).toBe(true);
-  expect(await shown(page, "skills")).toBe(false);
+  expect(await isShown(page, "timeline")).toBe(true);
+  expect(await isShown(page, "skills")).toBe(false);
 
   // a screen part way through the step, then wide again
   await page.keyboard.press("ArrowDown");
@@ -50,7 +45,7 @@ test("wide to touch and back keeps the step, and each layout starts on its first
   await resize(page, WIDE);
   expect(await whereOf(page)).toMatchObject({ step, screen: 0, screens: 1 });
   for (const id of ["timeline", "education", "skills"])
-    expect(await shown(page, id)).toBe(true);
+    expect(await isShown(page, id)).toBe(true);
   await expect(page).toHaveURL(/\/timeline\/$/);
 });
 
@@ -72,12 +67,12 @@ test("a taller phone screen keeps the timeline step's two screens, and the one y
   await ready(page, "/timeline/");
   await settle(page);
   expect(await whereOf(page)).toMatchObject({ screen: 0, screens: 2 });
-  expect(await shown(page, "timeline")).toBe(true);
-  expect(await shown(page, "education")).toBe(false);
+  expect(await isShown(page, "timeline")).toBe(true);
+  expect(await isShown(page, "education")).toBe(false);
 
   await resize(page, { width: 390, height: 1000 });
   expect(await whereOf(page)).toMatchObject({ screen: 0, screens: 2 });
-  expect(await shown(page, "timeline")).toBe(true);
+  expect(await isShown(page, "timeline")).toBe(true);
 
   // on the second screen, education over skills, a resize stays there
   await page.keyboard.press("ArrowDown");
@@ -85,14 +80,13 @@ test("a taller phone screen keeps the timeline step's two screens, and the one y
   expect(await whereOf(page)).toMatchObject({ screen: 1, screens: 2 });
   await resize(page, { width: 390, height: 667 });
   expect(await whereOf(page)).toMatchObject({ screen: 1, screens: 2 });
-  expect(await shown(page, "education")).toBe(true);
-  expect(await shown(page, "skills")).toBe(true);
-  expect(await shown(page, "timeline")).toBe(false);
+  expect(await isShown(page, "education")).toBe(true);
+  expect(await isShown(page, "skills")).toBe(true);
+  expect(await isShown(page, "timeline")).toBe(false);
 });
 
 test.describe("reduced motion on touch", () => {
-  const { defaultBrowserType: _engine, ...pixel } = devices["Pixel 7"];
-  test.use({ ...pixel, reducedMotion: "reduce" });
+  test.use({ ...PHONES["Pixel 7"], reducedMotion: "reduce" });
 
   test("a swipe still moves exactly one screen each way", async ({ page }) => {
     await ready(page, "/");
@@ -121,6 +115,6 @@ test.describe("reduced motion on touch", () => {
     expect(await whereOf(page)).toMatchObject({ step, screen: 0, screens: 1 });
     await resize(page, PHONE);
     expect(await whereOf(page)).toMatchObject({ step, screen: 0 });
-    await expect(area(page)).toHaveAttribute("data-retiling", "false");
+    await expectNotRetiling(page);
   });
 });

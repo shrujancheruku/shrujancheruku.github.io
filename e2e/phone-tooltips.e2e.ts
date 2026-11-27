@@ -1,5 +1,6 @@
-import { devices, expect, type Page, test } from "@playwright/test";
-import { ready, settle, warmUpTouch } from "./helpers";
+import { expect, type Page, test } from "@playwright/test";
+import { allPhones, emulate, ready, settle } from "./desktop";
+import { warmUpTouch } from "./helpers";
 
 // On a phone the status bar's shortcut tooltips name keys a phone does not
 // have, so none of them shows: not while the page is idle, not after a tap.
@@ -13,30 +14,7 @@ const shownTips = (page: Page) =>
       .map((t) => t.textContent?.replace(/\s+/g, " ").trim() ?? "?"),
   );
 
-for (const [name, opts] of [
-  [
-    "Pixel 7",
-    (() => {
-      const { defaultBrowserType: _e, ...d } = devices["Pixel 7"];
-      return d;
-    })(),
-  ],
-  [
-    "iPhone 14",
-    (() => {
-      const { defaultBrowserType: _e, ...d } = devices["iPhone 14"];
-      return d;
-    })(),
-  ],
-  [
-    "375x667",
-    {
-      viewport: { width: 375, height: 667 },
-      hasTouch: true,
-      isMobile: true,
-    },
-  ],
-] as const) {
+for (const [name, opts] of allPhones()) {
   test.describe(name, () => {
     test.use(opts);
 
@@ -71,8 +49,7 @@ test("1280x800 desktop still shows its tooltips while idle", async ({
 });
 
 test.describe("a touch tablet", () => {
-  const { defaultBrowserType: _e, ...ipad } = devices["iPad (gen 7) landscape"];
-  test.use(ipad);
+  test.use(emulate("iPad (gen 7) landscape"));
 
   test("keeps the four tooltips while idle, without key labels or the workspaces tip", async ({
     page,

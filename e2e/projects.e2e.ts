@@ -1,15 +1,7 @@
-import { expect, type Page, test } from "@playwright/test";
-import { area, ready, settle } from "./helpers";
+import { expect, test } from "@playwright/test";
+import { areaBox, expectStep, ready, settle, shown, stepOf } from "./desktop";
 
 const SLUGS = ["issho", "rapid-radiology", "orca-flow", "unmacos"];
-const shown = (page: Page) =>
-  page.$$eval(".pane", (els) =>
-    els
-      .filter((e) => getComputedStyle(e).display !== "none")
-      .map((e) => (e as HTMLElement).dataset.window)
-      .sort(),
-  );
-
 test("scrolling steps through the featured projects in order, one at a time", async ({
   page,
 }) => {
@@ -76,7 +68,7 @@ test("the stack lists every project, marks the current, jumps on click, ends wit
 
   await items.nth(2).click();
   await settle(page);
-  await expect(area(page)).toHaveAttribute("data-step", "4");
+  await expectStep(page, await stepOf(page, "projects", 2));
   await expect(stack.locator("[aria-current]")).toHaveText("orca-flow");
   await expect(page).toHaveURL(/\/work\/orca-flow\/$/);
 
@@ -98,7 +90,7 @@ test("only the last featured project has the archive line, inert for now", async
   await expect(page.locator("[data-archive-open]")).toHaveCount(2);
   await ready(page, "/work/unmacos/");
   await page.locator("#archive-more").click();
-  await expect(area(page)).toHaveAttribute("data-step", "5");
+  await expectStep(page, await stepOf(page, "projects", 3));
 });
 
 test("each address is titled by the repository and described by the pitch", async ({
@@ -114,7 +106,7 @@ test("each address is titled by the repository and described by the pitch", asyn
     "content",
     /shorthand findings into a finished report/,
   );
-  await expect(area(page)).toHaveAttribute("data-step", "3");
+  await expectStep(page, await stepOf(page, "projects", 1));
 });
 
 test("a composition slot is told when its step comes on show and goes", async ({
@@ -156,7 +148,7 @@ test("the composition window is the right 70%, the copy and stack the left 30%",
     box("copy-1"),
     box("comp-1"),
     box("stack"),
-    area(page).boundingBox(),
+    areaBox(page),
   ]);
   if (!copy || !comp || !stack || !main) throw new Error("missing window");
   expect(copy.width / main.width).toBeCloseTo(0.3, 1);

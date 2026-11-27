@@ -1,24 +1,31 @@
-import { expect, type Page, test } from "@playwright/test";
-import { area, ready as boot, flick, settle } from "./helpers";
+import { expect, test } from "@playwright/test";
+import {
+  ready as boot,
+  expectStep,
+  goTo,
+  settle,
+  stepOf,
+  type WorkspaceId,
+  workspaceOf,
+} from "./desktop";
+import { flick } from "./helpers";
 
 const DESCRIPTION =
   "I design things and I build them. Give me a problem, not a spec.";
-const workspace = async (page: Page) =>
-  Number(await area(page).getAttribute("data-workspace"));
 
-const ADDRESSES: [string, number, string][] = [
-  ["/", 0, "Shrujan Cheruku — Senior Product Engineer"],
-  ["/timeline/", 1, "Timeline — Shrujan Cheruku"],
-  ["/work/", 2, "Projects — Shrujan Cheruku"],
-  ["/about/", 3, "About — Shrujan Cheruku"],
-  ["/now/", 4, "Sabbatical — Shrujan Cheruku"],
-  ["/contact/", 5, "Contact — Shrujan Cheruku"],
+const ADDRESSES: [string, WorkspaceId, string][] = [
+  ["/", "opening", "Shrujan Cheruku — Senior Product Engineer"],
+  ["/timeline/", "timeline", "Timeline — Shrujan Cheruku"],
+  ["/work/", "projects", "Projects — Shrujan Cheruku"],
+  ["/about/", "about", "About — Shrujan Cheruku"],
+  ["/now/", "sabbatical", "Sabbatical — Shrujan Cheruku"],
+  ["/contact/", "contact", "Contact — Shrujan Cheruku"],
 ];
 
-for (const [path, ws, title] of ADDRESSES) {
+for (const [path, workspace, title] of ADDRESSES) {
   test(`${path} loads straight into its workspace`, async ({ page }) => {
     await boot(page, path);
-    expect(await workspace(page)).toBe(ws);
+    expect(await workspaceOf(page)).toBe(workspace);
     await expect(page).toHaveTitle(title);
     await expect(page.locator('meta[name="description"]')).toHaveAttribute(
       "content",
@@ -32,7 +39,7 @@ test("a project's address opens its step with the repository name as title", asy
   page,
 }) => {
   await boot(page, "/work/unmacos/");
-  expect(await area(page).getAttribute("data-step")).toBe("5");
+  await expectStep(page, await stepOf(page, "projects", 3));
   await expect(page).toHaveTitle("unmacos — Shrujan Cheruku");
   await expect(page.locator('meta[name="description"]')).not.toHaveAttribute(
     "content",
@@ -73,10 +80,10 @@ test("a workspace key or a status bar item adds an entry, and Back undoes it", a
 }) => {
   await boot(page, "/");
   const before = await page.evaluate(() => history.length);
-  await page.keyboard.press("2");
+  await goTo(page, "timeline");
   await settle(page);
   expect(new URL(page.url()).pathname).toBe("/timeline/");
-  await page.locator('.ws button[data-workspace="5"]').click();
+  await goTo(page, "contact", "click");
   await settle(page);
   expect(new URL(page.url()).pathname).toBe("/contact/");
   expect(await page.evaluate(() => history.length)).toBe(before + 2);
@@ -84,19 +91,19 @@ test("a workspace key or a status bar item adds an entry, and Back undoes it", a
   await page.goBack();
   await settle(page);
   expect(new URL(page.url()).pathname).toBe("/timeline/");
-  expect(await workspace(page)).toBe(1);
+  expect(await workspaceOf(page)).toBe("timeline");
   await expect(page).toHaveTitle("Timeline — Shrujan Cheruku");
   await page.goBack();
   await settle(page);
   expect(new URL(page.url()).pathname).toBe("/");
-  expect(await workspace(page)).toBe(0);
+  expect(await workspaceOf(page)).toBe("opening");
 });
 
 test("Back after scrolling past a jump returns to the jump's origin, not the scroll", async ({
   page,
 }) => {
   await boot(page, "/");
-  await page.keyboard.press("4");
+  await goTo(page, "about");
   await settle(page);
   await page.keyboard.press("ArrowDown"); // about -> sabbatical, replaces
   await settle(page);

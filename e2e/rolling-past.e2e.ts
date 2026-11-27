@@ -3,7 +3,8 @@
 // back), the stack doesn't move, and the tiles end exactly where they were.
 // Shape only, never timing: every frame is sampled.
 import { expect, type Page, test } from "@playwright/test";
-import { area, type Box, framesOf, ready, settle } from "./helpers";
+import { areaBox, expectNotRetiling, ready, settle } from "./desktop";
+import { type Box, framesOf } from "./helpers";
 
 const IDS = ["copy-1", "comp-1", "copy-2", "comp-2", "stack"] as const;
 type Id = (typeof IDS)[number];
@@ -29,7 +30,7 @@ async function sample(
   return out;
 }
 
-const shown = (frames: (Box | null)[]): Box[] =>
+const present = (frames: (Box | null)[]): Box[] =>
   frames.filter((f): f is Box => f !== null);
 
 /** Each value is no smaller (`1`) or no larger (`-1`) than the one before. */
@@ -43,13 +44,13 @@ async function rollsOnWide(page: Page, forwards: boolean) {
   await settle(page);
   const [old, next] = forwards ? (["1", "2"] as const) : (["2", "1"] as const);
   const key = forwards ? "ArrowDown" : "ArrowUp";
-  const was = await area(page).boundingBox();
+  const was = await areaBox(page);
   if (!was) throw new Error("no area");
   const frames = await sample(page, () => page.keyboard.press(key));
 
   for (const part of ["copy", "comp"] as const) {
-    const leaving = shown(frames[`${part}-${old}` as Id]);
-    const arriving = shown(frames[`${part}-${next}` as Id]);
+    const leaving = present(frames[`${part}-${old}` as Id]);
+    const arriving = present(frames[`${part}-${next}` as Id]);
     const tile = arriving.at(-1);
     const start = leaving[0];
     if (!tile || !start) throw new Error(`${part} never showed`);
@@ -84,7 +85,7 @@ async function rollsOnWide(page: Page, forwards: boolean) {
   }
 
   // the stack doesn't move
-  const stack = shown(frames.stack);
+  const stack = present(frames.stack);
   const first = stack[0];
   if (!first) throw new Error("no stack");
   for (const s of stack) {
@@ -95,7 +96,7 @@ async function rollsOnWide(page: Page, forwards: boolean) {
   }
 
   // settled: rest styles cleared, one project on show
-  await expect(area(page)).toHaveAttribute("data-retiling", "false");
+  await expectNotRetiling(page);
   for (const id of [`copy-${next}`, `comp-${next}`]) {
     const style = await page
       .locator(`.pane[data-window="${id}"]`)

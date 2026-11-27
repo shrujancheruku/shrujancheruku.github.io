@@ -1,12 +1,10 @@
 import { expect, type Page, test } from "@playwright/test";
-import { ready, settle } from "./helpers";
+import { goTo, ready, settle, settleComposition } from "./desktop";
 
 // the session takes about 17 s and some tests play it twice
 test.describe.configure({ timeout: 90_000 });
 
 const slot = (page: Page) => page.locator('[data-composition="orca-flow"]');
-/** The session takes about 17 s; allow for a busy machine. */
-const HELD = { timeout: 45_000 };
 
 test("a composition is not part of the first load: it is asked for after the page has loaded", async ({
   page,
@@ -60,13 +58,15 @@ test("compositions are not loaded while the projects workspace is far off, and a
     if (/\/_astro\/orca-flow\./.test(r.url())) asked.push(r.url());
   });
   await ready(page, "/contact/");
+  // time itself is under test: nothing is asked for as time passes
   await page.waitForTimeout(1500);
   expect(asked).toEqual([]);
-  await page.keyboard.press("5"); // sabbatical: still two away
+  await goTo(page, "sabbatical"); // still two away
   await settle(page);
+  // time itself is under test: nothing is asked for as time passes
   await page.waitForTimeout(500);
   expect(asked).toEqual([]);
-  await page.keyboard.press("4"); // about: next to projects
+  await goTo(page, "about"); // next to projects
   await expect(slot(page)).toHaveAttribute("data-mounted", "true");
   expect(asked).toHaveLength(1);
 });
@@ -81,7 +81,7 @@ test("orca-flow plays the session and holds its end state", async ({
   await expect(
     scene.locator("b", { hasText: "/flow:build #42" }),
   ).toBeVisible();
-  await expect(slot(page)).toHaveAttribute("data-state", "held", HELD);
+  await settleComposition(page, "orca-flow");
 
   await expect(scene.locator(".row")).toHaveCount(9);
   const statuses = await scene.locator(".row .st").allTextContents();
@@ -106,6 +106,7 @@ test("orca-flow plays the session and holds its end state", async ({
   await expect(scene).not.toContainText("1 projects workspace");
   // it holds: nothing changes afterwards
   const before = await scene.textContent();
+  // time itself is under test: it holds, nothing changes as time passes
   await page.waitForTimeout(1500);
   expect(await scene.textContent()).toBe(before);
 });
@@ -119,6 +120,7 @@ test("the coordinator's message arrives a word at a time, the question is asked 
   const lengths = new Set<number>();
   for (let i = 0; i < 40 && lengths.size < 4; i++) {
     lengths.add((await message.textContent())?.length ?? 0);
+    // time itself is under test: the message arrives a word at a time, sampled every 100 ms
     await page.waitForTimeout(100);
   }
   expect(lengths.size).toBeGreaterThanOrEqual(3);
@@ -159,7 +161,7 @@ test("it restarts from its beginning each time its project is scrolled to, and s
   page,
 }) => {
   await ready(page, "/work/orca-flow/");
-  await expect(slot(page)).toHaveAttribute("data-state", "held", HELD);
+  await settleComposition(page, "orca-flow");
   await page.keyboard.press("ArrowDown");
   await settle(page);
   await expect(slot(page)).toHaveAttribute("data-state", "idle");
@@ -169,7 +171,7 @@ test("it restarts from its beginning each time its project is scrolled to, and s
   await expect(slot(page)).toHaveAttribute("data-state", "playing");
   await expect(scene.locator(".pr")).toContainText("0/9 merged");
   await expect(scene.locator(".row.queued")).toHaveCount(9);
-  await expect(slot(page)).toHaveAttribute("data-state", "held", HELD);
+  await settleComposition(page, "orca-flow");
   await expect(scene.locator(".pr")).toContainText("9/9 merged");
 });
 
@@ -185,15 +187,17 @@ test("it stops drawing while the tab is hidden and carries on afterwards", async
       });
       document.dispatchEvent(new Event("visibilitychange"));
     }, hidden);
+  // time itself is under test: let the session play a while before the tab is hidden
   await page.waitForTimeout(800);
   await hide(true);
   await expect(slot(page)).toHaveAttribute("data-state", "paused");
   const frozen = await slot(page).textContent();
+  // time itself is under test: nothing is drawn while hidden, however long
   await page.waitForTimeout(2500);
   expect(await slot(page).textContent()).toBe(frozen);
   await hide(false);
   await expect(slot(page)).toHaveAttribute("data-state", "playing");
-  await expect(slot(page)).toHaveAttribute("data-state", "held", HELD);
+  await settleComposition(page, "orca-flow");
 });
 
 test("it follows the site theme live", async ({ page }) => {

@@ -1,37 +1,5 @@
 import { expect, type Page } from "@playwright/test";
-
-/** The desktop's tiling area, which carries the step, workspace and re-tile state. */
-export const area = (page: Page) => page.locator("main.area");
-
-/**
- * Load `path` and wait for the desktop to boot, and for its first appearance
- * to end: the windows slide in with `data-retiling` true, and the wheel and
- * the swipe wait for them.
- */
-export async function ready(page: Page, path = "/"): Promise<void> {
-  await page.goto(path);
-  await expect(area(page)).toHaveAttribute("data-ready", "true");
-  await expect(area(page)).toHaveAttribute("data-retiling", "false", {
-    timeout: 15_000,
-  });
-}
-
-/**
- * Wait for the desktop to come to rest: give a step two frames to begin its
- * re-tile, then wait for the re-tile to end, however long a busy machine
- * makes it. Replaces a fixed sleep that raced the 850 ms re-tile.
- */
-export async function settle(page: Page): Promise<void> {
-  await page.evaluate(
-    () =>
-      new Promise<void>((done) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => done())),
-      ),
-  );
-  await expect(area(page)).toHaveAttribute("data-retiling", "false", {
-    timeout: 15_000,
-  });
-}
+import { type ScreenNow, settle, whereOf } from "./desktop";
 
 /**
  * Start the page with the crt effect off, as a visitor who turned it off. The
@@ -182,6 +150,7 @@ export async function swipe(page: Page, dir: 1 | -1, s: Swipe): Promise<void> {
     });
   await touch("touchStart", y0);
   for (let i = 1; i <= frames; i++) {
+    // the swipe's own pace: time itself is what a swipe is made of
     await page.waitForTimeout(s.ms / frames);
     await touch("touchMove", y0 - (dir * s.distance * i) / frames);
   }
@@ -240,36 +209,12 @@ export async function pinch(page: Page, scale: number): Promise<number> {
   return last;
 }
 
-/** The step on show, the screen in it (a phone splits a step into screens), and how many it has. */
-export interface Where {
-  step: number;
-  screen: number;
-  screens: number;
-}
-export const whereOf = (page: Page): Promise<Where> =>
-  area(page).evaluate((a) => ({
-    step: Number(a.dataset.step),
-    screen: Number(a.dataset.screen),
-    screens: Number(a.dataset.screens),
-  }));
-
-/** Whether `after` is exactly one screen from `before` in `direction`. */
-export function isOneScreen(before: Where, after: Where, direction: 1 | -1) {
-  if (direction === 1)
-    return before.screen < before.screens - 1
-      ? after.step === before.step && after.screen === before.screen + 1
-      : after.step === before.step + 1 && after.screen === 0;
-  return before.screen > 0
-    ? after.step === before.step && after.screen === before.screen - 1
-    : after.step === before.step - 1 && after.screen === after.screens - 1;
-}
-
-/** Swipe once and wait for the screen it moves to; returns where it was and is. */
+/** Swipe once and wait for the screen it moves to and for the desktop to rest; returns where it was and is. */
 export async function swipeScreen(
   page: Page,
   direction: 1 | -1,
-  s: Swipe,
-): Promise<{ before: Where; after: Where }> {
+  s: Swipe = SWIPES[0] as Swipe,
+): Promise<{ before: ScreenNow; after: ScreenNow }> {
   const before = await whereOf(page);
   await swipe(page, direction, s);
   await expect
@@ -278,31 +223,9 @@ export async function swipeScreen(
       return now.step !== before.step || now.screen !== before.screen;
     })
     .toBe(true);
-  // a moment for a second, wrong, move to show
-  await page.waitForTimeout(150);
-  return { before, after: await whereOf(page) };
-}
-
-/** Whether a position is the last screen of the last step. */
-export const atEnd = (page: Page, w: Where): Promise<boolean> =>
-  page
-    .evaluate(
-      () =>
-        (
-          JSON.parse(
-            document.getElementById("desktop-addresses")?.textContent ?? "{}",
-          ).byStep as string[]
-        ).length - 1,
-    )
-    .then((last) => w.step === last && w.screen === w.screens - 1);
-
-/**
- * On a phone a project is one screen, its copy over its composition (#90).
- * Wait for the page and for the desktop to come to rest.
- */
-export async function toComposition(page: Page): Promise<void> {
-  await expect(area(page)).toHaveAttribute("data-ready", "true");
+  // a second, wrong, move would begin before the desktop is at rest
   await settle(page);
+  return { before, after: await whereOf(page) };
 }
 
 /**
@@ -343,6 +266,7 @@ export async function twoFingerSpread(page: Page): Promise<void> {
     touchPoints: at(20),
   });
   for (let d = 40; d <= 140; d += 20) {
+    // one frame between touch moves: the gesture's own pace
     await page.waitForTimeout(16);
     await cdp.send("Input.dispatchTouchEvent", {
       type: "touchMove",

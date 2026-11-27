@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { ready as boot } from "./helpers";
+import { ready as boot, settle, settleComposition } from "./desktop";
 
 // the play-through takes about 24 s and some tests play it twice
 test.describe.configure({ timeout: 90_000 });
@@ -7,8 +7,6 @@ test.describe.configure({ timeout: 90_000 });
 const slot = (page: Page) => page.locator('[data-composition="issho"]');
 const scene = (page: Page) => slot(page).locator(".scene");
 const ready = (page: Page, path = "/work/issho/") => boot(page, path);
-/** The play-through takes about 24 s; allow for a busy machine. */
-const HELD = { timeout: 50_000 };
 
 test("three gapped panes carry the site's window border; the site has the accent", async ({
   page,
@@ -79,7 +77,7 @@ test("the site steps through its six parts while the app shows the step three ah
       });
     read();
   });
-  await expect(slot(page)).toHaveAttribute("data-state", "held", HELD);
+  await settleComposition(page, "issho");
   const { pairs, anim } = await page.evaluate(() => {
     const w = window as unknown as { __pairs: string[]; __anim: number[] };
     return { pairs: w.__pairs, anim: w.__anim };
@@ -258,17 +256,18 @@ test("it plays from its beginning on each visit, holds the last step, and stops 
 }) => {
   await ready(page);
   await expect(slot(page)).toHaveAttribute("data-state", "playing");
-  await expect(slot(page)).toHaveAttribute("data-state", "held", HELD);
+  await settleComposition(page, "issho");
   await expect(scene(page).locator(".sec.at")).toHaveCount(1);
   // it holds: nothing changes afterwards
   const before = await scene(page).innerHTML();
+  // time itself is under test: it holds, nothing changes as time passes
   await page.waitForTimeout(1500);
   expect(await scene(page).innerHTML()).toBe(before);
   await page.keyboard.press("ArrowDown");
-  await page.waitForTimeout(1100);
+  await settle(page);
   await expect(slot(page)).toHaveAttribute("data-state", "idle");
   await page.keyboard.press("ArrowUp");
-  await page.waitForTimeout(1100);
+  await settle(page);
   await expect(slot(page)).toHaveAttribute("data-state", "playing");
   // back at the top of the site with the day screen
   await expect(scene(page).locator(".sec.at")).toHaveCount(0);
@@ -283,8 +282,16 @@ test("its still frame is the top of the site with the day screen", async ({
 }) => {
   await ready(page);
   await expect(slot(page)).toHaveAttribute("data-state", "playing");
-  // move on a little first: the frame must set the whole scene
-  await page.waitForTimeout(6500);
+  // move on a little first, so the frame must set the whole scene: the site
+  // is past the top on a step's section, and the app off the day screen
+  await expect(scene(page).locator(".sec.at")).toHaveCount(1, {
+    timeout: 15_000,
+  });
+  await expect(scene(page).locator(".scrn.on")).not.toHaveAttribute(
+    "data-step",
+    "3",
+    { timeout: 15_000 },
+  );
   await slot(page).evaluate((el) => {
     el.dataset.frame = "top";
   });

@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { area, ready } from "./helpers";
+import { booted, expectWorkspace, ready } from "./desktop";
 
 const box = (page: Page, id: string) =>
   page.locator(`[data-window="${id}"]`).boundingBox();
@@ -72,13 +72,13 @@ test("~/now is a one-line teaser; clicking it jumps to sabbatical and adds a his
 
   const before = await page.evaluate(() => history.length);
   await teaser.click();
-  await expect(area(page)).toHaveAttribute("data-workspace", "4");
+  await expectWorkspace(page, "sabbatical");
   await expect(page).toHaveURL(/\/now\/$/);
   expect(await page.evaluate(() => history.length)).toBe(before + 1);
 
   // Back undoes the jump: the opening is on show again at the root address
   await page.goBack();
-  await expect(area(page)).toHaveAttribute("data-workspace", "0");
+  await expectWorkspace(page, "opening");
   await expect(page).toHaveURL(/\/$/);
 });
 
@@ -114,7 +114,7 @@ test("the name is Duo Bold at -0.02em on two lines inside its window, and scales
     { width: 1920, height: 1080 },
   ]) {
     await page.setViewportSize(viewport);
-    await expect(area(page)).toHaveAttribute("data-ready", "true");
+    await booted(page);
     const win = await box(page, "name");
     const text = await name.boundingBox();
     expect(text && win).toBeTruthy();

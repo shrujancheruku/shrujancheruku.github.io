@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { ready } from "./helpers";
+import { ready } from "./desktop";
 
 // a beat is 2.2 s and a cycle five of them
 test.describe.configure({ timeout: 60_000 });
@@ -29,6 +29,7 @@ test("it starts on the visitor's theme, holds it for 2.5 s, then switches on eac
     const name = (await bar(page).locator(".a").textContent()) ?? "";
     if (seen.at(-1) !== name) seen.push(name);
     if (Date.now() - started < 1200) held &&= name === "tokyo-night";
+    // time itself is under test: the bar is sampled every 100 ms as the beats pass
     await page.waitForTimeout(100);
   }
   expect(held).toBe(true);
@@ -44,6 +45,7 @@ test("it starts on the visitor's theme, holds it for 2.5 s, then switches on eac
 
 test("it does not change the site's own theme", async ({ page }) => {
   await open(page, "nord");
+  // time itself is under test: the site's theme stays as the cycle runs on
   await page.waitForTimeout(6000);
   expect(await siteTheme(page)).toBe("nord");
   const body = await page.evaluate(() =>
@@ -101,6 +103,7 @@ test("it opens with nvim, btop and spotify_player, one window opens from the lau
     if (label && labels.at(-1) !== label) labels.push(label);
     const n = await scene(page).locator(".tile:not(.out)").count();
     if (counts.at(-1) !== n) counts.push(n);
+    // time itself is under test: the keys and windows are sampled every 80 ms as the session plays
     await page.waitForTimeout(80);
   }
   // 3 windows, 4 while lazygit is open, 3 again
@@ -141,6 +144,7 @@ test("the share-card frame is four windows with no key label, in the visitor's t
   await expect(tiles.nth(3)).toContainText("Unstaged changes");
   await expect(bar(page)).toHaveText(/nord · 23 themes$/);
   expect(await scene(page).evaluate((el) => el.style.length)).toBe(0);
+  // time itself is under test: the still frame holds its theme as time passes
   await page.waitForTimeout(3500);
   await expect(bar(page)).toHaveText(/nord · 23 themes$/);
 });
@@ -155,6 +159,7 @@ test("with reduced motion it is frozen at its still frame in the visitor's theme
   await expect(scene(page).locator(".tile")).toHaveCount(4);
   await expect(scene(page).locator(".keys.on")).toHaveCount(0);
   const before = await scene(page).innerHTML();
+  // time itself is under test: the still frame holds as time passes
   await page.waitForTimeout(3500);
   expect(await scene(page).innerHTML()).toBe(before);
   await expect(bar(page)).toHaveText(/gruvbox · 23 themes$/);
@@ -175,6 +180,7 @@ test("btop draws its panels and its meters move; the song's clock runs", async (
       .evaluateAll((els) => els.map((e) => e.textContent));
   const clock = () => scene(page).locator(".tm").first().textContent();
   const [m0, c0] = [await meters(), await clock()];
+  // time itself is under test: the meters move and the clock runs as time passes
   await page.waitForTimeout(2300);
   expect(await meters()).not.toEqual(m0);
   expect(await clock()).not.toBe(c0);

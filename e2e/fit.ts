@@ -145,12 +145,12 @@ export const hidden = (page: Page) =>
         right: left + he.clientWidth,
       };
     };
-    const shown = [...document.querySelectorAll<HTMLElement>(".pane")].filter(
+    const onShow = [...document.querySelectorAll<HTMLElement>(".pane")].filter(
       (p) => getComputedStyle(p).display !== "none",
     );
 
     // no two windows on a screen overlap
-    const wins = shown.map((p) => ({
+    const wins = onShow.map((p) => ({
       id: p.dataset.window ?? "?",
       box: p.querySelector(".win")?.getBoundingClientRect(),
     }));
@@ -179,7 +179,7 @@ export const hidden = (page: Page) =>
       return false;
     };
 
-    for (const pane of shown) {
+    for (const pane of onShow) {
       const id = pane.dataset.window ?? "?";
       const win = pane.querySelector(".win");
       if (!win) continue;

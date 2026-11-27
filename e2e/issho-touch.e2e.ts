@@ -1,7 +1,7 @@
-import { devices, expect, type Page, test } from "@playwright/test";
-import { toComposition } from "./helpers";
+import { expect, type Page, test } from "@playwright/test";
+import { PHONES, toComposition, viewportOf } from "./desktop";
 
-test.use({ ...devices["Pixel 7"] });
+test.use(PHONES["Pixel 7"]);
 test.describe.configure({ timeout: 90_000 });
 
 const slot = (page: Page) => page.locator('[data-composition="issho"]');
@@ -12,7 +12,6 @@ test("on touch the site fills the window as text only, with the phone in front c
 }) => {
   await page.goto("/work/issho/");
   await toComposition(page);
-  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
   await expect(slot(page)).toHaveAttribute("data-mounted", "true");
   const sc = scene(page);
   const box = await sc.boundingBox();
@@ -86,7 +85,7 @@ test("on touch the site's text does not overflow sideways and the phone stays in
 
 for (const [name, viewport] of [
   ["375x667", { width: 375, height: 667 }],
-  ["Pixel 7", devices["Pixel 7"].viewport],
+  ["Pixel 7", viewportOf("Pixel 7")],
 ] as const)
   test(`on a ${name} phone every card of the app fits its screen with room to spare`, async ({
     page,

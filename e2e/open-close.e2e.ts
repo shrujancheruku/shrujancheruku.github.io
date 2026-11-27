@@ -4,7 +4,8 @@
 // frame is sampled and checked for its edge, direction, the shared border, no
 // frame jumping back, and the right final rectangles.
 import { expect, type Page, test } from "@playwright/test";
-import { area, type Box, framesOf, ready, settle } from "./helpers";
+import { areaBox, expectNotRetiling, ready, settle } from "./desktop";
+import { type Box, framesOf } from "./helpers";
 
 /** A rectangle in percent of the tiling area. */
 type Pct = Box;
@@ -15,7 +16,7 @@ async function sample(
   ids: readonly string[],
   action: () => Promise<unknown>,
 ): Promise<Record<string, (Pct | null)[]>> {
-  const a = await area(page).boundingBox();
+  const a = await areaBox(page);
   if (!a) throw new Error("no area");
   const selector = ids.map((id) => `.pane[data-window="${id}"]`).join(", ");
   const order = await page.$$eval(selector, (els) =>
@@ -199,6 +200,6 @@ test.describe("wide screen, reduced motion", () => {
     for (const r of frames.skills ?? [])
       expect(either(r, [62, 40, 38, 60], null)).toBe(true);
     expectRect(frames.education?.at(-1), [46, 0, 54, 100]);
-    await expect(area(page)).toHaveAttribute("data-retiling", "false");
+    await expectNotRetiling(page);
   });
 });

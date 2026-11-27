@@ -3,8 +3,6 @@ import {
   COMPOSITION_BUDGET_BYTES,
   chunkOf,
   closureBytes,
-  drawing,
-  frameToShow,
   missingCompositions,
   overCompositionBudget,
   shouldLoad,
@@ -67,20 +65,6 @@ describe("when a composition is loaded", () => {
   });
 });
 
-describe("when a composition draws", () => {
-  const on = { active: true, onscreen: true, visible: true };
-
-  test("when its window is on show, in view, and the tab is visible", () => {
-    expect(drawing(on)).toBe(true);
-  });
-
-  test("not when any of those is false", () => {
-    expect(drawing({ ...on, active: false })).toBe(false);
-    expect(drawing({ ...on, onscreen: false })).toBe(false);
-    expect(drawing({ ...on, visible: false })).toBe(false);
-  });
-});
-
 describe("what a built composition weighs", () => {
   test("finds the chunks a built chunk imports statically", () => {
     const code =
@@ -113,38 +97,5 @@ describe("what a built composition weighs", () => {
       "orca-flow.A1b2.js",
     );
     expect(chunkOf("orca-flow", ["orca-flow-session.A.js"])).toBeUndefined();
-  });
-});
-
-describe("which still frame to show", () => {
-  const frames = ["end", "top"];
-  const base = { frames, card: "end", flashes: false, reduced: false };
-
-  test("none by default", () => {
-    expect(frameToShow({ ...base, asked: undefined })).toBeNull();
-  });
-
-  test("a named frame that exists", () => {
-    expect(frameToShow({ ...base, asked: "top" })).toBe("top");
-  });
-
-  test("the word card asks for the composition's own card frame", () => {
-    expect(frameToShow({ ...base, asked: "card" })).toBe("end");
-  });
-
-  test("an unknown name is ignored", () => {
-    expect(frameToShow({ ...base, asked: "nope" })).toBeNull();
-  });
-
-  test("reduced motion freezes a flashing composition at its card", () => {
-    expect(
-      frameToShow({ ...base, asked: undefined, flashes: true, reduced: true }),
-    ).toBe("end");
-  });
-
-  test("reduced motion leaves a composition that does not flash playing", () => {
-    expect(
-      frameToShow({ ...base, asked: undefined, reduced: true }),
-    ).toBeNull();
   });
 });
