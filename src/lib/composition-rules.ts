@@ -1,6 +1,5 @@
 // The rules around compositions that need no DOM: the size budget, the build
-// check that every featured project has one, when one is loaded and when it
-// draws. Tested under `bun test`.
+// check that every featured project has one, and when one is loaded. Tested under `bun test`.
 
 /** A composition is at most 60 KB of JS plus assets once built. */
 export const COMPOSITION_BUDGET_BYTES = 60 * 1024;
@@ -59,19 +58,6 @@ export function shouldLoad(state: LoadState): boolean {
   return distance <= 1 && state.loaded && state.idle;
 }
 
-export interface DrawState {
-  /** Its window is on show (the desktop's `composition:enter`). */
-  active: boolean;
-  /** Its window is in view. */
-  onscreen: boolean;
-  /** The tab is visible. */
-  visible: boolean;
-}
-
-export function drawing(state: DrawState): boolean {
-  return state.active && state.onscreen && state.visible;
-}
-
 export interface Chunk {
   bytes: number;
   /** Chunks it imports statically (file names). */
@@ -114,29 +100,4 @@ export function chunkOf(
 ): string | undefined {
   const own = new RegExp(`^${name.replace(/[^\w-]/g, "\\$&")}\\.[\\w-]+\\.js$`);
   return files.find((f) => own.test(f));
-}
-
-export interface FrameAsk {
-  /** `data-frame` on the slot: a frame's name, or `card` for the share card's. */
-  asked: string | undefined;
-  /** The names of the composition's frames. */
-  frames: readonly string[];
-  /** The frame its share card shows. */
-  card: string;
-  flashes: boolean;
-  reduced: boolean;
-}
-
-/** The still frame to show instead of playing, if any (null: play). */
-export function frameToShow({
-  asked,
-  frames,
-  card,
-  flashes,
-  reduced,
-}: FrameAsk): string | null {
-  const name = asked === "card" ? card : asked;
-  if (name && frames.includes(name)) return name;
-  if (flashes && reduced) return card;
-  return null;
 }
