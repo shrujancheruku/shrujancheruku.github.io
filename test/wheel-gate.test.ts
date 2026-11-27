@@ -16,30 +16,37 @@ const flickAt = (start: number, gap: number, sign = 1): [number, number][] =>
 type Wheel = [number, number] | [number, number, number];
 
 /**
- * Drive the gate as desktop.ts does: every step, fed or released, starts a
- * re-tile that holds the gate for `retile` ms; at its end the gate is released
- * and a pending step, if any, fires. Returns when each step fired.
+ * Drive the gate as desktop.ts does: every step starts a motion of `retile`
+ * ms, which the gate is told of. A step the gate gives during a motion waits
+ * (the latest only) and runs when the motion ends. Returns when each step ran.
  */
 function drive(g: WheelGate, events: Wheel[], retile = 900): number[] {
   const fired: number[] = [];
-  let releaseAt = Number.POSITIVE_INFINITY;
+  let endsAt = Number.POSITIVE_INFINITY;
+  let waiting = false;
   const step = (time: number) => {
     fired.push(time);
-    g.hold();
-    releaseAt = time + retile;
+    g.moving();
+    endsAt = time + retile;
   };
-  const releaseUntil = (time: number) => {
-    while (releaseAt <= time && releaseAt < Number.POSITIVE_INFINITY) {
-      const at = releaseAt;
-      releaseAt = Number.POSITIVE_INFINITY;
-      if (g.release()) step(at);
+  const endUntil = (time: number) => {
+    while (endsAt <= time && endsAt < Number.POSITIVE_INFINITY) {
+      const at = endsAt;
+      endsAt = Number.POSITIVE_INFINITY;
+      g.still();
+      if (waiting) {
+        waiting = false;
+        step(at);
+      }
     }
   };
   for (const [time, delta, stall] of events) {
-    releaseUntil(time);
-    if (g.feed(time, delta, stall)) step(time);
+    endUntil(time);
+    if (!g.feed(time, delta, stall)) continue;
+    if (endsAt < Number.POSITIVE_INFINITY) waiting = true;
+    else step(time);
   }
-  releaseUntil(Number.POSITIVE_INFINITY);
+  endUntil(Number.POSITIVE_INFINITY);
   return fired;
 }
 
@@ -70,13 +77,13 @@ describe("the wheel gate", () => {
     });
   }
 
-  test("a slow tail is one step even with no re-tile holding the gate", () => {
+  test("a slow tail is one step even with no motion running", () => {
     const g = gate();
     const steps = flickAt(0, 260).filter(([t, d]) => g.feed(t, d)).length;
     expect(steps).toBe(1);
   });
 
-  test("a flick whose re-tile starts late is one step, its tail swallowed until the re-tile ends", () => {
+  test("a flick whose re-tile starts late is one step, its tail swallowed until the motion ends", () => {
     // captured in Chrome at 12x CPU throttle: the step at 10584 asked for a
     // re-tile that only ended at 11895, and the page was too busy to deliver
     // the tail for over a second
@@ -121,7 +128,7 @@ describe("the wheel gate", () => {
       expect(drive(gate(), coalesced(merge))).toEqual([0]);
     });
 
-    test("is one step with no re-tile holding the gate", () => {
+    test("is one step with no motion running", () => {
       const g = gate();
       const merge = FLICK.indexOf(15);
       const steps = coalesced(merge).filter(([t, d, b]) =>
@@ -136,7 +143,7 @@ describe("the wheel gate", () => {
       expect(drive(gate(), coalesced(merge, 4))).toEqual([0]);
     });
 
-    test("is one step when four are merged with no re-tile holding the gate", () => {
+    test("is one step when four are merged with no motion running", () => {
       const g = gate();
       const merge = FLICK.indexOf(48);
       const events = coalesced(merge, 4, 16);
@@ -209,47 +216,41 @@ describe("the wheel gate", () => {
     });
   });
 
-  describe("a step asked for during a re-tile", () => {
-    test("waits, and fires as soon as the re-tile releases", () => {
+  describe("a gesture during a motion", () => {
+    test("steps at once: the gate is not held shut while the windows move", () => {
       const g = gate();
       expect(g.feed(0, 120)).toBe(1);
-      g.hold();
-      expect(g.feed(600, 120)).toBe(0);
-      expect(g.release()).toBe(1);
+      g.moving();
+      expect(g.feed(600, 120)).toBe(1);
     });
 
-    test("is never more than one", () => {
+    test("turning round steps the other way at once, to turn the motion back", () => {
       const g = gate();
       expect(g.feed(0, 120)).toBe(1);
-      g.hold();
-      expect(g.feed(300, 120)).toBe(0);
-      expect(g.feed(600, 120)).toBe(0);
-      expect(g.feed(800, 120)).toBe(0);
-      expect(g.release()).toBe(1);
-      // nothing more was queued
-      g.hold();
-      expect(g.release()).toBe(0);
+      g.moving();
+      expect(g.feed(100, -120)).toBe(-1);
     });
 
-    test("is not queued by the first flick's own tail", () => {
+    test("is not a step of the first flick's own tail", () => {
       const g = gate();
       expect(g.feed(0, 120)).toBe(1);
-      g.hold();
+      g.moving();
       for (const [t, d] of flickAt(0, 50).slice(1))
         expect(g.feed(t, d)).toBe(0);
-      expect(g.release()).toBe(0);
     });
 
-    test("goes the way of the latest gesture", () => {
+    test("a tail the busy page kept waiting stays tail while the windows move", () => {
       const g = gate();
       expect(g.feed(0, 120)).toBe(1);
-      g.hold();
-      expect(g.feed(400, 120)).toBe(0);
-      expect(g.feed(700, -120)).toBe(0);
-      expect(g.release()).toBe(-1);
+      g.moving();
+      expect(g.feed(900, 90)).toBe(0);
+      expect(g.feed(1700, 60)).toBe(0);
+      g.still();
+      // at rest, a silence that long starts a new gesture
+      expect(g.feed(2600, 60)).toBe(1);
     });
 
-    test("a second flick during the re-tile steps the moment it ends", () => {
+    test("a second flick during the motion steps the moment it ends", () => {
       const events = [...flickAt(0, 30), ...flickAt(700, 30)];
       expect(drive(gate(), events)).toEqual([0, 900]);
     });
@@ -302,11 +303,11 @@ describe("the wheel gate", () => {
   test("events with no vertical delta neither step nor break a tail", () => {
     const g = gate();
     expect(g.feed(0, 100)).toBe(1);
-    g.hold();
+    g.moving();
     expect(g.feed(300, 30)).toBe(0);
     expect(g.feed(350, 0)).toBe(0);
     expect(g.feed(400, 25)).toBe(0);
-    expect(g.release()).toBe(0);
+    g.still();
     expect(g.feed(450, 20)).toBe(0);
   });
 

@@ -24,12 +24,12 @@
 // delta big enough to step on its own, `steadyMs` or more after the last, is
 // a new notch.
 //
-// The caller holds the gate for the real re-tile, which on a busy page can
-// start late and end well after the event that asked for it, and releases it
-// when that ends. While held, a shrinking delta is tail however long the page
-// kept it waiting. A new gesture that comes while held is not dropped: the
-// gate remembers one pending step, the latest gesture's way, and `release`
-// hands it back to be taken at once.
+// The caller says when a step's motion runs (`moving`) and when it ends
+// (`still`): on a busy page it can start late and end well after the event
+// that asked for it. While it runs, a shrinking delta is tail however long the
+// page kept it waiting. The gate is never shut, though: a new gesture during
+// a motion steps at once, and the caller decides what that step does (turn
+// the motion back, or wait for it to end).
 
 export interface WheelGateOptions {
   /** The longest gap between two events of one gesture's tail, in ms. */
@@ -53,10 +53,10 @@ export interface WheelGate {
    * a flick that scrolls a window to its end does not carry on into a step.
    */
   absorb(time: number, delta: number): void;
-  /** Keep the gate shut until `release`, however long that takes. */
-  hold(): void;
-  /** The re-tile ended: open the gate, and return the step that waited for it. */
-  release(): 1 | -1 | 0;
+  /** A step's motion is running: its gesture's tail stays tail until `still`. */
+  moving(): void;
+  /** The motion ended. */
+  still(): void;
 }
 
 /**
@@ -70,9 +70,8 @@ export function createWheelGate({
   steadyMs,
   threshold,
 }: WheelGateOptions): WheelGate {
+  /** A step's motion is running. */
   let held = false;
-  /** A step asked for while held: at most one, taken at the release. */
-  let pending: 1 | -1 | 0 = 0;
   /** After a step, until a new gesture starts: the events are its tail. */
   let inTail = false;
   let last = Number.NEGATIVE_INFINITY;
@@ -139,9 +138,7 @@ export function createWheelGate({
       const direction = sum > 0 ? 1 : -1;
       sum = 0;
       inTail = true;
-      if (!held) return direction;
-      pending = direction;
-      return 0;
+      return direction;
     },
     absorb(time, delta) {
       if (delta === 0) return;
@@ -149,15 +146,11 @@ export function createWheelGate({
       sum = 0;
       inTail = true;
     },
-    hold() {
+    moving() {
       held = true;
     },
-    release() {
-      if (!held) return 0;
+    still() {
       held = false;
-      const step = pending;
-      pending = 0;
-      return step;
     },
   };
 }
