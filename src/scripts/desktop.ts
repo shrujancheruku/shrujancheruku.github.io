@@ -244,8 +244,14 @@ interface Placed {
 }
 /** The layout on show, as placed. */
 let placed: Placed | null = null;
-/** The running motion's two ends, as placed; `from` is null for the first appearance. */
-let placedEnds: { from: Placed | null; to: Placed } | null = null;
+/**
+ * The running motion's two ends, as placed; `from` is null for the first
+ * appearance. `pushed`: the input that began it added a history entry.
+ */
+let placedEnds: { from: Placed | null; to: Placed; pushed: boolean } | null =
+  null;
+/** The step being placed comes from an input that just added a history entry. */
+let pushing = false;
 /** Back steps the page took itself, whose popstate only reconciles the address. */
 let ownBacks = 0;
 /** The input that waits for the running motion to end: the latest only. */
@@ -372,7 +378,7 @@ function turnBack(): void {
   if (!timeline || !ends?.from) return;
   turnedBack = true;
   waiting = null;
-  placedEnds = { from: ends.to, to: ends.from };
+  placedEnds = { from: ends.to, to: ends.from, pushed: false };
   record(ends.from);
   if (timeline.reversed()) timeline.play();
   else timeline.reverse();
@@ -449,7 +455,7 @@ function place(n: number, animate: boolean): void {
     gate.moving();
     // for the page and its tests: a motion is running until `settled`
     area.dataset.retiling = "true";
-    placedEnds = { from, to: next };
+    placedEnds = { from, to: next, pushed: pushing };
     latest = motionBetween(
       before,
       layout,
@@ -895,9 +901,11 @@ function openArchive(slug = "", push = true): void {
   if (push) {
     history.pushState(null, "", ARCHIVE_PATH);
     archivePushed = true;
+    pushing = true;
   }
   document.title = book.forPath(ARCHIVE_PATH)?.title ?? document.title;
   setOpen(true, true, screenOfEntry(slug));
+  pushing = false;
   markEntry(slug);
   staggerEntries();
 }
@@ -1021,14 +1029,24 @@ function goBackOver(): void {
  */
 export function jump(n: number): void {
   const next = Math.max(0, Math.min(steps - 1, n));
-  act({ step: next, screen: 0, open: false }, () => jumpNow(next));
+  // a jump that turns back a jump goes Back over that jump's entry, so the
+  // history holds only where the visitor settled
+  act({ step: next, screen: 0, open: false }, () =>
+    jumpNow(next, turningBack && placedEnds?.pushed === true),
+  );
 }
 
-function jumpNow(next: number): void {
+/** Jump to step `next`; `undo` goes Back over the running jump's entry instead of adding one. */
+function jumpNow(next: number, undo = false): void {
   const here = !notFound && book.stepFor(location.pathname) === next;
-  if (!here) {
+  if (undo) {
+    archivePushed = false;
+    goBackOver();
+    document.title = book.forStep(next).title;
+  } else if (!here) {
     const address = book.forStep(next);
     history.pushState(null, "", address.path);
+    pushing = true;
     document.title = address.title;
   }
   if (notFound) {
@@ -1038,6 +1056,7 @@ function jumpNow(next: number): void {
   // a jump to the step the archive is open on closes it, with no re-tile of its own
   if (open && next === step) setOpen(false);
   goTo(next);
+  pushing = false;
 }
 
 /** A deliberate jump to an address of the site; false if the path is not one. */
@@ -1376,7 +1395,7 @@ area.dataset.retiling ??= "false";
 if (shown && placed && !reduced.matches) {
   gate.moving();
   area.dataset.retiling = "true";
-  placedEnds = { from: null, to: placed };
+  placedEnds = { from: null, to: placed, pushed: false };
   appearing = latest = appearBetween(shown);
 }
 area.dataset.ready = "true";
