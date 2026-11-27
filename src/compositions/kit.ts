@@ -14,7 +14,7 @@
 //   on the slot (share cards), and the composition's `card` frame under
 //   reduced motion when the composition `flashes`.
 import { Cancelled, type Clock, createClock } from "../lib/composition-clock";
-import { drawing, frameToShow } from "../lib/composition-rules";
+import { createLifecycle, type Mode } from "../lib/composition-lifecycle";
 
 export { Cancelled };
 
@@ -70,7 +70,7 @@ export interface Composition {
   frames: Record<string, (kit: Kit) => void>;
 }
 
-export type Mode = "idle" | "playing" | "paused" | "held" | "frame";
+export type { Mode };
 
 /**
  * True in the touch layout (max-width 760px), read live: for a composition's
@@ -160,121 +160,43 @@ export function mount(slot: HTMLElement, composition: Composition): void {
   composition.build(kit);
 
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-  let active = slot.dataset.active === "true";
-  let onscreen = false;
-  let visible = !document.hidden;
-  /** The clock of the run on show, or null if none has begun. */
-  let running: Clock | null = null;
-  let finished = false;
-  let mode: Mode = "idle";
-  const setMode = (next: Mode): void => {
-    mode = next;
-    slot.dataset.state = mode;
-  };
-
-  const frameName = (): string | null =>
-    frameToShow({
-      asked: slot.dataset.frame,
-      frames: Object.keys(composition.frames),
-      card: composition.card,
-      flashes: composition.flashes ?? false,
-      reduced: reduced.matches,
-    });
-
-  const stop = (): void => {
-    running?.cancel();
-    running = null;
-    finished = false;
-  };
-
-  const begin = (): void => {
-    stop();
-    clock = createClock();
-    running = clock;
-    const mine = clock;
-    if (drawing({ active, onscreen, visible })) setMode("playing");
-    else {
-      mine.pause();
-      setMode("paused");
-    }
-    composition
-      .play(kit)
-      .then(() => {
-        if (running !== mine) return;
-        finished = true;
-        setMode("held");
-        const again = composition.holdMs;
-        if (again === undefined) return;
-        mine
-          .sleep(again)
-          .then(() => {
-            if (running === mine && active) begin();
-          })
-          .catch((e: unknown) => {
-            if (!(e instanceof Cancelled)) throw e;
-          });
-      })
-      .catch((e: unknown) => {
-        if (!(e instanceof Cancelled)) throw e;
-      });
-  };
-
-  /** Bring the scene in line with what is true now. */
-  const update = (): void => {
-    const frame = frameName();
-    if (frame) {
-      stop();
-      composition.frames[frame]?.(kit);
-      slot.dataset.shownFrame = frame;
-      setMode("frame");
-      return;
-    }
-    delete slot.dataset.shownFrame;
-    if (!active) {
-      if (mode !== "idle") setMode("idle");
-      return;
-    }
-    if (mode === "frame" || mode === "idle") {
-      begin();
-      return;
-    }
-    if (finished) return;
-    const draws = drawing({ active, onscreen, visible });
-    if (draws && running?.paused) {
-      running.resume();
-      setMode("playing");
-    } else if (!draws && running && !running.paused) {
-      running.pause();
-      setMode("paused");
-    }
-  };
-
-  slot.addEventListener("composition:enter", () => {
-    active = true;
-    stop();
-    setMode("idle");
-    update();
+  const lifecycle = createLifecycle({
+    createClock: () => createClock(),
+    play: (next) => {
+      clock = next;
+      return composition.play(kit);
+    },
+    showFrame: (name) => composition.frames[name]?.(kit),
+    onChange: ({ mode, frame }) => {
+      slot.dataset.state = mode;
+      if (frame === null) delete slot.dataset.shownFrame;
+      else slot.dataset.shownFrame = frame;
+    },
+    holdMs: composition.holdMs,
+    frames: Object.keys(composition.frames),
+    card: composition.card,
+    flashes: composition.flashes,
+    active: slot.dataset.active === "true",
+    visible: !document.hidden,
+    reduced: reduced.matches,
+    asked: slot.dataset.frame,
   });
-  slot.addEventListener("composition:leave", () => {
-    active = false;
-    stop();
-    setMode("idle");
-    update();
-  });
+
+  slot.addEventListener("composition:enter", () => lifecycle.enter());
+  slot.addEventListener("composition:leave", () => lifecycle.leave());
   new IntersectionObserver((entries) => {
-    for (const e of entries) onscreen = e.isIntersecting;
-    update();
+    for (const e of entries) lifecycle.setOnscreen(e.isIntersecting);
   }).observe(slot);
-  document.addEventListener("visibilitychange", () => {
-    visible = !document.hidden;
-    update();
-  });
-  reduced.addEventListener("change", update);
-  new MutationObserver(update).observe(slot, {
-    attributes: true,
-    attributeFilter: ["data-frame"],
-  });
+  document.addEventListener("visibilitychange", () =>
+    lifecycle.setVisible(!document.hidden),
+  );
+  reduced.addEventListener("change", () =>
+    lifecycle.setReduced(reduced.matches),
+  );
+  new MutationObserver(() => lifecycle.setAsked(slot.dataset.frame)).observe(
+    slot,
+    { attributes: true, attributeFilter: ["data-frame"] },
+  );
 
-  setMode("idle");
-  update();
+  lifecycle.sync();
 }
