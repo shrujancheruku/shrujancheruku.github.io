@@ -10,6 +10,7 @@ import {
   createWorkspaces,
   firstStepOf,
   type Layout,
+  screensOf,
   stepAt,
   tilingOf,
 } from "../src/lib/workspaces";
@@ -157,6 +158,47 @@ describe("the edge a window opens out of and closes into", () => {
 
   test("a step's real tiles: the about window has nothing beside it", () => {
     expect(edgeOf("about", {}, wide("about"))).toBe("right");
+  });
+});
+
+describe("the edge a window takes on a phone", () => {
+  const phone = (id: string, open = false, screen = 0): Layout =>
+    screensOf(stepAt(workspaces, firstStepOf(workspaces, ws(id))), open)[
+      screen
+    ] ?? {};
+  const edge = (id: string, before: Layout, after: Layout) =>
+    edgeOf(id, before, after, true);
+
+  test("the archive comes from the right and goes back into it", () => {
+    const closed = phone("projects");
+    const open = phone("projects", true);
+    expect(edge("archive", closed, open)).toBe("right");
+    expect(edge("archive", open, closed)).toBe("right");
+  });
+
+  test("the copy and the composition go into the left edge, and come out of it", () => {
+    const closed = phone("projects");
+    const open = phone("projects", true);
+    for (const id of Object.keys(closed)) {
+      expect(edge(id, closed, open)).toBe("left");
+      expect(edge(id, open, closed)).toBe("left");
+    }
+  });
+
+  test("Skills goes into the bottom edge as Education grows down", () => {
+    const second = phone("timeline", false, 1);
+    const open = phone("timeline", true);
+    expect(edge("skills", second, open)).toBe("bottom");
+    expect(edge("skills", open, second)).toBe("bottom");
+  });
+
+  test("a wide screen keeps its rule: no neighbour, the fallback", () => {
+    expect(edgeOf("a", { b: [0, 0, 100, 50] }, { a: [0, 0, 100, 100] })).toBe(
+      "right",
+    );
+    expect(edgeOf("b", { b: [0, 0, 100, 50] }, { a: [0, 0, 100, 100] })).toBe(
+      "right",
+    );
   });
 });
 

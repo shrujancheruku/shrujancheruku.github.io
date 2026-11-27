@@ -74,13 +74,37 @@ const overlaps = ([al, at, aw, ah]: Rect, [bl, bt, bw, bh]: Rect): boolean =>
 
 const centre = ([l, t, w, h]: Rect): [number, number] => [l + w / 2, t + h / 2];
 
+const area = ([, , w, h]: Rect): number => w * h;
+
+/** The edge a window with no neighbour overlapping it uses. */
+const fallbackEdge = ([l, , w]: Rect): Edge =>
+  l + w >= 100 - EPSILON ? "right" : "bottom";
+
+const opposite: Record<Edge, Edge> = {
+  left: "right",
+  right: "left",
+  top: "bottom",
+  bottom: "top",
+};
+
 /**
  * The desktop edge a window opens out of (it is in `after` only) or closes
  * into (it is in `before` only): on the far side from its neighbours. With no
  * neighbour overlapping it, right if its tile reaches the right edge, else
  * bottom.
+ *
+ * On a phone, a window that has no neighbour but is swapped for a larger one
+ * (the copy and the composition, for the archive that takes the whole screen)
+ * takes the edge opposite the larger one's, so that the two share one moving
+ * border: the archive comes out of the right, the copy and the composition go
+ * into the left.
  */
-export function edgeOf(id: string, before: Layout, after: Layout): Edge {
+export function edgeOf(
+  id: string,
+  before: Layout,
+  after: Layout,
+  phone = false,
+): Edge {
   const opening = id in after;
   const tile = (opening ? after : before)[id];
   if (!tile) throw new Error(`${id} is in neither layout`);
@@ -103,8 +127,15 @@ export function edgeOf(id: string, before: Layout, after: Layout): Edge {
       return dy > 0 ? "bottom" : "top";
     }
   }
-  const [l, , w] = tile;
-  return l + w >= 100 - EPSILON ? "right" : "bottom";
+  if (phone) {
+    const swapped = Object.entries(other)
+      .filter(([n, t]) => !(n in beside) && overlaps(t, tile))
+      .map(([, t]) => t)
+      .filter((t) => area(t) > area(tile));
+    const larger = swapped.sort((a, b) => area(b) - area(a))[0];
+    if (larger) return opposite[fallbackEdge(larger)];
+  }
+  return fallbackEdge(tile);
 }
 
 /**

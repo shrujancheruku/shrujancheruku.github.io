@@ -98,6 +98,10 @@ let screenBeforeOpen = 0;
 let shown: Layout | null = null;
 /** The workspace of the layout on show. */
 let shownWorkspace = -1;
+/** The step, disclosure and pages of the layout on show (a phone's screens). */
+let shownStep = -1;
+let shownOpen = false;
+let shownPages: Readonly<Record<string, number>> = {};
 /** Where the layout on show sits in the order of steps and screens. */
 let shownOrder = -1;
 /** The current step's disclosure (Education & Internships) is open. */
@@ -240,11 +244,20 @@ function place(n: number, animate: boolean): void {
     return;
   const before = shown;
   const beforeWorkspace = shownWorkspace;
+  const beforePages = shownPages;
+  const sameScreens =
+    touch.matches && shownStep === n && shownOpen === open && before !== null;
+  const sameLayout =
+    sameScreens && JSON.stringify(before) === JSON.stringify(layout);
+  shownStep = n;
+  shownOpen = open;
+  shownPages = pages;
   const order = n * 1000 + screen;
   const direction = order >= shownOrder ? 1 : -1;
   shownOrder = order;
   // a motion still running ends here: its windows go to rest first
   const interrupted = stopMotion();
+  turning = [];
 
   let z = 1;
   for (const pane of panes) {
@@ -265,12 +278,15 @@ function place(n: number, animate: boolean): void {
     });
   }
 
+  const moving = animate && before !== null && !reduced.matches;
   // the entries of a paged window: its page on touch, all of them wide
   for (const pane of panes) {
     const id = pane.dataset.window ?? "";
     const paged = pagedWindow(id);
     const tile = layout[id];
     if (!paged || !tile) continue;
+    if (moving && sameLayout && (beforePages[id] ?? 0) !== (pages[id] ?? 0))
+      turning.push(turnFrom(paged));
     showPage(
       paged,
       touch.matches ? pagesOf(id, tile)[pages[id] ?? 0] : undefined,
@@ -293,7 +309,7 @@ function place(n: number, animate: boolean): void {
     else b.removeAttribute("aria-current");
   }
 
-  if (animate && before && !reduced.matches) {
+  if (moving && before) {
     // the wheel stays shut for the whole motion, which on a busy page starts
     // late and ends well after the wheel event that asked for it
     gate.hold();
@@ -304,6 +320,7 @@ function place(n: number, animate: boolean): void {
       layout,
       workspace === beforeWorkspace,
       direction,
+      sameScreens && !sameLayout,
     );
   } else if (interrupted) {
     area.dataset.retiling = "false";
@@ -320,6 +337,50 @@ const css = ([left, top, width, height]: Rect) => ({
 
 /** The running motion's clean-up: what leaves goes, and fades are cleared. */
 let rest: (() => void) | null = null;
+
+/** A paged window turning its page: its old entries, as a copy that leaves. */
+interface Turn {
+  paged: Paged;
+  old: HTMLElement;
+  /** What the window's own list was positioned against, to put back. */
+  parent: HTMLElement;
+  position: string;
+}
+/** The page turns of the step being placed, taken before its pages change. */
+let turning: Turn[] = [];
+
+/**
+ * Copy the entries a paged window shows now and lay the copy over them, so
+ * that the old page can leave while the next comes in. Taken before the window
+ * shows its next page.
+ */
+function turnFrom(paged: Paged): Turn {
+  const { list } = paged;
+  const parent = list.parentElement ?? paged.root;
+  const position = parent.style.position;
+  if (getComputedStyle(parent).position === "static")
+    parent.style.position = "relative";
+  const old = list.cloneNode(true) as HTMLElement;
+  old.removeAttribute("id");
+  old.removeAttribute("data-paged");
+  old.dataset.clone = "true";
+  old.setAttribute("aria-hidden", "true");
+  old.inert = true;
+  for (const e of old.querySelectorAll("[id]")) e.removeAttribute("id");
+  for (const e of old.querySelectorAll("[data-entry]"))
+    e.removeAttribute("data-entry");
+  for (const e of old.querySelectorAll("[aria-current]"))
+    e.removeAttribute("aria-current");
+  Object.assign(old.style, {
+    position: "absolute",
+    top: `${list.offsetTop}px`,
+    left: `${list.offsetLeft}px`,
+    width: `${list.offsetWidth}px`,
+    margin: "0",
+  });
+  parent.append(old);
+  return { paged, old, parent, position };
+}
 
 /** End the running motion, if any, with its windows at rest. */
 function stopMotion(): boolean {
@@ -347,8 +408,12 @@ function motionBetween(
   after: Layout,
   sameWorkspace: boolean,
   direction: 1 | -1,
+  screenMove = false,
 ): gsap.core.Timeline {
-  if (!sameWorkspace) return travelBetween(before, after, direction);
+  // a phone moving between screens of one step, whose windows all change,
+  // travels like changing workspace
+  if (!sameWorkspace || screenMove)
+    return travelBetween(before, after, direction);
   const leaving: HTMLElement[] = [];
   const faded: HTMLElement[] = [];
   const rolled: HTMLElement[] = [];
@@ -390,10 +455,12 @@ function motionBetween(
         0,
       );
       rolled.push(pane);
-    } else if (touch.matches) {
-      // the phone's motions are their own ticket
     } else if (c.motion === "opening" && c.to) {
-      tween(pane, collapsed(c.to, edgeOf(c.id, before, after)), c.to);
+      tween(
+        pane,
+        collapsed(c.to, edgeOf(c.id, before, after, touch.matches)),
+        c.to,
+      );
       timeline.fromTo(
         pane,
         { opacity: 0 },
@@ -404,7 +471,11 @@ function motionBetween(
     } else if (c.motion === "closing" && c.from) {
       // it stays on show until it is in its edge
       pane.style.display = "block";
-      tween(pane, c.from, collapsed(c.from, edgeOf(c.id, before, after)));
+      tween(
+        pane,
+        c.from,
+        collapsed(c.from, edgeOf(c.id, before, after, touch.matches)),
+      );
       timeline.fromTo(
         pane,
         { opacity: 1 },
@@ -415,12 +486,38 @@ function motionBetween(
       faded.push(pane);
     }
   }
+  // a paged window turning its page: its entries roll past inside the window
+  // (the window's body clips them); its frame and title bar stay
+  const turned = turning;
+  turning = [];
+  const entries: HTMLElement[] = [];
+  for (const { paged, old } of turned) {
+    const roll = rollOf(direction, paged.root.clientHeight);
+    timeline.fromTo(
+      old,
+      { y: roll.rest.y },
+      { y: roll.out.to.y, duration: ROLL, ease: ROLL_EASE },
+      0,
+    );
+    timeline.fromTo(
+      paged.list,
+      { y: roll.in.from.y },
+      { y: roll.rest.y, duration: ROLL, ease: ROLL_EASE },
+      0,
+    );
+    entries.push(paged.list);
+  }
   // a step whose windows only appear and go still takes the step's time
-  timeline.set({}, {}, rolled.length > 0 ? ROLL : MOVE);
+  timeline.set({}, {}, rolled.length > 0 || turned.length > 0 ? ROLL : MOVE);
   rest = () => {
     for (const pane of leaving) pane.style.display = "none";
     gsap.set(faded, { clearProps: "opacity" });
     gsap.set(rolled, { clearProps: "transform,clipPath" });
+    gsap.set(entries, { clearProps: "transform" });
+    for (const { old, parent, position } of turned) {
+      old.remove();
+      parent.style.position = position;
+    }
   };
   return timeline;
 }
@@ -825,6 +922,9 @@ markZoom();
 const fingerEvent = (e: PointerEvent): boolean =>
   touch.matches && e.pointerType === "touch";
 
+/** A swipe the finger has made, which moves once the finger lifts. */
+let swiping: 1 | -1 | 0 = 0;
+
 const fingerOf = (e: PointerEvent) => ({
   id: e.pointerId,
   x: e.clientX,
@@ -833,9 +933,9 @@ const fingerOf = (e: PointerEvent) => ({
 });
 
 /**
- * A swipe moves one screen, except during the first appearance: like the
- * wheel, it waits until every window is in (a swipe then is dropped; nothing
- * queues yet).
+ * A swipe moves one screen, starting when the finger lifts (the windows don't
+ * track the finger), except during the first appearance: like the wheel, it
+ * waits until every window is in (a swipe then is dropped; nothing queues yet).
  */
 function swiped(direction: 1 | -1): void {
   if (appearing) return;
@@ -847,7 +947,10 @@ function swiped(direction: 1 | -1): void {
 document.addEventListener(
   "pointerdown",
   (e) => {
-    if (fingerEvent(e)) swipe.down(fingerOf(e), e.isPrimary, zoom());
+    if (!fingerEvent(e)) return;
+    // a second finger is a pinch, never a step
+    swiping = 0;
+    swipe.down(fingerOf(e), e.isPrimary, zoom());
   },
   { passive: true },
 );
@@ -855,8 +958,8 @@ document.addEventListener(
   "pointermove",
   (e) => {
     if (!fingerEvent(e)) return;
-    const direction = swipe.move(fingerOf(e));
-    if (direction) swiped(direction);
+    // the rule says the swipe is made; it moves when the finger lifts
+    swiping = swipe.move(fingerOf(e)) || swiping;
   },
   { passive: true },
 );
@@ -864,15 +967,19 @@ document.addEventListener(
   "pointerup",
   (e) => {
     if (!fingerEvent(e)) return;
-    const direction = swipe.up(fingerOf(e));
-    if (direction) swiped(direction);
+    const direction = swipe.up(fingerOf(e)) || swiping;
+    if (!direction) return;
+    swiping = 0;
+    swiped(direction);
   },
   { passive: true },
 );
 document.addEventListener(
   "pointercancel",
   (e) => {
-    if (fingerEvent(e)) swipe.cancel(e.pointerId);
+    if (!fingerEvent(e)) return;
+    swiping = 0;
+    swipe.cancel(e.pointerId);
   },
   { passive: true },
 );
@@ -999,6 +1106,7 @@ for (const [act, index] of [
 // and when the screen's size or the fonts change what fits a page
 function onLayoutChange(): void {
   swipe.reset();
+  swiping = 0;
   if (touch.matches) fitEntries();
   pageCache.clear();
   screen = 0;
