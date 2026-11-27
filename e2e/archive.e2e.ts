@@ -102,7 +102,7 @@ test("scrolling to another step closes it and the address follows the step", asy
   await page.keyboard.press("ArrowDown");
   await settle(page);
   expect(await shown(page)).not.toContain("archive");
-  await expect(page).toHaveURL(/\/timeline\/$/);
+  await expect(page).toHaveURL(/\/about\/$/);
 });
 
 test("Back after opening closes it; the entry is a history entry", async ({

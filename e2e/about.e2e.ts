@@ -2,20 +2,20 @@ import { devices, expect, type Page, test } from "@playwright/test";
 import { unseen } from "./fit";
 import { area, ready, SWIPES, settle, swipe, warmUpTouch } from "./helpers";
 
-// The about workspace (#99): second, at /about/, one window with the founder's
-// text and a closing line in the accent colour that leads to the projects.
+// The about workspace (#99): fourth, at /about/, one window with the founder's
+// text and a closing line in the accent colour that leads to the sabbatical.
 
 const pathname = (page: Page) => new URL(page.url()).pathname;
 const closing = (page: Page) => page.locator('[data-window="about"] .closing');
 
-test("about is the second workspace, at /about/, with its own title and share card", async ({
+test("about is the fourth workspace, at /about/, with its own title and share card", async ({
   page,
 }) => {
   await ready(page, "/about/");
-  await expect(area(page)).toHaveAttribute("data-workspace", "1");
+  await expect(area(page)).toHaveAttribute("data-workspace", "3");
   await expect(page).toHaveTitle("About — Shrujan Cheruku");
-  await expect(page.locator(".ws button").nth(1)).toHaveText(/2\s+about/);
-  await expect(page.locator(".ws button").nth(1)).toHaveAttribute(
+  await expect(page.locator(".ws button").nth(3)).toHaveText(/4\s+about/);
+  await expect(page.locator(".ws button").nth(3)).toHaveAttribute(
     "aria-current",
     "true",
   );
@@ -66,36 +66,36 @@ test("clicking the closing line moves to the sabbatical, and Back returns", asyn
   expect(await page.evaluate(() => history.length)).toBe(before + 1);
   await page.goBack();
   await settle(page);
-  await expect(area(page)).toHaveAttribute("data-workspace", "1");
+  await expect(area(page)).toHaveAttribute("data-workspace", "3");
   expect(pathname(page)).toBe("/about/");
   await page.goForward();
   await settle(page);
   expect(pathname(page)).toBe("/now/");
 });
 
-test("an arrow key from about reaches the projects, and up returns to the opening", async ({
+test("an arrow key from about reaches the sabbatical, and up returns to the last project", async ({
   page,
 }) => {
   await ready(page, "/about/");
   await page.keyboard.press("ArrowDown");
   await settle(page);
-  expect(pathname(page)).toBe("/work/");
+  expect(pathname(page)).toBe("/now/");
   await page.keyboard.press("ArrowUp");
   await settle(page);
   expect(pathname(page)).toBe("/about/");
   await page.keyboard.press("ArrowUp");
   await settle(page);
-  expect(pathname(page)).toBe("/");
+  expect(pathname(page)).toBe("/work/unmacos/");
 });
 
-test("number keys: 2 is about, 3 the projects, 4 timeline, 5 sabbatical, 6 contact", async ({
+test("number keys: 2 is timeline, 3 the projects, 4 about, 5 sabbatical, 6 contact", async ({
   page,
 }) => {
   await ready(page, "/");
   for (const [key, path] of [
-    ["2", "/about/"],
+    ["2", "/timeline/"],
     ["3", "/work/"],
-    ["4", "/timeline/"],
+    ["4", "/about/"],
     ["5", "/now/"],
     ["6", "/contact/"],
   ] as const) {
@@ -156,7 +156,7 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       ).toBe(true);
     });
 
-    test("tapping the closing line reaches the sabbatical, and swiping the projects", async ({
+    test("tapping the closing line, or swiping, reaches the sabbatical", async ({
       page,
     }) => {
       await ready(page, "/about/");
@@ -168,7 +168,7 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       await ready(page, "/about/");
       await warmUpTouch(page);
       await swipe(page, 1, SWIPES[0] as (typeof SWIPES)[number]);
-      await expect.poll(() => pathname(page)).toBe("/work/");
+      await expect.poll(() => pathname(page)).toBe("/now/");
     });
   });
 }
