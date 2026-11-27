@@ -162,7 +162,7 @@ async function play(kit: Kit): Promise<void> {
     await kit.sleep(150);
   }
   await kit.sleep(300);
-  view.key.classList.add("on");
+  end(kit);
 }
 
 /** The end state: findings typed, both reports complete, the key line showing. */
