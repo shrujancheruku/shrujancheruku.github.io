@@ -22,7 +22,7 @@ const visible = (page: Page, id: string) =>
 
 test.beforeEach(async ({ page }) => {
   await ready(page);
-  await page.keyboard.press("4");
+  await page.keyboard.press("2");
   await settle(page);
 });
 
@@ -127,7 +127,7 @@ test("leaving the workspace closes it", async ({ page }) => {
   await settle(page);
   await page.keyboard.press("5");
   await settle(page);
-  await page.keyboard.press("4");
+  await page.keyboard.press("2");
   await settle(page);
   expect(await visible(page, "skills")).toBe(true);
   await expect(page.locator("[data-disclosure=education]")).toHaveAttribute(

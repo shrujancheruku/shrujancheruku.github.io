@@ -24,19 +24,60 @@ export interface Variant {
   touch: readonly Layout[];
 }
 
+/**
+ * A window as tall as its rows on a wide screen: `px` tall at the foot of its
+ * tile, and the window above it in the same column takes the rest. The tiling
+ * holds percentages, so the area's live height resolves it (`tilingOf`).
+ */
+export interface Sized {
+  window: string;
+  px: number;
+}
+
 export interface Step {
   /** The window that has focus (the gradient border). */
   focus: string;
-  /** One tiling for a wide screen, and one or more screens for touch. */
+  /**
+   * One tiling for a wide screen, and one or more screens for touch. With
+   * `sized`, `desktop` is the tiling before the area's height is known.
+   */
   desktop: Layout;
+  /** A window sized to its rows on a wide screen while the disclosure is shut. */
+  sized?: Sized;
   touch: readonly Layout[];
   /** The tiling while the step's disclosure is open; absent if it has none. */
   open?: Variant;
 }
 
-/** The wide tiling to show: the open variant if the step has one and it is open. */
-export const tilingOf = (step: Step, open: boolean): Layout =>
-  open && step.open ? step.open.desktop : step.desktop;
+/**
+ * The wide tiling to show: the open variant if the step has one and it is
+ * open; else the step's own, its sized window resolved against `height`, the
+ * tiling area's height in px, when that is given.
+ */
+export function tilingOf(step: Step, open: boolean, height?: number): Layout {
+  if (open && step.open) return step.open.desktop;
+  if (!step.sized || !height || height <= 0) return step.desktop;
+  return resolveSized(step.desktop, step.sized, height);
+}
+
+/** `layout` with `sized.window` `sized.px` tall at the foot of its tile and the window above taking the rest. */
+function resolveSized(layout: Layout, sized: Sized, height: number): Layout {
+  const tile = layout[sized.window];
+  if (!tile) return layout;
+  const [x, y, w, h] = tile;
+  const own = Math.min(h, (sized.px / height) * 100);
+  const top = y + h - own;
+  return Object.fromEntries(
+    Object.entries(layout).map(([id, r]): [string, Rect] => {
+      if (id === sized.window) return [id, [x, top, w, own]];
+      const [rx, ry, rw, rh] = r;
+      // the window above in the same column grows down to the sized one
+      if (rx === x && rw === w && ry + rh === y)
+        return [id, [rx, ry, rw, top - ry]];
+      return [id, r];
+    }),
+  );
+}
 
 /** The touch screens to show: the open variant's if the step has one and it is open. */
 export const screensOf = (step: Step, open: boolean): readonly Layout[] =>
@@ -55,6 +96,8 @@ export interface Workspace {
 export interface WorkspaceOptions {
   /** How many featured projects there are (one step each). */
   featured: number;
+  /** The stack ends with the line that opens the archive (there is an archive). */
+  archive: boolean;
 }
 
 const stepOf = (
@@ -92,19 +135,59 @@ const squeeze = (layout: Layout, share: number): Layout =>
     ]),
   );
 
+/**
+ * One row of the stack on a wide screen, a featured project or the archive
+ * line: the tallest a row grows. ProjectStack.astro reads it as `--stack-row`.
+ */
+export const STACK_ROW = 34;
+
+// What the stack's pane spends besides its rows, top to bottom (#141, layout E):
+/** The label's band (`.stack`'s top inset in ProjectStack.astro). */
+const STACK_LABEL = 32;
+/** The rule under the label (`.stack`'s top border). */
+const STACK_RULE = 1;
+/** The pane's padding, half of `--gap` (global.css, wide) on each side. */
+const STACK_GAP = 14;
+/** The window's border, 2px on each side (`.win` in Window.astro). */
+const STACK_BORDER = 4;
+/** Everything the pane spends besides its rows: 51px. */
+export const STACK_CHROME = STACK_LABEL + STACK_RULE + STACK_GAP + STACK_BORDER;
+
+/**
+ * The chrome the stack's height allows for: all of it, so every row is
+ * exactly STACK_ROW tall and the stack is 221px with four featured and the
+ * archive line (the founder's ruling on #176, option b). The prototype
+ * (#141, layout E) allowed only the label's band and two rules, 34px, which
+ * left its rows about 30.6px.
+ */
+const STACK_ALLOWANCE = STACK_CHROME;
+
+/** The stack's height on a wide screen with `rows` lines (featured and the archive line). */
+export const stackHeight = (rows: number): number =>
+  STACK_ALLOWANCE + rows * STACK_ROW;
+
 /** The share of a phone screen a project's copy takes; the composition has the rest. */
 const PROJECT_COPY_SHARE = 56;
 
 const WORKSPACE_NAMES = [
   ["opening", "opening"],
-  ["about", "about"],
-  ["projects", "projects"],
   ["timeline", "timeline"],
+  ["projects", "projects"],
+  ["about", "about"],
   ["sabbatical", "sabbatical"],
   ["contact", "contact"],
 ] as const;
 
-export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
+export function createWorkspaces({
+  featured,
+  archive,
+}: WorkspaceOptions): Workspace[] {
+  // on a wide screen with the archive shut the stack is as tall as its rows
+  // and the copy takes the rest of the column (#160)
+  const stack: Sized = {
+    window: "stack",
+    px: stackHeight(featured + (archive ? 1 : 0)),
+  };
   const projectSteps = Array.from({ length: featured }, (_, i) => {
     const copy = `copy-${i + 1}`;
     const comp = `comp-${i + 1}`;
@@ -113,7 +196,7 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
       stack: [0, 62, 30, 38],
       [comp]: [30, 0, 70, 100],
     };
-    return stepOf(
+    const step = stepOf(
       comp,
       desktop,
       // a phone drops the stack and holds the project on one screen: the copy
@@ -135,6 +218,7 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
         touch: [{ archive: [0, 0, 100, 100] }],
       },
     );
+    return { ...step, sized: stack };
   });
 
   const steps: Record<string, readonly Step[]> = {

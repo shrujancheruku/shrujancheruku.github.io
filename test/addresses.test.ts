@@ -8,7 +8,7 @@ import {
 } from "../src/lib/addresses";
 import { createWorkspaces, firstStepOf } from "../src/lib/workspaces";
 
-const workspaces = createWorkspaces({ featured: 3 });
+const workspaces = createWorkspaces({ featured: 3, archive: false });
 const book = createAddressBook(workspaces, [
   { repository: "issho", pitch: "Find your people." },
   { repository: "unmacos", pitch: "A Mac in a tab." },
@@ -20,8 +20,8 @@ describe("the address book", () => {
     const at = (w: number) => book.forStep(firstStepOf(workspaces, w));
     expect([0, 1, 3, 4, 5].map((w) => [at(w).path, at(w).title])).toEqual([
       ["/", "Shrujan Cheruku — Senior Product Engineer"],
-      ["/about/", "About — Shrujan Cheruku"],
       ["/timeline/", "Timeline — Shrujan Cheruku"],
+      ["/about/", "About — Shrujan Cheruku"],
       ["/now/", "Sabbatical — Shrujan Cheruku"],
       ["/contact/", "Contact — Shrujan Cheruku"],
     ]);

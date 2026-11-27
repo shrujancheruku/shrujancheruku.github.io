@@ -8,9 +8,9 @@ const workspace = async (page: Page) =>
 
 const ADDRESSES: [string, number, string][] = [
   ["/", 0, "Shrujan Cheruku — Senior Product Engineer"],
-  ["/about/", 1, "About — Shrujan Cheruku"],
+  ["/timeline/", 1, "Timeline — Shrujan Cheruku"],
   ["/work/", 2, "Projects — Shrujan Cheruku"],
-  ["/timeline/", 3, "Timeline — Shrujan Cheruku"],
+  ["/about/", 3, "About — Shrujan Cheruku"],
   ["/now/", 4, "Sabbatical — Shrujan Cheruku"],
   ["/contact/", 5, "Contact — Shrujan Cheruku"],
 ];
@@ -47,9 +47,10 @@ test("scrolling changes address and title and adds no history entry", async ({
   const before = await page.evaluate(() => history.length);
   await flick(page, { x: 640, y: 400 });
   await settle(page);
-  expect(new URL(page.url()).pathname).toBe("/about/");
-  await expect(page).toHaveTitle("About — Shrujan Cheruku");
-  await flick(page, { x: 640, y: 400 });
+  expect(new URL(page.url()).pathname).toBe("/timeline/");
+  await expect(page).toHaveTitle("Timeline — Shrujan Cheruku");
+  // the timeline scrolls its own entries under a wheel, so leave it by key
+  await page.keyboard.press("ArrowDown");
   await settle(page);
   expect(new URL(page.url()).pathname).toBe("/work/");
   await expect(page).toHaveTitle("Projects — Shrujan Cheruku");
@@ -72,7 +73,7 @@ test("a workspace key or a status bar item adds an entry, and Back undoes it", a
 }) => {
   await boot(page, "/");
   const before = await page.evaluate(() => history.length);
-  await page.keyboard.press("4");
+  await page.keyboard.press("2");
   await settle(page);
   expect(new URL(page.url()).pathname).toBe("/timeline/");
   await page.locator('.ws button[data-workspace="5"]').click();
@@ -83,7 +84,7 @@ test("a workspace key or a status bar item adds an entry, and Back undoes it", a
   await page.goBack();
   await settle(page);
   expect(new URL(page.url()).pathname).toBe("/timeline/");
-  expect(await workspace(page)).toBe(3);
+  expect(await workspace(page)).toBe(1);
   await expect(page).toHaveTitle("Timeline — Shrujan Cheruku");
   await page.goBack();
   await settle(page);
@@ -97,7 +98,7 @@ test("Back after scrolling past a jump returns to the jump's origin, not the scr
   await boot(page, "/");
   await page.keyboard.press("4");
   await settle(page);
-  await page.keyboard.press("ArrowDown"); // timeline -> sabbatical, replaces
+  await page.keyboard.press("ArrowDown"); // about -> sabbatical, replaces
   await settle(page);
   expect(new URL(page.url()).pathname).toBe("/now/");
   await page.goBack();
@@ -114,6 +115,20 @@ test("an unknown path boots the desktop with a not-found terminal offering the s
   await expect(term).toBeVisible();
   await expect(term).toContainText("/no/such/place/");
   await expect(term.locator("a")).toHaveCount(6);
+  // the six places, numbered in the story's order, each linking to its address
+  await expect(term.locator("li")).toHaveText([
+    /^1\s+opening$/,
+    /^2\s+timeline$/,
+    /^3\s+projects$/,
+    /^4\s+about$/,
+    /^5\s+sabbatical$/,
+    /^6\s+contact$/,
+  ]);
+  expect(
+    await term
+      .locator("a")
+      .evaluateAll((els) => els.map((e) => e.getAttribute("href"))),
+  ).toEqual(["/", "/timeline/", "/work/", "/about/", "/now/", "/contact/"]);
 
   await term.getByRole("link", { name: "timeline" }).click();
   await settle(page);

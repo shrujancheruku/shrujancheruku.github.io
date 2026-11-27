@@ -13,7 +13,7 @@ const fills = (page: Page) =>
 
 async function enter(page: Page) {
   await ready(page, "/");
-  await page.keyboard.press("4");
+  await page.keyboard.press("2");
 }
 
 test("five bars on tracks, no number, Comedic Talent last at full length", async ({
@@ -45,7 +45,7 @@ test("the bars grow in on entry, the joke bar last; replays on re-entry", async 
   expect((await fills(page)).every((f) => f.w > 0.69)).toBe(true);
   await page.keyboard.press("5");
   await settle(page);
-  await page.keyboard.press("4");
+  await page.keyboard.press("2");
   await page.waitForTimeout(500);
   expect((await fills(page)).some((f) => f.w < 0.5)).toBe(true);
 });

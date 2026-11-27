@@ -27,9 +27,9 @@ test("a featured project shares its own card, title and pitch", async ({
 test("every other address shares the site's card", async ({ page }) => {
   for (const path of [
     "/",
-    "/about/",
-    "/work/",
     "/timeline/",
+    "/work/",
+    "/about/",
     "/now/",
     "/contact/",
     "/archive/",

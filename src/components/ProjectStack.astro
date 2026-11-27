@@ -5,6 +5,7 @@
 // On touch the window sits under the composition on the project's second
 // screen, two fifths of the screen, with room for every row.
 import type { Stack } from "../lib/project-copy";
+import { STACK_ROW } from "../lib/workspaces";
 import Window from "./Window.astro";
 
 interface Props {
@@ -15,7 +16,12 @@ const { stack } = Astro.props;
 ---
 
 <Window id="stack" label="featured" scrolls>
-  <nav class="stack" aria-label="featured projects" data-stack>
+  <nav
+    class="stack"
+    aria-label="featured projects"
+    data-stack
+    style={`--stack-row: ${STACK_ROW}px`}
+  >
     {
       stack.items.map((item) => (
         <a href={item.href} data-position={item.position}>{item.name}</a>
@@ -32,6 +38,8 @@ const { stack } = Astro.props;
 </Window>
 
 <style>
+  /* the label's band and the rule under it are STACK_LABEL and STACK_RULE
+     in src/lib/workspaces.ts, which sizes the stack from them */
   .stack {
     position: absolute;
     inset: 32px 0 0;
@@ -51,7 +59,8 @@ const { stack } = Astro.props;
 
   .stack > * {
     flex: 1 0 26px;
-    max-height: 34px;
+    /* STACK_ROW in src/lib/workspaces.ts */
+    max-height: var(--stack-row);
     padding: 0 14px;
     display: flex;
     align-items: center;
@@ -103,10 +112,10 @@ const { stack } = Astro.props;
       border-top: 0;
     }
 
-    /* the window is two fifths of a screen: five rows at 34px fit, and more
-       rows give way to a smaller row before they would be cut off */
+    /* the window is two fifths of a screen: five rows at STACK_ROW fit, and
+       more rows give way to a smaller row before they would be cut off */
     .stack > * {
-      flex: 1 1 34px;
+      flex: 1 1 var(--stack-row);
       min-height: 22px;
       max-height: none;
     }

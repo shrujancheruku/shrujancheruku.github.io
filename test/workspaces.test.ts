@@ -6,7 +6,10 @@ import {
   type Layout,
   locate,
   type Rect,
+  STACK_CHROME,
+  STACK_ROW,
   screensOf,
+  stackHeight,
   stepAfter,
   stepCount,
   stepsIn,
@@ -27,14 +30,14 @@ const tile = (layout: Layout, id: string): Rect => {
 };
 
 describe("the six workspaces", () => {
-  const ws = createWorkspaces({ featured: 4 });
+  const ws = createWorkspaces({ featured: 4, archive: false });
 
   test("are fixed, in order", () => {
     expect(ws.map((w) => w.id)).toEqual([
       "opening",
-      "about",
-      "projects",
       "timeline",
+      "projects",
+      "about",
       "sabbatical",
       "contact",
     ]);
@@ -50,21 +53,21 @@ describe("the six workspaces", () => {
 describe("steps inside the projects workspace", () => {
   test("hold one step per featured project, whatever the count", () => {
     for (const n of [3, 4, 6, 9]) {
-      const ws = createWorkspaces({ featured: n });
+      const ws = createWorkspaces({ featured: n, archive: false });
       expect(stepsIn(at(ws, 2))).toBe(n);
       expect(stepCount(ws)).toBe(n + 5);
     }
   });
 
   test("do not move the other workspaces' numbers when the count changes", () => {
-    const three = createWorkspaces({ featured: 3 });
-    const six = createWorkspaces({ featured: 6 });
+    const three = createWorkspaces({ featured: 3, archive: false });
+    const six = createWorkspaces({ featured: 6, archive: false });
     expect(three.map((w) => w.id)).toEqual(six.map((w) => w.id));
   });
 });
 
 describe("addressing steps", () => {
-  const ws = createWorkspaces({ featured: 4 });
+  const ws = createWorkspaces({ featured: 4, archive: false });
 
   test("firstStepOf gives the step a workspace begins on", () => {
     expect([0, 1, 2, 3, 4, 5].map((i) => firstStepOf(ws, i))).toEqual([
@@ -89,21 +92,22 @@ describe("addressing steps", () => {
 });
 
 describe("every step's tiling", () => {
-  const tilings = createWorkspaces({ featured: 5 }).flatMap((w, wi) =>
-    w.steps.flatMap((step, si) =>
-      [
-        { kind: "desktop", layouts: [step.desktop] },
-        { kind: "touch", layouts: step.touch },
-      ].flatMap(({ kind, layouts }) =>
-        layouts.map((layout, screen) => ({
-          name: `${w.id} step ${si + 1} (${kind} ${screen + 1})`,
-          step,
-          layout,
-          kind,
-          wi,
-        })),
+  const tilings = createWorkspaces({ featured: 5, archive: false }).flatMap(
+    (w, wi) =>
+      w.steps.flatMap((step, si) =>
+        [
+          { kind: "desktop", layouts: [step.desktop] },
+          { kind: "touch", layouts: step.touch },
+        ].flatMap(({ kind, layouts }) =>
+          layouts.map((layout, screen) => ({
+            name: `${w.id} step ${si + 1} (${kind} ${screen + 1})`,
+            step,
+            layout,
+            kind,
+            wi,
+          })),
+        ),
       ),
-    ),
   );
 
   test("fills the area exactly, with no overlap", () => {
@@ -151,7 +155,7 @@ describe("every step's tiling", () => {
 });
 
 describe("the decided proportions", () => {
-  const ws = createWorkspaces({ featured: 4 });
+  const ws = createWorkspaces({ featured: 4, archive: false });
   const desktop = (w: number, s = 0) => at(at(ws, w).steps, s).desktop;
 
   test("opening: name 60%, terminal above ~/now on the right", () => {
@@ -161,9 +165,9 @@ describe("the decided proportions", () => {
   });
 
   test("about: one window across the whole workspace", () => {
-    expect(desktop(1)).toEqual({ about: [0, 0, 100, 100] });
-    expect(at(at(ws, 1).steps, 0).focus).toBe("about");
-    expect(at(at(ws, 1).steps, 0).touch).toEqual([{ about: [0, 0, 100, 100] }]);
+    expect(desktop(3)).toEqual({ about: [0, 0, 100, 100] });
+    expect(at(at(ws, 3).steps, 0).focus).toBe("about");
+    expect(at(at(ws, 3).steps, 0).touch).toEqual([{ about: [0, 0, 100, 100] }]);
   });
 
   test("a project step: copy 30% above the stack, composition 70%", () => {
@@ -178,7 +182,7 @@ describe("the decided proportions", () => {
   });
 
   test("timeline: 62% window, 38% x 40% above 38% x 60%", () => {
-    const l = desktop(3);
+    const l = desktop(1);
     expect(tile(l, "timeline")[2]).toBe(62);
     expect(tile(l, "education").slice(2)).toEqual([38, 40]);
     expect(tile(l, "skills").slice(2)).toEqual([38, 60]);
@@ -205,8 +209,8 @@ describe("the decided proportions", () => {
 });
 
 describe("the timeline's open variant (Education & Internships)", () => {
-  const ws = createWorkspaces({ featured: 4 });
-  const step = at(at(ws, 3).steps, 0);
+  const ws = createWorkspaces({ featured: 4, archive: false });
+  const step = at(at(ws, 1).steps, 0);
 
   test("closed it is the decided tiling", () => {
     expect(tilingOf(step, false)).toBe(step.desktop);
@@ -240,7 +244,7 @@ describe("the timeline's open variant (Education & Internships)", () => {
 });
 
 describe("the archive's open variant (projects)", () => {
-  const ws = createWorkspaces({ featured: 4 });
+  const ws = createWorkspaces({ featured: 4, archive: false });
   const projects = at(ws, 2);
 
   test("every project step squeezes into the left 42% and the archive takes the right 58%", () => {
@@ -274,7 +278,7 @@ describe("the archive's open variant (projects)", () => {
 });
 
 describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
-  const ws = createWorkspaces({ featured: 4 });
+  const ws = createWorkspaces({ featured: 4, archive: false });
   const touch = (w: number, s = 0) => at(at(ws, w).steps, s).touch;
   const ids = (layouts: readonly Layout[]) =>
     layouts.map((l) => Object.keys(l));
@@ -284,7 +288,7 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
   });
 
   test("about is one screen, its window whole", () => {
-    expect(ids(touch(1))).toEqual([["about"]]);
+    expect(ids(touch(3))).toEqual([["about"]]);
   });
 
   test("contact is its terminal alone: one screen, the last step", () => {
@@ -298,7 +302,7 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
   });
 
   test("the timeline workspace is two screens: the timeline, then education over skills", () => {
-    expect(ids(touch(3))).toEqual([["timeline"], ["education", "skills"]]);
+    expect(ids(touch(1))).toEqual([["timeline"], ["education", "skills"]]);
   });
 
   test("the sabbatical is one touch screen: the copy over the four photos in a 2 x 2 grid", () => {
@@ -321,7 +325,7 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
 
   test("wherever the projects count goes, every project has its one screen", () => {
     for (const n of [1, 3, 6, 9]) {
-      const projects = at(createWorkspaces({ featured: n }), 2);
+      const projects = at(createWorkspaces({ featured: n, archive: false }), 2);
       expect(projects.steps.map((s) => s.touch.length)).toEqual(
         Array(n).fill(1),
       );
@@ -336,7 +340,7 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
 describe("the phone premise: one touch screen per step, two for the timeline", () => {
   for (const featured of [1, 4, 6]) {
     test(`with ${featured} featured: every step is one screen, the timeline's two`, () => {
-      for (const w of createWorkspaces({ featured })) {
+      for (const w of createWorkspaces({ featured, archive: false })) {
         for (const [i, step] of w.steps.entries()) {
           const name = `${w.id} step ${i + 1}`;
           const want = w.id === "timeline" ? 2 : 1;
@@ -358,4 +362,69 @@ describe("the phone premise: one touch screen per step, two for the timeline", (
       }
     });
   }
+});
+
+describe("the copy window's layout (#160): the stack as tall as its rows", () => {
+  /** A window's height in px, in a tiling area `height` px tall. */
+  const px = (r: Rect, height: number) => (r[3] * height) / 100;
+
+  test("four featured and the archive line: the stack is five rows tall, the copy takes the rest of the column", () => {
+    const projects = at(createWorkspaces({ featured: 4, archive: true }), 2);
+    for (const [i, step] of projects.steps.entries()) {
+      for (const height of [640, 720, 843, 1013]) {
+        const l = tilingOf(step, false, height);
+        const copy = tile(l, `copy-${i + 1}`);
+        const stack = tile(l, "stack");
+        expect(px(stack, height)).toBeCloseTo(stackHeight(5));
+        expect(stack[1] + stack[3]).toBeCloseTo(100);
+        expect(copy[1]).toBe(0);
+        expect(copy[3]).toBeCloseTo(stack[1]);
+        expect([copy[0], copy[2], stack[0], stack[2]]).toEqual([0, 30, 0, 30]);
+        expect(tile(l, `comp-${i + 1}`)).toEqual([30, 0, 70, 100]);
+      }
+    }
+  });
+
+  test("the height follows the row count", () => {
+    const stackPx = (featured: number, archive: boolean) =>
+      px(
+        tile(
+          tilingOf(
+            at(at(createWorkspaces({ featured, archive }), 2).steps, 0),
+            false,
+            800,
+          ),
+          "stack",
+        ),
+        800,
+      );
+    expect(stackPx(3, true)).toBeCloseTo(stackHeight(4));
+    expect(stackPx(4, false)).toBeCloseTo(stackHeight(4));
+    expect(stackPx(6, true)).toBeCloseTo(stackHeight(7));
+    expect(stackHeight(7) - stackHeight(4)).toBeCloseTo(3 * STACK_ROW);
+  });
+
+  test("the chrome is the label's band, its rule, the pane's gap and the window's border", () => {
+    expect(STACK_CHROME).toBe(32 + 1 + 14 + 4);
+    // the height allows for all of the chrome: every row is STACK_ROW tall
+    expect((stackHeight(5) - STACK_CHROME) / 5).toBe(STACK_ROW);
+  });
+
+  test("with the archive open the tiling is 62/38: copy 62%, stack 38%, squeezed into 42%", () => {
+    const step = at(
+      at(createWorkspaces({ featured: 4, archive: true }), 2).steps,
+      0,
+    );
+    const l = tilingOf(step, true, 800);
+    expect(tile(l, "copy-1")).toEqual([0, 0, 30 * 0.42, 62]);
+    expect(tile(l, "stack")).toEqual([0, 62, 30 * 0.42, 38]);
+    expect(tile(l, "archive")).toEqual([42, 0, 58, 100]);
+  });
+
+  test("every other step's wide tiling ignores the area's height", () => {
+    for (const w of createWorkspaces({ featured: 4, archive: true }))
+      if (w.id !== "projects")
+        for (const step of w.steps)
+          expect(tilingOf(step, false, 800)).toBe(step.desktop);
+  });
 });

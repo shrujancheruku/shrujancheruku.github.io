@@ -70,28 +70,6 @@ const { n, copy } = Astro.props;
     }
   }
 
-  @container (max-height: 460px) {
-    .copy {
-      gap: 6px;
-      padding-top: 18px;
-      padding-bottom: 14px;
-    }
-
-    h2 {
-      font-size: clamp(28px, 10cqw, 38px);
-    }
-
-    .pitch {
-      font-size: 15px;
-      line-height: 1.4;
-    }
-
-    .proof {
-      font-size: 12px;
-      line-height: 1.5;
-    }
-  }
-
   .kick {
     font: 400 12px var(--mono);
     opacity: 0.55;
@@ -172,6 +150,47 @@ const { n, copy } = Astro.props;
     background: none;
     border: 0;
     cursor: pointer;
+  }
+
+  /* a short copy window steps the type down (#160, layout E of #141): on a
+     wide screen with the archive shut only. After the type it steps from;
+     the phone sets its own. #141 measured the copy window as a window, its
+     pane, and the query measures the window's body: the pane less its
+     padding (--gap, 14px) and border (4px). So a pane under 620px is a body
+     under 602px. */
+  @media (min-width: 761px) {
+    @container (height < 602px) {
+      /* nested under the scoped .copy, which holds only this markup */
+      :global(.area:not([data-open="true"])) .copy {
+        gap: 8px;
+        padding-top: 20px;
+        padding-bottom: 16px;
+
+        & h2 {
+          font-size: clamp(26px, 10cqw, 38px);
+        }
+
+        & .pitch {
+          font-size: 15px;
+          line-height: 1.4;
+        }
+
+        & .proof {
+          font-size: 12px;
+          line-height: 1.5;
+        }
+      }
+    }
+
+    /* the archive open keeps the full type, and only its spacing steps down
+       in a window under 460px */
+    @container (height < 460px) {
+      :global(.area[data-open="true"]) .copy {
+        gap: 6px;
+        padding-top: 18px;
+        padding-bottom: 14px;
+      }
+    }
   }
 
   @media (max-width: 760px) {
