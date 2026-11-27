@@ -1286,12 +1286,12 @@ for (const b of numbers) {
 }
 
 // home and contact: deliberate jumps to the opening and the last workspace.
-for (const [act, index] of [
+for (const [cue, index] of [
   ["home", 0],
   ["contact", workspaces.length - 1],
 ] as const) {
   document
-    .querySelector(`[data-act="${act}"]`)
+    .querySelector(`[data-act="${cue}"]`)
     ?.addEventListener("click", () => jump(firstStepOf(workspaces, index)));
 }
 
