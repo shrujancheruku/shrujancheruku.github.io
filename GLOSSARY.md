@@ -40,6 +40,10 @@ _Avoid_: Fade in, pop in, launch; "the opening" (that is the first workspace)
 The reverse of opening a window: it slides back into the edge it came from while its neighbours fill the space it leaves.
 _Avoid_: Fade out, dismiss, hide
 
+**Disclosure**:
+The window a step keeps hidden until the visitor opens it: Education & Internships on the timeline step, the archive on each step of the projects workspace. Opening it opens a window, and on a phone it shows on its own screens from the first. Moving between the step's screens keeps it open. Closing it by its opener or by Back returns to the screen it was opened from; a jump to the same step closes it too. Leaving the step closes it.
+_Avoid_: Drawer, accordion, expander, toggle
+
 **Rolling past**:
 How one project gives way to the next. The tiles stay put; inside each one the old project's window slides out and the next one's slides in, like a scroll: forwards, the old goes up and the next comes from below; backwards, the reverse. A window both projects share (the stack) doesn't move. On a phone, a window turns its page the same way: its frame stays and inside it the old page's entries roll out as the next page's roll in.
 _Avoid_: Crossfade, swap, carousel, page turn
