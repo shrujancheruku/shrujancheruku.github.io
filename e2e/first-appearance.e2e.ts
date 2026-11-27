@@ -351,15 +351,91 @@ test.describe("phone", () => {
       };
       requestAnimationFrame(tick);
     });
-    const run = await load(page, "/");
+    // the appearance is sampled on every frame until the swipe, queued,
+    // runs: the step changes once every window is in
+    await page.addInitScript((sel) => {
+      const w = window as unknown as {
+        __in: (Box | null)[][];
+        __inIds: string[];
+      };
+      w.__in = [];
+      w.__inIds = [];
+      const tick = () => {
+        const a = document.querySelector<HTMLElement>("main.area");
+        if (a?.dataset.ready === "true") {
+          if (a.dataset.step !== "0") return;
+          if (w.__inIds.length === 0)
+            w.__inIds = [...document.querySelectorAll<HTMLElement>(sel)]
+              .filter((p) => getComputedStyle(p).display !== "none")
+              .map((p) => p.dataset.window ?? "");
+          const origin = a.getBoundingClientRect();
+          w.__in.push(
+            w.__inIds.map((id) => {
+              const b = document
+                .querySelector<HTMLElement>(`${sel}[data-window="${id}"]`)
+                ?.getBoundingClientRect();
+              return b
+                ? {
+                    left: b.left - origin.left,
+                    top: b.top - origin.top,
+                    width: b.width,
+                    height: b.height,
+                  }
+                : null;
+            }),
+          );
+        }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }, PANES);
+    await page.goto("/");
+    // once the windows are in, the queued swipe runs: one step down
+    await expect(area(page)).toHaveAttribute("data-step", "1");
+    await expect(area(page)).toHaveAttribute("data-retiling", "false");
     expect(
       await page.evaluate(
         () => (window as unknown as { __swiped: boolean }).__swiped,
       ),
     ).toBe(true);
-    // the step stays, and every window still slid all the way into its tile
-    expect(await whereOf(page)).toMatchObject({ step: 0, screen: 0 });
+    expect(await whereOf(page)).toMatchObject({ step: 1, screen: 0 });
+
+    // every window still slid all the way into its tile on step 0, in tiling order
+    const { ids, frames, model } = await page.evaluate(() => {
+      const w = window as unknown as {
+        __in: (Box | null)[][];
+        __inIds: string[];
+      };
+      return {
+        ids: w.__inIds,
+        frames: w.__in,
+        model: JSON.parse(
+          document.getElementById("desktop-model")?.textContent ?? "[]",
+        ) as Workspace[],
+      };
+    });
+    const at = stepAt(model, 0);
+    const shown = [...ids].sort().join();
+    const layout = [tilingOf(at, false), ...screensOf(at, false)].find(
+      (l) => Object.keys(l).sort().join() === shown,
+    );
+    if (!layout) throw new Error(`no layout of step 0 shows ${shown}`);
+    const order = Object.keys(layout).map((id) => ids.indexOf(id));
+    const run: Run = {
+      ids: Object.keys(layout),
+      frames: frames.map((f) => order.map((i) => f[i] ?? null)),
+      waited: true,
+    };
     expectAppeared(run, (_, i) => (i % 2 === 0 ? "right" : "left"));
+    const rest = await restOf(await page.context().newPage(), "/", run.ids);
+    const end = run.frames.at(-1) as (Box | null)[];
+    for (const [i, r] of rest.entries()) {
+      const f = end[i];
+      expect(r && f && near(f.left, r.left) && near(f.top, r.top)).toBe(true);
+      expect(r && f && near(f.width, r.width) && near(f.height, r.height)).toBe(
+        true,
+      );
+    }
   });
 });
 
