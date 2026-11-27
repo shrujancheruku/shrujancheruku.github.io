@@ -55,6 +55,7 @@ test("the canvas stops while the tab is hidden and resumes after", async ({
   // time itself is under test: the canvas stops drawing, and stays stopped as time passes
   await page.waitForTimeout(100);
   const stopped = await frames(page);
+  // time itself is under test: no frame is drawn for as long as it is hidden
   await page.waitForTimeout(300);
   expect(await frames(page)).toBe(stopped);
   await hide(false);
