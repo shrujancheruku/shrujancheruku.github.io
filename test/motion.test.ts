@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { collapsed, edgeOf, rollOf, sortChanges } from "../src/lib/motion";
+import {
+  collapsed,
+  edgeOf,
+  rollOf,
+  sortChanges,
+  travelOf,
+} from "../src/lib/motion";
 import {
   createWorkspaces,
   firstStepOf,
@@ -180,5 +186,45 @@ describe("rolling past", () => {
       y: 0,
       clip: "inset(0px 0px 0px 0px)",
     });
+  });
+});
+
+describe("changing workspace", () => {
+  const ids = (list: { id: string }[]) => list.map((w) => w.id);
+
+  test("the old windows leave in tiling order, the next arrive in theirs", () => {
+    const { leaving, arriving } = travelOf(wide("sabbatical"), wide("about"));
+    expect(ids(leaving)).toEqual(Object.keys(wide("sabbatical")));
+    expect(ids(arriving)).toEqual(["about"]);
+  });
+
+  test("the written order decides, not the position", () => {
+    const before: Layout = { b: [50, 0, 50, 100], a: [0, 0, 50, 100] };
+    expect(ids(travelOf(before, {}).leaving)).toEqual(["b", "a"]);
+  });
+
+  test("a window on both workspaces leaves as a clone and arrives as itself", () => {
+    const { leaving, arriving } = travelOf(wide("opening"), wide("contact"));
+    const shared = (list: { id: string; shared: boolean }[]) =>
+      list.filter((w) => w.shared).map((w) => w.id);
+    expect(shared(leaving)).toEqual(["name", "term"]);
+    expect(shared(arriving)).toEqual(["name", "term"]);
+    expect(ids(leaving)).toEqual(["name", "term", "now"]);
+    expect(ids(arriving)).toEqual(["contact", "name", "term"]);
+  });
+
+  test("each carries its tile in its own workspace", () => {
+    const { leaving, arriving } = travelOf(wide("opening"), wide("contact"));
+    expect(leaving.find((w) => w.id === "name")?.tile).toEqual(
+      wide("opening").name as never,
+    );
+    expect(arriving.find((w) => w.id === "name")?.tile).toEqual(
+      wide("contact").name as never,
+    );
+  });
+
+  test("nothing is shared between workspaces that share no window", () => {
+    const { leaving, arriving } = travelOf(wide("about"), wide("sabbatical"));
+    expect([...leaving, ...arriving].some((w) => w.shared)).toBe(false);
   });
 });

@@ -148,3 +148,31 @@ export function rollOf(
     },
   };
 }
+
+export interface Traveller {
+  id: string;
+  /** Its tile in its own workspace. */
+  tile: Rect;
+  /** The window is on both workspaces: it leaves as a clone, arrives as itself. */
+  shared: boolean;
+}
+
+/**
+ * Who travels when the step is in another workspace: the old windows, then
+ * the new, each in tiling order (the order a step's windows are written in,
+ * not their position). The same window on both workspaces (the name and its
+ * terminal) travels with each: the old workspace's copy leaves as a clone
+ * while the real pane arrives.
+ */
+export function travelOf(
+  before: Layout,
+  after: Layout,
+): { leaving: Traveller[]; arriving: Traveller[] } {
+  const side = (layout: Layout, other: Layout): Traveller[] =>
+    Object.entries(layout).map(([id, tile]) => ({
+      id,
+      tile,
+      shared: id in other,
+    }));
+  return { leaving: side(before, after), arriving: side(after, before) };
+}
