@@ -21,7 +21,7 @@
 // turn back to, so everything during it waits.
 import { type AddressBook, notFoundTitle } from "./addresses";
 import { moveBy } from "./screens";
-import { locate, stepAt, stepCount, type Workspace } from "./workspaces";
+import { inProjects, stepAt, stepCount, type Workspace } from "./workspaces";
 
 /** The archive's own address: the archive alone, on the last featured project. */
 export const ARCHIVE_PATH = "/archive/";
@@ -160,8 +160,6 @@ export function createNavigator({
 }: NavigatorOptions): Navigator {
   const steps = stepCount(workspaces);
   const clamp = (n: number) => Math.max(0, Math.min(steps - 1, n));
-  const inProjects = (n: number): boolean =>
-    workspaces[locate(workspaces, n).workspace]?.id === "projects";
 
   let s: State = {
     step: 0,
@@ -268,7 +266,7 @@ export function createNavigator({
    * The caller places. False if it does not open.
    */
   function openArchive(p: Plan, entry: string, pushed: boolean): boolean {
-    if (!hasArchive || s.open || !inProjects(s.step)) return false;
+    if (!hasArchive || s.open || !inProjects(workspaces, s.step)) return false;
     if (!stepAt(workspaces, s.step).open) return false;
     if (pushed) {
       push(p, ARCHIVE_PATH);
@@ -285,7 +283,7 @@ export function createNavigator({
   }
 
   function closeArchive(p: Plan): void {
-    if (!s.open || !inProjects(s.step)) return;
+    if (!s.open || !inProjects(workspaces, s.step)) return;
     const address = book.forStep(s.step);
     // the archive's own entry: Back to the address underneath, whose popstate
     // only reconciles the title; the windows close (or turn back) here and now

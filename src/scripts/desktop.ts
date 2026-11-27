@@ -20,6 +20,7 @@ import { createWheelGate } from "../lib/wheel-gate";
 import {
   firstStepOf,
   focusOf,
+  inProjects,
   type Layout,
   locate,
   screensOf,
@@ -75,9 +76,6 @@ const navigator = createNavigator({
   screenOfEntry: (n, slug) => stepScreens.screenOfEntry(n, slug),
   hasArchive: archiveEl !== null,
 });
-
-const inProjects = (n: number): boolean =>
-  workspaces[locate(workspaces, n).workspace]?.id === "projects";
 
 // ---- screens
 // A step's screens on touch are the step-screens module's (src/lib/
@@ -387,7 +385,7 @@ function disclose(from: Where | null, to: Where): void {
 
 /** Tell the page step `n`'s disclosure changed: Education's cue, or the archive's openers. */
 function announce(n: number, opened: boolean): void {
-  const kind = inProjects(n) ? "archive" : "open";
+  const kind = inProjects(workspaces, n) ? "archive" : "open";
   if (kind === "archive") {
     for (const b of document.querySelectorAll(ARCHIVE_OPENERS))
       b.setAttribute("aria-expanded", String(opened));
@@ -666,7 +664,7 @@ addEventListener("keydown", (e: KeyboardEvent) => {
   // move on; anywhere else (a status bar number just clicked) it moves a step
   if (e.key === " " && t instanceof HTMLElement && t.closest(".tgl")) return;
   const { step, open } = navigator.where;
-  if (e.key === "Escape" && open && inProjects(step)) {
+  if (e.key === "Escape" && open && inProjects(workspaces, step)) {
     e.preventDefault();
     carry(navigator.take({ kind: "archive", open: false }));
     return;
