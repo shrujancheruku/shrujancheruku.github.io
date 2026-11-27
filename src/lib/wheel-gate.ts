@@ -71,7 +71,7 @@ export function createWheelGate({
   threshold,
 }: WheelGateOptions): WheelGate {
   /** A step's motion is running. */
-  let held = false;
+  let moving = false;
   /** After a step, until a new gesture starts: the events are its tail. */
   let inTail = false;
   let last = Number.NEGATIVE_INFINITY;
@@ -100,7 +100,7 @@ export function createWheelGate({
     if (size > 2 * was && size >= threshold && size / merged > was)
       return false;
     if (size === was && gap >= steadyMs && size >= threshold) return false;
-    return gap < tailMs || held;
+    return gap < tailMs || moving;
   };
 
   /** Note an event's time and delta; returns its gap and the delta before. */
@@ -147,10 +147,10 @@ export function createWheelGate({
       inTail = true;
     },
     moving() {
-      held = true;
+      moving = true;
     },
     still() {
-      held = false;
+      moving = false;
     },
   };
 }
