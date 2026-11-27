@@ -7,6 +7,7 @@
 // fitted before any step's screens are counted; readings are kept per window
 // and tile, and dropped together; the screen on show is found again by its
 // first entry. src/scripts/layout-reader.ts is the reader over the page.
+import type { Where } from "./navigator";
 import { limitOf } from "./open-queue";
 import {
   anchorOf,
@@ -58,13 +59,6 @@ export interface StepScreensConfig {
   reader: StepScreensReader;
 }
 
-/** A place in a step: enough to find its screen again. */
-export interface Place {
-  step: number;
-  open: boolean;
-  screen: number;
-}
-
 export interface StepScreens {
   /** The screens of step `n`; `opened` says whether its disclosure is open. */
   screens(n: number, opened: boolean): Screen[];
@@ -79,7 +73,7 @@ export interface StepScreens {
    * Given where the visitor is on a phone, gives the screen that now holds
    * what was first on show there.
    */
-  changed(at?: Place): number | undefined;
+  changed(at?: Where): number | undefined;
 }
 
 export function createStepScreens(config: StepScreensConfig): StepScreens {
@@ -148,7 +142,7 @@ export function createStepScreens(config: StepScreensConfig): StepScreens {
     );
   }
 
-  function changed(at?: Place): number | undefined {
+  function changed(at?: Where): number | undefined {
     timelineFitted = false;
     if (!at || !config.touch()) {
       cache.clear();
