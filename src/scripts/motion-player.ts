@@ -5,7 +5,7 @@
 //
 // With reduced motion it is not called: the windows are simply there.
 import { gsap } from "gsap";
-import type { Clip, Plan, Slide, Turn as TurnPlan } from "../lib/motion";
+import type { Clip, PageTurn, Plan, Slide } from "../lib/motion";
 import type { Rect } from "../lib/workspaces";
 import type { Paged } from "./paged";
 
@@ -236,7 +236,7 @@ export function createMotionPlayer(config: MotionPlayerConfig): MotionPlayer {
       if (!turn) continue;
       turned.push(turn);
       const extent = turn.paged.root.clientHeight;
-      const roll = (target: HTMLElement, slide: TurnPlan["out"]) => {
+      const roll = (target: HTMLElement, slide: PageTurn["out"]) => {
         const [from, to] = px(slide, extent);
         timeline.fromTo(
           target,
