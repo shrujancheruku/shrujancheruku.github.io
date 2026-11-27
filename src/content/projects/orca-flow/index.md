@@ -1,9 +1,7 @@
 ---
-pitch: Turn a backlog of issues into reviewed, merged pull requests.
+pitch: Build a whole spec with AI workers, and get back one pull request.
 proof:
-  - each ticket goes to the cheapest model that can do it
-  - tickets built side by side, one pull request out
-  - sizes tickets itself, checked against ones you’ve shipped
-  - this portfolio was built with it
-  - successor to claude-orchestrate
+  - A coding agent builds one ticket well and gets into trouble with five, so I built the part around it that decides the order, picks a model for each ticket, checks the work and hands me one pull request.
+  - I use it every day, and the first 21 tickets of this portfolio went through it in two days.
+  - If something on this page is broken, I’m the one who merged it.
 ---

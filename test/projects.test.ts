@@ -126,16 +126,16 @@ describe("projects: build failures name the project", () => {
     expect(failure(input)[0]).toMatch(/b.*proof lines/);
   });
 
-  test("a featured project with six proof lines", () => {
+  test("a featured project with four proof lines", () => {
     const input = setup(names("a", "b", "c"));
-    input.contents.set("c", content({ proof: ["1", "2", "3", "4", "5", "6"] }));
-    expect(failure(input)[0]).toMatch(/c.*proof lines/);
+    input.contents.set("c", content({ proof: ["1", "2", "3", "4"] }));
+    expect(failure(input)[0]).toMatch(/c.*2 to 3 proof lines/);
   });
 
-  test("two and five proof lines are fine", () => {
+  test("two and three proof lines are fine", () => {
     const input = setup(names("a", "b", "c"));
     input.contents.set("a", content({ proof: ["1", "2"] }));
-    input.contents.set("b", content({ proof: ["1", "2", "3", "4", "5"] }));
+    input.contents.set("b", content({ proof: ["1", "2", "3"] }));
     expect(() => buildProjects(input)).not.toThrow();
   });
 

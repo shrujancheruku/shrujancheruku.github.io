@@ -14,7 +14,7 @@ export interface Copy {
   counter: string;
   name: string;
   pitch: string;
-  /** Without a trailing full stop. */
+  /** Sentences, with their full stops. */
   proof: string[];
   /** `repository`, then `live site` when the project has one. */
   links: Link[];
@@ -44,7 +44,7 @@ export function copyOf(
     counter: `featured ${position} / ${total}`,
     name: project.name,
     pitch: project.pitch,
-    proof: project.proof.map((line) => line.replace(/\.$/, "")),
+    proof: project.proof,
     links,
     facts: {
       language: project.language,
