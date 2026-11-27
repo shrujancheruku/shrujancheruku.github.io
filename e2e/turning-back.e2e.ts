@@ -8,12 +8,13 @@
 // cannot skip a motion to its end between two frames.
 import { expect, type Page, test } from "@playwright/test";
 import {
-  AREA,
   areaBox,
   expectOpen,
   expectWorkspace,
   goTo,
+  type InPage,
   keyOf,
+  probe,
   ready,
   settle,
   stepNow,
@@ -42,12 +43,14 @@ async function midMotion(
 ): Promise<boolean[]> {
   const now = await page.evaluate(() => Date.now());
   await page.clock.pauseAt(new Date(now + 1000));
+  await probe(page);
   const fars = then.map((_, i) => (Array.isArray(far) ? (far[i] ?? 4) : far));
   let done = false;
   const sent = page
     .evaluate(
-      ([first, then, fars, watch, areaSel]) => {
-        const area = document.querySelector<HTMLElement>(areaSel);
+      ([first, then, fars, watch]) => {
+        const retiling = () =>
+          (window as unknown as InPage).desktopNow()?.retiling === true;
         const send = (input: string) => {
           if (input === "Back") history.back();
           else if (input.startsWith("click:"))
@@ -77,7 +80,7 @@ async function midMotion(
           let left = [...then];
           const tick = () => {
             if (left.length === 0) return done(during);
-            if (area?.dataset.retiling !== "true") {
+            if (!retiling()) {
               // the motion ended before the input: say so, and send the rest
               for (const input of left) {
                 during.push(false);
@@ -88,7 +91,7 @@ async function midMotion(
             }
             if (movedFrom(was, fars[during.length] ?? 4)) {
               const input = left.shift() ?? "";
-              during.push(area?.dataset.retiling === "true");
+              during.push(retiling());
               send(input);
               was = rects();
             }
@@ -97,7 +100,7 @@ async function midMotion(
           requestAnimationFrame(tick);
         });
       },
-      [first, then, fars, watch, AREA] as const,
+      [first, then, fars, watch] as const,
     )
     .finally(() => {
       done = true;

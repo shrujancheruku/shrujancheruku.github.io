@@ -11,15 +11,16 @@ import {
   type Workspace,
 } from "../src/lib/workspaces";
 import {
-  AREA,
   areaBox,
   booted,
   expectNotRetiling,
   expectStep,
+  type InPage,
   isOpen,
   isRetiling,
   modelOf,
   PHONES,
+  probe,
   ready,
   whereOf,
 } from "./desktop";
@@ -43,8 +44,9 @@ const PANES = ".pane[data-window]";
 
 /** Load `path`, sampling every window's box on every frame until the desktop is at rest. */
 async function load(page: Page, path: string): Promise<Run> {
+  await probe(page);
   await page.addInitScript(
-    ({ sel, areaSel }) => {
+    ({ sel }) => {
       const w = window as unknown as {
         __frames: (Box | null)[][];
         __ids: string[];
@@ -54,16 +56,16 @@ async function load(page: Page, path: string): Promise<Run> {
       w.__ids = [];
       w.__waited = false;
       const tick = () => {
-        const a = document.querySelector<HTMLElement>(areaSel);
-        if (a?.dataset.ready === "true") {
+        const a = (window as unknown as InPage).desktopNow();
+        if (a?.ready) {
           const panes = [...document.querySelectorAll<HTMLElement>(sel)].filter(
             (p) => getComputedStyle(p).display !== "none",
           );
           if (w.__ids.length === 0) {
             w.__ids = panes.map((p) => p.dataset.window ?? "");
-            w.__waited = a.dataset.retiling === "true";
+            w.__waited = a.retiling;
           }
-          const origin = a.getBoundingClientRect();
+          const origin = a.box;
           w.__frames.push(
             w.__ids.map((id) => {
               const p = document.querySelector<HTMLElement>(
@@ -80,13 +82,13 @@ async function load(page: Page, path: string): Promise<Run> {
                 : null;
             }),
           );
-          if (a.dataset.retiling === "false") return;
+          if (!a.retiling) return;
         }
         requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
     },
-    { sel: PANES, areaSel: AREA },
+    { sel: PANES },
   );
   // the appearance runs on the page's clock in fixed frames, so a busy machine
   // cannot skip part of it between two sampled frames
@@ -340,7 +342,8 @@ test.describe("phone", () => {
     // on the first frame the windows are coming in, a finger swipes up the
     // screen (a step down), as the page's pointer handlers see one: sent from
     // the page, so it can't arrive after the windows are in
-    await page.addInitScript((areaSel) => {
+    await probe(page);
+    await page.addInitScript(() => {
       const w = window as unknown as { __swiped: boolean };
       w.__swiped = false;
       const finger = (type: string, y: number) =>
@@ -355,8 +358,8 @@ test.describe("phone", () => {
           }),
         );
       const tick = () => {
-        const a = document.querySelector<HTMLElement>(areaSel);
-        if (a?.dataset.ready === "true" && a.dataset.retiling === "true") {
+        const a = (window as unknown as InPage).desktopNow();
+        if (a?.ready && a.retiling) {
           finger("pointerdown", 600);
           for (const y of [560, 500, 420, 360]) finger("pointermove", y);
           finger("pointerup", 360);
@@ -366,11 +369,11 @@ test.describe("phone", () => {
         requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
-    }, AREA);
+    });
     // the appearance is sampled on every frame until the swipe, queued,
     // runs: the step changes once every window is in
     await page.addInitScript(
-      ({ sel, areaSel }) => {
+      ({ sel }) => {
         const w = window as unknown as {
           __in: (Box | null)[][];
           __inIds: string[];
@@ -378,14 +381,14 @@ test.describe("phone", () => {
         w.__in = [];
         w.__inIds = [];
         const tick = () => {
-          const a = document.querySelector<HTMLElement>(areaSel);
-          if (a?.dataset.ready === "true") {
-            if (a.dataset.step !== "0") return;
+          const a = (window as unknown as InPage).desktopNow();
+          if (a?.ready) {
+            if (a.step !== 0) return;
             if (w.__inIds.length === 0)
               w.__inIds = [...document.querySelectorAll<HTMLElement>(sel)]
                 .filter((p) => getComputedStyle(p).display !== "none")
                 .map((p) => p.dataset.window ?? "");
-            const origin = a.getBoundingClientRect();
+            const origin = a.box;
             w.__in.push(
               w.__inIds.map((id) => {
                 const b = document
@@ -406,7 +409,7 @@ test.describe("phone", () => {
         };
         requestAnimationFrame(tick);
       },
-      { sel: PANES, areaSel: AREA },
+      { sel: PANES },
     );
     // Time is the test's: Playwright's clock fakes requestAnimationFrame and
     // Date, so GSAP's ticker moves only in the fixed frames run here. A busy

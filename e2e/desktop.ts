@@ -16,14 +16,60 @@ import {
   type Page,
 } from "@playwright/test";
 
-/**
- * The desktop's tiling area. Only for a recorder that runs in the page, such
- * as first-appearance's, which must read it on every frame: it is passed in as
- * an argument, since a function sent to the page cannot close over it.
- */
-export const AREA = "main.area";
+const AREA = "main.area";
 
 const area = (page: Page): Locator => page.locator(AREA);
+
+// ------------------------------------------------------------- in the page
+
+/**
+ * Where the desktop is, as read inside the page on one frame. For a recorder
+ * that runs in the page (sampling every frame, or acting on the frame a motion
+ * starts), which cannot call this module: it calls `desktopNow()` instead.
+ */
+export interface DesktopNow {
+  /** The desktop has booted. */
+  ready: boolean;
+  /** A re-tile (a step's or a workspace's motion, or the first appearance) runs. */
+  retiling: boolean;
+  /** The global step on show. */
+  step: number;
+  /** The tiling area's box in the viewport. */
+  box: DOMRect;
+  /** The tiling area's inline `overflow` (its clip while windows move). */
+  overflow: string;
+}
+
+/**
+ * Give the page `desktopNow()`, on this document and on every one loaded
+ * after. Call it before a recorder that uses it is sent to the page.
+ */
+export async function probe(page: Page): Promise<void> {
+  const install = (areaSel: string) => {
+    (window as unknown as { desktopNow: () => DesktopNow | null }).desktopNow =
+      () => {
+        const a = document.querySelector<HTMLElement>(areaSel);
+        if (!a) return null;
+        return {
+          ready: a.dataset.ready === "true",
+          retiling: a.dataset.retiling === "true",
+          step: Number(a.dataset.step),
+          box: a.getBoundingClientRect(),
+          overflow: a.style.overflow,
+        };
+      };
+  };
+  await page.addInitScript(install, AREA);
+  await page.evaluate(install, AREA);
+}
+
+/**
+ * `desktopNow()` as a recorder sent to the page sees it (see `probe`):
+ * `(window as unknown as InPage).desktopNow()`.
+ */
+export interface InPage {
+  desktopNow: () => DesktopNow | null;
+}
 
 // ---------------------------------------------------------------- phones
 
@@ -384,9 +430,15 @@ export async function settleBars(page: Page): Promise<void> {
 }
 
 /**
+ * How long each composition may take to play to its end on a busy machine: a
+ * session takes about 17 s, issho's play-through about 24 s.
+ */
+const HELD_WITHIN: Record<string, number> = { issho: 50_000 };
+const HELD_DEFAULT = 45_000;
+
+/**
  * Wait for a composition to come to rest: its `data-state` is "held" once it
- * has played to its end. A session takes up to about 24 s, so allow for a busy
- * machine.
+ * has played to its end.
  */
 export async function settleComposition(
   page: Page,
@@ -394,7 +446,9 @@ export async function settleComposition(
 ): Promise<void> {
   await expect(
     page.locator(`[data-composition="${composition}"]`),
-  ).toHaveAttribute("data-state", "held", { timeout: 50_000 });
+  ).toHaveAttribute("data-state", "held", {
+    timeout: HELD_WITHIN[composition] ?? HELD_DEFAULT,
+  });
 }
 
 /**

@@ -282,9 +282,16 @@ test("its still frame is the top of the site with the day screen", async ({
 }) => {
   await ready(page);
   await expect(slot(page)).toHaveAttribute("data-state", "playing");
-  // move on a little first: the frame must set the whole scene
-  // (time itself is under test: the scene has to be well into its play)
-  await page.waitForTimeout(6500);
+  // move on a little first, so the frame must set the whole scene: the site
+  // is past the top on a step's section, and the app off the day screen
+  await expect(scene(page).locator(".sec.at")).toHaveCount(1, {
+    timeout: 15_000,
+  });
+  await expect(scene(page).locator(".scrn.on")).not.toHaveAttribute(
+    "data-step",
+    "3",
+    { timeout: 15_000 },
+  );
   await slot(page).evaluate((el) => {
     el.dataset.frame = "top";
   });

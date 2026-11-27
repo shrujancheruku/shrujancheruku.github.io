@@ -8,13 +8,14 @@
 // and the final rectangles.
 import { expect, type Page, test } from "@playwright/test";
 import {
-  AREA,
   areaBox,
   areaOverflow,
   expectWorkspace,
   goTo,
+  type InPage,
   isRetiling,
   keyOf,
+  probe,
   ready,
   settle,
   type WorkspaceId,
@@ -114,12 +115,13 @@ async function pressReading(
   ids: readonly string[],
 ): Promise<Record<string, number>> {
   const key = await keyOf(page, to);
+  await probe(page);
   return page.evaluate(
-    ([key, ids, areaSel]) => {
+    ([key, ids]) => {
       document.body.dispatchEvent(
         new KeyboardEvent("keydown", { key, bubbles: true }),
       );
-      const a = document.querySelector(areaSel)?.getBoundingClientRect();
+      const a = (window as unknown as InPage).desktopNow()?.box;
       return Object.fromEntries(
         ids.map((id) => {
           const p = document
@@ -129,7 +131,7 @@ async function pressReading(
         }),
       );
     },
-    [key, ids, AREA] as const,
+    [key, ids] as const,
   );
 }
 
@@ -294,16 +296,17 @@ test("the area is clipped during the change and the clip is gone afterwards", as
   await settle(page);
   const before = await areaOverflow(page);
   const key = await keyOf(page, "timeline");
+  await probe(page);
   const clip = await page.evaluate(
-    ([key, areaSel]) =>
+    (key) =>
       new Promise<string[]>((done) => {
-        const el = document.querySelector<HTMLElement>(areaSel);
-        if (!el) throw new Error("no area");
+        const now = (window as unknown as InPage).desktopNow;
+        if (!now()) throw new Error("no area");
         const seen: string[] = [];
         const read = () => {
-          if (el.dataset.retiling === "true") seen.push(el.style.overflow);
-          if (el.dataset.retiling === "false" && seen.length > 0)
-            return done(seen);
+          const d = now();
+          if (d?.retiling) seen.push(d.overflow);
+          if (d && !d.retiling && seen.length > 0) return done(seen);
           requestAnimationFrame(read);
         };
         requestAnimationFrame(read);
@@ -311,7 +314,7 @@ test("the area is clipped during the change and the clip is gone afterwards", as
           new KeyboardEvent("keydown", { key, bubbles: true }),
         );
       }),
-    [key, AREA] as const,
+    key,
   );
   expect(clip.length).toBeGreaterThan(0);
   expect(new Set(clip)).toEqual(new Set(["hidden"]));

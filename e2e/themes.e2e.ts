@@ -1,5 +1,12 @@
 import { expect, type Page, test } from "@playwright/test";
-import { barItem, expectWorkspace, goTo, ready, settle } from "./desktop";
+import {
+  barItem,
+  expectWorkspace,
+  goTo,
+  modelOf,
+  ready,
+  settle,
+} from "./desktop";
 
 const root = (page: Page) => page.locator("html");
 
@@ -150,8 +157,9 @@ for (const [kind, interact] of FIRST) {
     await expect(tips).toHaveCount(5);
     for (const tip of await tips.all())
       await expect(tip).toHaveCSS("opacity", "1");
+    const count = (await modelOf(page)).length;
     await expect(page.locator(".tip[data-tip]")).toContainText(
-      "workspaces 1 – 6",
+      `workspaces 1 – ${count}`,
     );
     const animation = () =>
       page
