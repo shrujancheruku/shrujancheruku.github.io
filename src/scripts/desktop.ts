@@ -832,6 +832,16 @@ const fingerOf = (e: PointerEvent) => ({
   time: e.timeStamp,
 });
 
+/**
+ * A swipe moves one screen, except during the first appearance: like the
+ * wheel, it waits until every window is in (a swipe then is dropped; nothing
+ * queues yet).
+ */
+function swiped(direction: 1 | -1): void {
+  if (appearing) return;
+  moveOneScreen(direction);
+}
+
 // Pointer events, not touch events: the browser can hand a gesture to its own
 // handling and stop sending `touchmove`, but the pointer stream keeps coming.
 document.addEventListener(
@@ -846,7 +856,7 @@ document.addEventListener(
   (e) => {
     if (!fingerEvent(e)) return;
     const direction = swipe.move(fingerOf(e));
-    if (direction) moveOneScreen(direction);
+    if (direction) swiped(direction);
   },
   { passive: true },
 );
@@ -855,7 +865,7 @@ document.addEventListener(
   (e) => {
     if (!fingerEvent(e)) return;
     const direction = swipe.up(fingerOf(e));
-    if (direction) moveOneScreen(direction);
+    if (direction) swiped(direction);
   },
   { passive: true },
 );
