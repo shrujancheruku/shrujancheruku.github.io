@@ -29,10 +29,10 @@ import {
   tilingOf,
   type Workspace,
 } from "../lib/workspaces";
-import { layoutReader } from "./layout-reader";
+import { layoutReader, pagedWindows } from "./layout-reader";
 import { createMotionPlayer, css } from "./motion-player";
 import { addresses, model } from "./page-data";
-import { type Paged, pagedOf, showPage } from "./paged";
+import { showPage } from "./paged";
 
 gsap.registerPlugin(Observer);
 
@@ -84,15 +84,8 @@ const navigator = createNavigator({
 // screens.ts); the archive pages the same way.
 
 const windowOf = new Map(panes.map((p) => [p.dataset.window ?? "", p]));
-const pagedByWindow = new Map<string, Paged | undefined>();
 /** The paged parts of a window, to show a page of its entries. */
-const pagedWindow = (id: string): Paged | undefined => {
-  if (!pagedByWindow.has(id)) {
-    const pane = windowOf.get(id);
-    pagedByWindow.set(id, pane && pagedOf(pane));
-  }
-  return pagedByWindow.get(id);
-};
+const pagedWindow = pagedWindows(windowOf);
 
 /** Plays the motions (src/lib/motion.ts plans them). */
 const player = createMotionPlayer({
@@ -112,7 +105,7 @@ const stepScreens = createStepScreens({
   // the stack's height is in px: the area's live height resolves it (#160)
   wide: (n, opened) =>
     tilingOf(stepAt(workspaces, n), opened, area.clientHeight),
-  reader: layoutReader(panes),
+  reader: layoutReader(pagedWindow),
 });
 
 /** The screens of step `n`; `opened` says whether its disclosure is open. */
