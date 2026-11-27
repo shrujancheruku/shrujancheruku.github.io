@@ -191,13 +191,13 @@ export function createWorkspaces({ featured }: WorkspaceOptions): Workspace[] {
           ),
         },
         // the copy over the four photos, on one screen: the copy takes the
-        // height its text needs at 375 × 667 (about 55%), the 2 × 2 grid the rest
+        // height its text needs at 375 × 667 (about 60%), the 2 × 2 grid the rest
         [
           {
-            sabbatical: [0, 0, 100, 55],
+            sabbatical: [0, 0, 100, 60],
             ...grid2(
               ["photo-1", "photo-2", "photo-3", "photo-4"],
-              [0, 55, 100, 45],
+              [0, 60, 100, 40],
             ),
           },
         ],

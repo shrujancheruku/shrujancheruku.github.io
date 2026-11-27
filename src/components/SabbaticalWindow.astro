@@ -1,16 +1,42 @@
 ---
+import ch from "../assets/flags/ch.svg";
+import gb from "../assets/flags/gb.svg";
+import id from "../assets/flags/id.svg";
+import india from "../assets/flags/in.svg";
+import jp from "../assets/flags/jp.svg";
+import vn from "../assets/flags/vn.svg";
 // The copy window of the sabbatical workspace (left, 34%).
 import Window from "./Window.astro";
+
+// Flags are committed SVGs (flag-icons, MIT; see src/assets/flags/README.md),
+// so they draw on every platform, which flag emoji do not.
+const flags = [
+  { name: "United Kingdom", src: gb },
+  { name: "Japan", src: jp },
+  { name: "Switzerland", src: ch },
+  { name: "India", src: india },
+  { name: "Vietnam", src: vn },
+  { name: "Indonesia", src: id },
+];
 ---
 
 <Window id="sabbatical" label="~/sabbatical" scrolls>
   <div class="copy">
     <p class="when">Nov 2025 → Now</p>
     <h2>sabbatical</h2>
+    <p class="reason">
+      After a decade of coding for work or class every day, I needed a break.
+    </p>
     <ul>
-      <li>travelling the world</li>
+      <li>
+        travelling the world{" "}
+        <span class="flags">
+          {flags.map((f) => <img src={f.src.src} alt={f.name} width="20" height="15" />)}
+        </span>
+      </li>
       <li>time with family</li>
       <li>helping friends launch their products</li>
+      <li>building things for myself</li>
     </ul>
     <p class="foot">10/10 would recommend to a friend.</p>
   </div>
@@ -34,6 +60,22 @@ import Window from "./Window.astro";
     letter-spacing: -0.02em;
   }
 
+  .reason {
+    font: 400 15px / 1.5 var(--mono);
+  }
+
+  .flags {
+    display: inline-flex;
+    gap: 4px;
+    vertical-align: -0.1em;
+  }
+
+  .flags img {
+    height: 1em;
+    width: auto;
+    border-radius: 2px;
+  }
+
   ul {
     list-style: none;
     font: 400 15px / 1.6 var(--mono);
@@ -47,5 +89,31 @@ import Window from "./Window.astro";
   .foot {
     margin-top: auto;
     font: 500 16px / 1.45 var(--mono);
+  }
+
+  /* A phone shows the copy over the four photos on one screen: the type steps
+     down (never under 12px) so the wording fits its share. */
+  @media (max-width: 600px) {
+    .copy {
+      gap: 10px;
+    }
+
+    h2 {
+      font-size: 28px;
+    }
+
+    .when {
+      font-size: 12px;
+    }
+
+    .reason,
+    ul {
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .foot {
+      font-size: 13px;
+    }
   }
 </style>
