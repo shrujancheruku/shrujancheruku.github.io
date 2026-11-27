@@ -160,15 +160,16 @@ test("the status bar lists the numbers with names and marks the current workspac
 });
 
 test("windows animate between tilings, not cut", async ({ page }) => {
-  const frames = await framesOf(page, '[data-window="name"]', "left", () =>
+  // the name travels with its workspace: it comes up from below onto its tile
+  const frames = await framesOf(page, '[data-window="name"]', "top", () =>
     page.keyboard.press("6"),
   );
-  const lefts = frames.map(([l]) => l ?? 0);
-  const before = lefts[0] ?? 0;
-  const after = lefts[lefts.length - 1] ?? 0;
-  expect(before).toBeLessThan(after);
+  const tops = frames.map(([t]) => t ?? 0);
+  const after = tops[tops.length - 1] ?? 0;
+  const start = Math.max(...tops);
+  expect(start).toBeGreaterThan(after + 1);
   // it passes through the places between, frame by frame
-  expect(lefts.some((l) => l > before + 1 && l < after - 1)).toBe(true);
+  expect(tops.some((t) => t > after + 1 && t < start - 1)).toBe(true);
 });
 
 test("windows have the decided gap, border, radius and focus gradient", async ({
