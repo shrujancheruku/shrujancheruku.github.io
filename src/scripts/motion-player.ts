@@ -121,20 +121,28 @@ export function createMotionPlayer(config: MotionPlayerConfig): MotionPlayer {
     rest = null;
   }
 
-  function settle(timeline: gsap.core.Timeline): void {
-    if (timeline !== latest) return;
+  /**
+   * The completion guard: `then`, run for `timeline` only while it is the
+   * newest motion. One that a later motion stopped does nothing when it ends.
+   */
+  const whileLatest =
+    (timeline: gsap.core.Timeline, then: () => void) => (): void => {
+      if (timeline === latest) then();
+    };
+
+  /** The newest motion ended: no motion runs any more. */
+  function settle(): void {
     latest = null;
     playing = null;
     config.settled();
   }
 
-  /** A motion turned back reached where it began: its windows go to rest there. */
+  /** The newest motion, turned back, reached where it began: its windows go to rest there. */
   function backAtStart(timeline: gsap.core.Timeline): void {
-    if (timeline !== latest) return;
     timeline.kill();
     atRest();
     config.atStart();
-    settle(timeline);
+    settle();
   }
 
   function play(plan: Plan): void {
@@ -148,17 +156,20 @@ export function createMotionPlayer(config: MotionPlayerConfig): MotionPlayer {
     const areaHeight = area.clientHeight;
     const overflow = area.style.overflow;
     if (plan.clipsArea) area.style.overflow = "hidden";
-    const timeline = gsap.timeline({
-      onComplete: () => {
-        if (timeline !== latest) return;
+    const timeline = gsap.timeline();
+    timeline.eventCallback(
+      "onComplete",
+      whileLatest(timeline, () => {
         atRest();
-        settle(timeline);
-      },
-      // the first appearance is not turned back
-      ...(plan.motion === "first appearance"
-        ? {}
-        : { onReverseComplete: () => backAtStart(timeline) }),
-    });
+        settle();
+      }),
+    );
+    // the first appearance is not turned back
+    if (plan.motion !== "first appearance")
+      timeline.eventCallback(
+        "onReverseComplete",
+        whileLatest(timeline, () => backAtStart(timeline)),
+      );
     const px = (slide: Slide, extent: number): [number, number] => [
       slide.from * (extent + slide.gap),
       slide.to * (extent + slide.gap),
@@ -271,6 +282,7 @@ export function createMotionPlayer(config: MotionPlayerConfig): MotionPlayer {
       if (timeline.reversed()) timeline.play();
       else timeline.reverse();
       // turned back before it moved: it is already where it began
+      // (it is the newest motion, so no guard)
       if (timeline.reversed() && timeline.time() === 0) backAtStart(timeline);
     },
     stop() {
