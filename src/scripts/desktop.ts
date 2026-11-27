@@ -246,6 +246,8 @@ interface Placed {
 let placed: Placed | null = null;
 /** The running motion's two ends, as placed; `from` is null for the first appearance. */
 let placedEnds: { from: Placed | null; to: Placed } | null = null;
+/** Back steps the page took itself, whose popstate only reconciles the address. */
+let ownBacks = 0;
 /** The input that waits for the running motion to end: the latest only. */
 let waiting: (() => void) | null = null;
 /** An input that leads back to where the running motion began is running. */
@@ -885,14 +887,11 @@ function openArchive(slug = "", push = true): void {
 
 function closeArchive(): void {
   if (!open || !inProjects()) return;
-  if (archivePushed) {
-    // Back to the address underneath; popstate re-tiles
-    archivePushed = false;
-    history.back();
-    return;
-  }
   const address = book.forStep(step);
-  history.replaceState(null, "", address.path);
+  // the archive's own entry: Back to the address underneath, whose popstate
+  // only reconciles the title; the windows close (or turn back) here and now
+  if (archivePushed) goBackOver();
+  else history.replaceState(null, "", address.path);
   document.title = address.title;
   setOpen(false);
 }
@@ -938,7 +937,8 @@ function goTo(n: number, toScreen = 0): void {
 /** Show the address of a step without adding history (scrolling). */
 function follow(n: number): void {
   if (notFound && n !== 0) notFound = false;
-  if (notFound) return;
+  // a Back the page took is on its way: the address it lands on is the step's
+  if (notFound || ownBacks > 0) return;
   const address = book.forStep(n);
   document.title = address.title;
   if (
@@ -981,7 +981,21 @@ function restore(): void {
   }
   place(step, true);
 }
-addEventListener("popstate", () => act(whereOfAddress(), restore));
+addEventListener("popstate", () => {
+  if (ownBacks > 0) {
+    // a Back the page took itself: the windows are already on their way
+    ownBacks--;
+    document.title = book.forPath(location.pathname)?.title ?? document.title;
+    return;
+  }
+  act(whereOfAddress(), restore);
+});
+
+/** Go Back one entry for the visitor: the windows are already going there. */
+function goBackOver(): void {
+  ownBacks++;
+  history.back();
+}
 
 /**
  * A deliberate jump to a step: adds a history entry (unless it is where we
