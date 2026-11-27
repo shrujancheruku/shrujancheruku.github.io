@@ -161,7 +161,7 @@ export function createNavigator({
   const steps = stepCount(workspaces);
   const clamp = (n: number) => Math.max(0, Math.min(steps - 1, n));
 
-  let s: State = {
+  let state: State = {
     step: 0,
     screen: 0,
     open: false,
@@ -176,23 +176,27 @@ export function createNavigator({
     waitingBack: false,
   };
 
-  const here = (): Where => ({ step: s.step, screen: s.screen, open: s.open });
+  const here = (): Where => ({
+    step: state.step,
+    screen: state.screen,
+    open: state.open,
+  });
   const draft = (): Draft => ({ history: [], placements: [], pushed: false });
   const place = (p: Draft, animate = true) =>
-    p.placements.push({ where: here(), animate, notFound: s.notFound });
+    p.placements.push({ where: here(), animate, notFound: state.notFound });
   const title = (p: Draft, t: string) => p.history.push({ title: t });
   const push = (p: Draft, path: string) => {
     p.history.push({ push: path });
-    s.address = path;
+    state.address = path;
     p.pushed = true;
   };
   const replace = (p: Draft, path: string) => {
     p.history.push({ replace: path });
-    s.address = path;
+    state.address = path;
   };
   /** Go Back one entry for the visitor: the windows are already going there. */
   const goBackOver = (p: Draft) => {
-    s.ownBacks++;
+    state.ownBacks++;
     p.history.push({ back: true });
   };
 
@@ -205,57 +209,57 @@ export function createNavigator({
     screen: fitScreen(w.screen, screens(w.step, w.open)),
   });
   function fitAll(): void {
-    s.screen = fit(here()).screen;
-    if (s.placed) s.placed = fit(s.placed);
-    if (s.running)
-      s.running = {
-        ...s.running,
-        from: s.running.from && fit(s.running.from),
-        to: fit(s.running.to),
+    state.screen = fit(here()).screen;
+    if (state.placed) state.placed = fit(state.placed);
+    if (state.running)
+      state.running = {
+        ...state.running,
+        from: state.running.from && fit(state.running.from),
+        to: fit(state.running.to),
       };
   }
 
-  // ---- transitions: each changes `s` and adds to the draft
+  // ---- transitions: each changes `state` and adds to the draft
 
   /** Show the address of a step without adding history (scrolling). */
   function follow(p: Draft, n: number): void {
-    if (s.notFound && n !== 0) s.notFound = false;
+    if (state.notFound && n !== 0) state.notFound = false;
     // a Back the page took is on its way: the address it lands on is the step's
-    if (s.notFound || s.ownBacks > 0) return;
+    if (state.notFound || state.ownBacks > 0) return;
     const address = book.forStep(n);
     title(p, address.title);
-    if (s.address !== address.path && book.stepFor(s.address) !== n)
+    if (state.address !== address.path && book.stepFor(state.address) !== n)
       replace(p, address.path);
   }
 
   /** Leaving a step closes its disclosure. */
   function leave(): void {
-    s.archivePushed = false;
-    s.open = false;
+    state.archivePushed = false;
+    state.open = false;
   }
 
   /** Move to a step, and a screen of it. */
   function goTo(p: Draft, n: number, toScreen = 0): void {
     const next = clamp(n);
-    if (next === s.step && toScreen === s.screen) return;
-    const changed = next !== s.step;
+    if (next === state.step && toScreen === state.screen) return;
+    const changed = next !== state.step;
     // a move between screens of the step keeps its disclosure open
     if (changed) leave();
-    s.step = next;
-    s.screen = toScreen;
+    state.step = next;
+    state.screen = toScreen;
     place(p);
     if (changed) follow(p, next);
   }
 
   /** Open or close the step's disclosure. */
   function setOpen(p: Draft, next: boolean): void {
-    if (next === s.open) return;
-    if (next && !stepAt(workspaces, s.step).open) return;
-    if (next) s.screenBeforeOpen = s.screen;
-    s.open = next;
-    if (!next) s.archivePushed = false;
+    if (next === state.open) return;
+    if (next && !stepAt(workspaces, state.step).open) return;
+    if (next) state.screenBeforeOpen = state.screen;
+    state.open = next;
+    if (!next) state.archivePushed = false;
     // opened, its screens are the disclosure's; closed, back to where it began
-    s.screen = next ? 0 : s.screenBeforeOpen;
+    state.screen = next ? 0 : state.screenBeforeOpen;
     place(p);
   }
 
@@ -266,28 +270,29 @@ export function createNavigator({
    * The caller places. False if it does not open.
    */
   function openArchive(p: Draft, entry: string, pushed: boolean): boolean {
-    if (!hasArchive || s.open || !inProjects(workspaces, s.step)) return false;
-    if (!stepAt(workspaces, s.step).open) return false;
+    if (!hasArchive || state.open || !inProjects(workspaces, state.step))
+      return false;
+    if (!stepAt(workspaces, state.step).open) return false;
     if (pushed) {
       push(p, ARCHIVE_PATH);
-      s.archivePushed = true;
+      state.archivePushed = true;
       const archive = book.forPath(ARCHIVE_PATH);
       if (archive) title(p, archive.title);
     }
-    s.screenBeforeOpen = s.screen;
-    s.open = true;
+    state.screenBeforeOpen = state.screen;
+    state.open = true;
     // the desktop script clamps this once the archive's screens are measured
-    s.screen = screenOfEntry(s.step, entry);
+    state.screen = screenOfEntry(state.step, entry);
     p.entry = entry;
     return true;
   }
 
   function closeArchive(p: Draft): void {
-    if (!s.open || !inProjects(workspaces, s.step)) return;
-    const address = book.forStep(s.step);
+    if (!state.open || !inProjects(workspaces, state.step)) return;
+    const address = book.forStep(state.step);
     // the archive's own entry: Back to the address underneath, whose popstate
     // only reconciles the title; the windows close (or turn back) here and now
-    if (s.archivePushed) goBackOver(p);
+    if (state.archivePushed) goBackOver(p);
     else replace(p, address.path);
     title(p, address.title);
     setOpen(p, false);
@@ -295,9 +300,9 @@ export function createNavigator({
 
   /** Jump to step `next`; `undo` goes Back over the running jump's entry instead of adding one. */
   function jumpNow(p: Draft, next: number, undo: boolean): void {
-    const there = !s.notFound && book.stepFor(s.address) === next;
+    const there = !state.notFound && book.stepFor(state.address) === next;
     if (undo) {
-      s.archivePushed = false;
+      state.archivePushed = false;
       goBackOver(p);
       title(p, book.forStep(next).title);
     } else if (!there) {
@@ -306,33 +311,34 @@ export function createNavigator({
       title(p, address.title);
     }
     // out of not-found: the terminal goes, the windows at rest where they are
-    if (s.notFound) {
-      s.notFound = false;
+    if (state.notFound) {
+      state.notFound = false;
       place(p, false);
     }
     // a jump to the step the disclosure is open on closes it
-    if (s.open && next === s.step) setOpen(p, false);
+    if (state.open && next === state.step) setOpen(p, false);
     goTo(p, next);
   }
 
   /** Back or Forward: show the address's step, with no new entry. */
   function restore(p: Draft): void {
-    const n = book.stepFor(s.address);
-    s.notFound = n === undefined;
+    const n = book.stepFor(state.address);
+    state.notFound = n === undefined;
     const next = n ?? 0;
-    const address = book.forPath(s.address);
+    const address = book.forPath(state.address);
     title(p, address?.title ?? notFoundTitle);
     // closing the disclosure (Back) lands on the screen it was opened from
-    const returning = s.open && next === s.step;
-    const stays = next === s.step;
+    const returning = state.open && next === state.step;
+    const stays = next === state.step;
     leave();
     const entry = hasArchive ? address?.archive : undefined;
-    s.step = next;
-    if (entry === undefined) s.screen = returning ? s.screenBeforeOpen : 0;
+    state.step = next;
+    if (entry === undefined)
+      state.screen = returning ? state.screenBeforeOpen : 0;
     else {
       // the archive opens from the screen on show, if the step stays
-      if (!stays) s.screen = 0;
-      else if (returning) s.screen = s.screenBeforeOpen;
+      if (!stays) state.screen = 0;
+      else if (returning) state.screen = state.screenBeforeOpen;
       openArchive(p, entry, false);
     }
     place(p);
@@ -368,7 +374,7 @@ export function createNavigator({
           return;
         }
         // an archive address: its step, then the archive open on its entry
-        if (n !== s.step) jumpNow(p, n, false);
+        if (n !== state.step) jumpNow(p, n, false);
         if (openArchive(p, entry, true)) place(p);
         return;
       }
@@ -389,12 +395,12 @@ export function createNavigator({
 
   const outcome = (p: Draft, handled = true): Outcome => ({
     history: p.history,
-    from: s.placed,
+    from: state.placed,
     rest: [],
     to: here(),
     motion: "none",
     ...(p.entry !== undefined && { entry: p.entry }),
-    notFound: s.notFound,
+    notFound: state.notFound,
     handled,
   });
 
@@ -402,11 +408,11 @@ export function createNavigator({
   function commit(p: Draft, rests = true): Outcome {
     const last = p.placements.at(-1);
     if (!last) return outcome(p);
-    const from = s.placed;
+    const from = state.placed;
     const rest = rests ? p.placements.slice(0, -1).map((r) => r.where) : [];
-    s.placed = last.where;
+    state.placed = last.where;
     if (last.animate)
-      s.running = {
+      state.running = {
         from: rest.at(-1) ?? from,
         to: last.where,
         pushed: p.pushed,
@@ -427,7 +433,7 @@ export function createNavigator({
    * waits for the motion to end.
    */
   function act(input: Exclude<Input, { kind: "popstate" }> | null): Outcome {
-    const running = s.running;
+    const running = state.running;
     if (!running) {
       const p = draft();
       if (input) run(p, input, false);
@@ -435,8 +441,8 @@ export function createNavigator({
       return commit(p);
     }
     // worked out on a copy: a waiting input changes nothing
-    const before = s;
-    s = { ...before };
+    const before = state;
+    state = { ...before };
     const p = draft();
     // a jump that turns back a jump goes Back over that jump's entry, so the
     // history holds only where the visitor settled
@@ -444,14 +450,14 @@ export function createNavigator({
     else restore(p);
     const last = p.placements.at(-1);
     if (!running.from || !last || !same(last.where, running.from)) {
-      s = before;
-      if (input) s.waiting = input;
-      else s.waitingBack = true;
+      state = before;
+      if (input) state.waiting = input;
+      else state.waitingBack = true;
       return outcome(draft());
     }
-    s.waiting = null;
-    s.running = { from: running.to, to: running.from, pushed: false };
-    s.placed = running.from;
+    state.waiting = null;
+    state.running = { from: running.to, to: running.from, pushed: false };
+    state.placed = running.from;
     return {
       ...outcome(p),
       from: running.to,
@@ -462,12 +468,12 @@ export function createNavigator({
   }
 
   function take(input: Input): Outcome {
-    if (input.kind !== "boot" && s.placed) fitAll();
+    if (input.kind !== "boot" && state.placed) fitAll();
     switch (input.kind) {
       case "boot": {
-        s.step = clamp(input.step);
-        s.address = input.path;
-        s.notFound = input.notFound;
+        state.step = clamp(input.step);
+        state.address = input.path;
+        state.notFound = input.notFound;
         const p = draft();
         // /archive/ and an archive project's address boot with the archive open
         const entry = input.notFound
@@ -477,30 +483,30 @@ export function createNavigator({
         place(p, false);
         const o = commit(p);
         // the first appearance: every input waits for it
-        s.running = { from: null, to: o.to, pushed: false };
+        state.running = { from: null, to: o.to, pushed: false };
         return { ...o, motion: "animate" };
       }
       case "ended": {
-        s.running = null;
-        if (s.waitingBack) {
-          s.waitingBack = false;
+        state.running = null;
+        if (state.waitingBack) {
+          state.waitingBack = false;
           return act(null);
         }
-        const waiting = s.waiting;
-        s.waiting = null;
+        const waiting = state.waiting;
+        state.waiting = null;
         return waiting ? act(waiting) : outcome(draft());
       }
       case "refit": {
-        if (input.screen !== undefined) s.screen = input.screen;
+        if (input.screen !== undefined) state.screen = input.screen;
         const p = draft();
         place(p, false);
         return commit(p);
       }
       case "popstate": {
-        s.address = input.path;
-        if (s.ownBacks > 0) {
+        state.address = input.path;
+        if (state.ownBacks > 0) {
           // a Back the page took itself: the windows are already on their way
-          s.ownBacks--;
+          state.ownBacks--;
           const p = draft();
           const address = book.forPath(input.path);
           if (address) title(p, address.title);
@@ -523,7 +529,7 @@ export function createNavigator({
       return here();
     },
     get notFound() {
-      return s.notFound;
+      return state.notFound;
     },
   };
 }
