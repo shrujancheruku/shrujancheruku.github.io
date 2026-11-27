@@ -91,23 +91,23 @@ const CONTACTS: readonly Contact[] = [
 ];
 
 /** An entry as the resume shows it: its description already chosen. */
-const asResumeEntry = (entry: Entry): Entry => ({
-  ...entry,
-  description: descriptionFor(entry),
-});
+const asResumeEntry = (entry: Entry): Entry => {
+  const { resume: _, ...rest } = entry;
+  return { ...rest, description: descriptionFor(entry) };
+};
 
 /** Everything the resume page shows, read from the shared content. */
 export function buildResume() {
   return {
     name: "Shrujan Cheruku",
-    title: "Product Engineer",
+    title: "Senior Product Engineer",
     contacts: CONTACTS,
     entries: timeline.map(asResumeEntry),
     education: {
       ...education,
       roles: education.roles.map(asResumeEntry),
     },
-    bars: skillBars(skills),
+    bars: skillBars(skills).filter((b) => !b.joke),
     languages,
     hobbies: hobbies.flatMap((folder) => folder.items.map((h) => h.name)),
   };
