@@ -3,79 +3,98 @@
 // settles on the step and address it began from, with no clone left. Any
 // other input waits until the motion ends, then runs from rest; only the
 // latest is kept. Shape only, never timing: the second input is sent on the
-// first frame the windows have visibly moved.
+// first frame the windows have visibly moved, and time is the test's while
+// the inputs are sent (Playwright's clock, in fixed frames), so a busy machine
+// cannot skip a motion to its end between two frames.
 import { expect, type Page, test } from "@playwright/test";
 import { area, type Box, framesOf, ready, settle } from "./helpers";
 
 /** An input sent inside the page: a key press, Back, or `click:<selector>`. */
 type Input = string;
 
+/** One frame of the page's clock, in ms. */
+const FRAME = 16;
+
 /**
  * Send `first`, then, on the first frame a window (of those `watch` matches)
- * has moved `far` px from where it was, each of `then` in turn, each after the windows have moved on
- * again. Returns whether each of `then` came while the motion still ran.
+ * has moved `far` px from where it was, each of `then` in turn, each after the
+ * windows have moved on again (`far` may give each input its own distance).
+ * The page's clock runs in fixed frames meanwhile. Returns whether each of
+ * `then` came while the motion still ran.
  */
-function midMotion(
+async function midMotion(
   page: Page,
   first: Input,
   then: Input[],
-  far = 4,
+  far: number | number[] = 4,
   watch = ".pane",
 ): Promise<boolean[]> {
-  return page.evaluate(
-    ([first, then, far, watch]) => {
-      const area = document.querySelector<HTMLElement>("main.area");
-      const send = (input: string) => {
-        if (input === "Back") history.back();
-        else if (input.startsWith("click:"))
-          document.querySelector<HTMLElement>(input.slice(6))?.click();
-        else
-          document.body.dispatchEvent(
-            new KeyboardEvent("keydown", {
-              key: input,
-              bubbles: true,
-              cancelable: true,
-            }),
-          );
-      };
-      const rects = () =>
-        [...document.querySelectorAll(watch)].map((p) => {
-          const { left, top, width, height } = p.getBoundingClientRect();
-          return [left, top, width, height];
-        });
-      const movedFrom = (was: number[][]) =>
-        rects().some((r, i) =>
-          r.some((v, j) => Math.abs(v - (was[i]?.[j] ?? v)) > far),
-        );
-      const during: boolean[] = [];
-      send(first);
-      return new Promise<boolean[]>((done) => {
-        let was = rects();
-        let left = [...then];
-        const tick = () => {
-          if (left.length === 0) return done(during);
-          if (area?.dataset.retiling !== "true") {
-            // the motion ended before the input: say so, and send the rest
-            for (const input of left) {
-              during.push(false);
-              send(input);
-            }
-            left = [];
-            return done(during);
-          }
-          if (movedFrom(was)) {
-            const input = left.shift() ?? "";
-            during.push(area?.dataset.retiling === "true");
-            send(input);
-            was = rects();
-          }
-          requestAnimationFrame(tick);
+  const now = await page.evaluate(() => Date.now());
+  await page.clock.pauseAt(new Date(now + 1000));
+  const fars = then.map((_, i) => (Array.isArray(far) ? (far[i] ?? 4) : far));
+  let done = false;
+  const sent = page
+    .evaluate(
+      ([first, then, fars, watch]) => {
+        const area = document.querySelector<HTMLElement>("main.area");
+        const send = (input: string) => {
+          if (input === "Back") history.back();
+          else if (input.startsWith("click:"))
+            document.querySelector<HTMLElement>(input.slice(6))?.click();
+          else
+            document.body.dispatchEvent(
+              new KeyboardEvent("keydown", {
+                key: input,
+                bubbles: true,
+                cancelable: true,
+              }),
+            );
         };
-        requestAnimationFrame(tick);
-      });
-    },
-    [first, then, far, watch] as const,
-  );
+        const rects = () =>
+          [...document.querySelectorAll(watch)].map((p) => {
+            const { left, top, width, height } = p.getBoundingClientRect();
+            return [left, top, width, height];
+          });
+        const movedFrom = (was: number[][], far: number) =>
+          rects().some((r, i) =>
+            r.some((v, j) => Math.abs(v - (was[i]?.[j] ?? v)) > far),
+          );
+        const during: boolean[] = [];
+        send(first);
+        return new Promise<boolean[]>((done) => {
+          let was = rects();
+          let left = [...then];
+          const tick = () => {
+            if (left.length === 0) return done(during);
+            if (area?.dataset.retiling !== "true") {
+              // the motion ended before the input: say so, and send the rest
+              for (const input of left) {
+                during.push(false);
+                send(input);
+              }
+              left = [];
+              return done(during);
+            }
+            if (movedFrom(was, fars[during.length] ?? 4)) {
+              const input = left.shift() ?? "";
+              during.push(area?.dataset.retiling === "true");
+              send(input);
+              was = rects();
+            }
+            requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        });
+      },
+      [first, then, fars, watch] as const,
+    )
+    .finally(() => {
+      done = true;
+    });
+  for (let f = 0; !done && f < 300; f++) await page.clock.runFor(FRAME);
+  const during = await sent;
+  await page.clock.resume();
+  return during;
 }
 
 const pathOf = (page: Page) => page.evaluate(() => location.pathname);
@@ -105,6 +124,8 @@ async function expectNoClone(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
+  // the clock flows on its own, except while midMotion sends its inputs
+  await page.clock.install();
   await ready(page, "/");
   await settle(page);
 });
@@ -195,10 +216,11 @@ test("a second reversal plays the step forwards again", async ({ page }) => {
   const path = await pathOf(page);
   await page.keyboard.press("ArrowUp");
   await settle(page);
-  expect(await midMotion(page, "ArrowDown", ["ArrowUp", "ArrowDown"])).toEqual([
-    true,
-    true,
-  ]);
+  // the first reversal well into the step, so the way back has room for the
+  // second
+  expect(
+    await midMotion(page, "ArrowDown", ["ArrowUp", "ArrowDown"], [40, 4]),
+  ).toEqual([true, true]);
   await settle(page);
   expect(await stepOf(page)).toBe(1);
   expect(await pathOf(page)).toBe(path);
