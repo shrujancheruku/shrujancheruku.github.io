@@ -8,10 +8,11 @@
 
 import { firstStepOf, locate, stepCount, type Workspace } from "./workspaces";
 
-export const DESCRIPTION = "I design and build. Give me a problem, not a spec.";
+export const DESCRIPTION =
+  "I design things and I build them. Give me a problem, not a spec.";
 
 const SUFFIX = "Shrujan Cheruku";
-export const OPENING_TITLE = `${SUFFIX} — Product Engineer`;
+export const OPENING_TITLE = `${SUFFIX} — Senior Product Engineer`;
 export const notFoundTitle = `Not found — ${SUFFIX}`;
 export const titleFor = (place: string): string => `${place} — ${SUFFIX}`;
 /** A project's title uses the repository name exactly as written. */

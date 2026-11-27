@@ -51,9 +51,18 @@ if (missing.length > 0)
   id="term"
   label="zsh"
   exchanges={[
-    { command: "whoami", replies: ["product engineer"] },
-    { command: "cat claim", replies: ["I design and build."] },
-    { command: "cat ask", replies: ["Give me a problem, not a spec."] },
+    {
+      command: "whoami",
+      replies: ["A senior product engineer. I design things and I build them."],
+    },
+    {
+      command: "cat ask",
+      replies: ["Give me a problem, not a spec. Here’s what usually comes back:"],
+    },
+    {
+      command: "ls -t ~/your-problem",
+      replies: ["day-1    designs", "week-1   prototype", "month-1  shipped"],
+    },
   ]}
 />
 <NowWindow />

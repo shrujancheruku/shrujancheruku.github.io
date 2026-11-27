@@ -2,8 +2,7 @@
 // Wording is from the spec (#29) and the contact mechanics ticket (#18).
 
 /** The line under `$ contact`, before the channels. */
-export const CONTACT_LINE =
-  "Feel free to get in touch. I always love hearing what people are building, and whether I can help.";
+export const CONTACT_LINE = "Email reaches me fastest, wherever I am.";
 
 /** Printed in the terminal after the email is copied. */
 export const COPIED_LINE = "copied to clipboard";
