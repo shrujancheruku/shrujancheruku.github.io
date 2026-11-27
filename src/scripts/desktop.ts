@@ -456,7 +456,11 @@ function motionBetween(
       );
       rolled.push(pane);
     } else if (c.motion === "opening" && c.to) {
-      tween(pane, collapsed(c.to, edgeOf(c.id, before, after, touch.matches)), c.to);
+      tween(
+        pane,
+        collapsed(c.to, edgeOf(c.id, before, after, touch.matches)),
+        c.to,
+      );
       timeline.fromTo(
         pane,
         { opacity: 0 },
