@@ -10,7 +10,12 @@
 import { gsap } from "gsap";
 import { Observer } from "gsap/Observer";
 import { interpretKey } from "../lib/keys";
-import { type Plan, planMotion, sameLayout } from "../lib/motion";
+import {
+  type Placement,
+  type Plan,
+  planMotion,
+  sameLayout,
+} from "../lib/motion";
 import { createNavigator, type Outcome, type Where } from "../lib/navigator";
 import { fitScreen, focusAmong, type Screen } from "../lib/screens";
 import { windowChanges } from "../lib/signals";
@@ -174,14 +179,11 @@ function markStack(index: number): void {
   }
 }
 
-/** A layout on show: where it is, and what the page says about it. */
-interface Shown {
-  /** Its screen as placed: brought in to the screens the step has. */
-  where: Where;
-  /** The workspace the step is in. */
-  workspace: number;
-  layout: Layout;
-  pages: Readonly<Record<string, number>>;
+/**
+ * A layout on show: where it is (its screen as placed, brought in to the
+ * screens the step has), and what the page says about it.
+ */
+interface Shown extends Placement {
   screens: number;
   focus: string | undefined;
 }
