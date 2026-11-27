@@ -1,15 +1,20 @@
-// The motion between two steps, worked out from their layouts: a pure model,
-// no DOM. The tiling model doesn't change (no split tree, no derived
-// rectangles); each window's motion is read off its old and new tiles.
+// The motion between two placements, worked out from their layouts: a pure
+// model, no DOM, and the whole of it as data (a plan) that one adapter plays
+// (src/scripts/motion-player.ts). The tiling model doesn't change (no split
+// tree, no derived rectangles); each window's motion is read off its old and
+// new tiles.
 //
 // - Re-tiling: a window in both steps moves and resizes to its new tile.
 // - Rolling past: a different window on an identical tile, in the same workspace.
 // - Opening / closing: a window in only one of the steps, in the same workspace.
-// - Changing workspace: the step is in another workspace.
+// - Changing workspace: the step is in another workspace (or, on a phone, a
+//   screen of the same step whose windows all change).
+// - First appearance: the desktop loads and the windows come on show.
 //
 // A window opens out of, and closes into, the desktop edge on the far side
 // from its neighbours: the windows in both steps whose tile, in the step it
 // is not in, overlaps its own (they give up or fill its space).
+import type { Where } from "./navigator";
 import type { Layout, Rect } from "./workspaces";
 
 export type Motion =
@@ -17,9 +22,10 @@ export type Motion =
   | "opening"
   | "closing"
   | "rolling past"
-  | "changing workspace";
+  | "changing workspace"
+  | "first appearance";
 
-export interface Change {
+interface Change {
   id: string;
   motion: Motion;
   /** Its tile in the old step, or null if it was not on show. */
@@ -37,7 +43,7 @@ const same = (a: Rect, b: Rect): boolean => a.every((v, i) => v === b[i]);
  * first, in tiling order, then those that leave, in theirs. `sameWorkspace`
  * says the two steps are in one workspace.
  */
-export function sortChanges(
+function sortChanges(
   before: Layout,
   after: Layout,
   sameWorkspace: boolean,
@@ -99,7 +105,7 @@ const opposite: Record<Edge, Edge> = {
  * border: the archive comes out of the right, the copy and the composition go
  * into the left.
  */
-export function edgeOf(
+function edgeOf(
   id: string,
   before: Layout,
   after: Layout,
@@ -144,7 +150,7 @@ export function edgeOf(
  * every tile spans the width: right and left by turns in tiling order (`index`
  * is the window's place in it), the first from the right.
  */
-export function appearEdgeOf(index: number, tile: Rect, phone: boolean): Edge {
+function appearEdgeOf(index: number, tile: Rect, phone: boolean): Edge {
   if (phone) return index % 2 === 0 ? "right" : "left";
   const [l, t, w, h] = tile;
   if (l + w >= 100 - EPSILON) return "right";
@@ -154,7 +160,7 @@ export function appearEdgeOf(index: number, tile: Rect, phone: boolean): Edge {
 }
 
 /** A tile collapsed onto one of its sides: no extent across that edge. */
-export function collapsed([l, t, w, h]: Rect, edge: Edge): Rect {
+function collapsed([l, t, w, h]: Rect, edge: Edge): Rect {
   switch (edge) {
     case "right":
       return [l + w, t, 0, h];
@@ -167,35 +173,26 @@ export function collapsed([l, t, w, h]: Rect, edge: Edge): Rect {
   }
 }
 
-export interface Roll {
-  y: number;
-  clip: string;
-}
-
 /**
- * Where a window rolls to and from inside its tile (`height` px tall).
+ * Where a window rolls to and from inside its tile, in tile heights.
  * `direction` is +1 forwards: the old goes up and out, the next comes from
  * below; -1 reverses both.
  */
-export function rollOf(
-  direction: 1 | -1,
-  height: number,
-): { rest: Roll; out: { to: Roll }; in: { from: Roll } } {
-  const none = "inset(0px 0px 0px 0px)";
-  const top = `inset(${height}px 0px 0px 0px)`;
-  const bottom = `inset(0px 0px ${height}px 0px)`;
+function rollOf(direction: 1 | -1): {
+  rest: Position;
+  out: { to: Position };
+  in: { from: Position };
+} {
+  const top = { top: 1, bottom: 0 };
+  const bottom = { top: 0, bottom: 1 };
   return {
-    rest: { y: 0, clip: none },
-    out: {
-      to: { y: -height * direction, clip: direction > 0 ? top : bottom },
-    },
-    in: {
-      from: { y: height * direction, clip: direction > 0 ? bottom : top },
-    },
+    rest: { y: 0, clip: { top: 0, bottom: 0 } },
+    out: { to: { y: -direction, clip: direction > 0 ? top : bottom } },
+    in: { from: { y: direction, clip: direction > 0 ? bottom : top } },
   };
 }
 
-export interface Traveller {
+interface Traveller {
   id: string;
   /** Its tile in its own workspace. */
   tile: Rect;
@@ -210,7 +207,7 @@ export interface Traveller {
  * terminal) travels with each: the old workspace's copy leaves as a clone
  * while the real pane arrives.
  */
-export function travelOf(
+function travelOf(
   before: Layout,
   after: Layout,
 ): { leaving: Traveller[]; arriving: Traveller[] } {
@@ -221,4 +218,370 @@ export function travelOf(
       shared: id in other,
     }));
   return { leaving: side(before, after), arriving: side(after, before) };
+}
+
+// ---- the plan
+
+/** How long a step's motion takes, in seconds. */
+const MOVE = 0.32;
+const EASE = "power3.out";
+/** Rolling past: one project gives way to the next inside its tile. */
+const ROLL = 0.38;
+const ROLL_EASE = "power3.inOut";
+/**
+ * Changing workspace: each window takes this long, starting this long after
+ * the one before, and the whole workspace travels one screen plus this gap (px).
+ */
+const SLIDE = 0.27;
+const SLIDE_GAP = 0.032;
+const SLIDE_EASE = "power3.inOut";
+const SCREEN_GAP = 14;
+/** First appearance: each window starts this long after the one before. */
+const APPEAR_GAP = 0.05;
+/** A window opening fades in over its first this long; closing, its last. */
+const FADE = 0.12;
+
+/** When a part of the motion starts, how long it takes, and its ease. */
+interface Timing {
+  /** Seconds from the start of the motion. */
+  at: number;
+  duration: number;
+  ease: string;
+}
+
+/** A window's frame going from one tile to another, in percent of the area. */
+export interface Frame extends Timing {
+  from: Rect;
+  to: Rect;
+}
+
+/** A window's opacity, 0 to 1. */
+export interface Fade extends Timing {
+  from: 0 | 1;
+  to: 0 | 1;
+}
+
+/** How much of a window's height is clipped from each end. */
+export interface Clip {
+  top: number;
+  bottom: number;
+}
+
+interface Position {
+  y: number;
+  clip: Clip;
+}
+
+/**
+ * A move up or down. `from` and `to` are multiples of an extent the DOM
+ * knows: the window's own height, the height of the body of a paged window,
+ * or the area's; the extent plus `gap` (px) is one unit. With `clip`, the
+ * window is clipped as it moves.
+ */
+export interface Slide extends Timing {
+  extent: "window" | "body" | "area";
+  gap: number;
+  from: number;
+  to: number;
+  clip?: { from: Clip; to: Clip };
+}
+
+/** What one window does in the motion. */
+export interface WindowPlan {
+  id: string;
+  /** What it does: its part of the motion. */
+  motion: Motion;
+  /** The edge it opens out of, closes into or comes from. */
+  edge?: Edge;
+  /** It is on show at this tile before it moves (it is not on its new tile). */
+  shownAt?: Rect;
+  /** A copy of the window plays the motion; the window itself stays. */
+  copy?: boolean;
+  frame?: Frame;
+  fade?: Fade;
+  slide?: Slide;
+  /** At rest it is gone: hidden, or the copy removed. */
+  leaves: boolean;
+}
+
+/**
+ * A paged window turning its page: its frame stays and its old entries (a
+ * copy of them, taken before the window shows the next page) roll out as the
+ * next page's entries roll in.
+ */
+export interface Turn {
+  id: string;
+  out: Slide;
+  in: Slide;
+}
+
+/** The whole motion between two placements, as data. */
+export interface Plan {
+  motion: "re-tiling" | "changing workspace" | "first appearance";
+  /** +1 towards a later step (then screen), -1 towards an earlier one. */
+  direction: 1 | -1;
+  /** Every window moving, in the order its motion is made: the new step's, then the old. */
+  windows: WindowPlan[];
+  /** The page turns, which copy the entries they leave from before the motion starts. */
+  turns: Turn[];
+  /** The area is clipped while it runs, so no window passes over the status bar. */
+  clipsArea: boolean;
+  /** How long the motion lasts, in seconds. */
+  duration: number;
+}
+
+/** Where the windows are: the place, its workspace, its layout and the pages of its paged windows. */
+export interface Placement {
+  where: Where;
+  workspace: number;
+  layout: Layout;
+  pages: Readonly<Record<string, number>>;
+}
+
+/** Whether place `a` comes before `b` in the order of steps, then screens. */
+const isBefore = (a: Where, b: Where): boolean =>
+  a.step < b.step || (a.step === b.step && a.screen < b.screen);
+
+const sameLayout = (a: Layout, b: Layout): boolean =>
+  JSON.stringify(a) === JSON.stringify(b);
+
+/** Two places on one step, its disclosure as open in each (the screens of a phone). */
+const sameStep = (a: Placement, b: Placement): boolean =>
+  a.where.step === b.where.step && a.where.open === b.where.open;
+
+const frameOf = (from: Rect, to: Rect): Frame => ({
+  from,
+  to,
+  at: 0,
+  duration: MOVE,
+  ease: EASE,
+});
+
+const fadeIn = (at: number): Fade => ({
+  from: 0,
+  to: 1,
+  at,
+  duration: FADE,
+  ease: "none",
+});
+
+const fadeOut = (at: number): Fade => ({
+  from: 1,
+  to: 0,
+  at,
+  duration: FADE,
+  ease: "none",
+});
+
+const rolling = (from: Position, to: Position): Slide => ({
+  extent: "window",
+  gap: 0,
+  from: from.y,
+  to: to.y,
+  clip: { from: from.clip, to: to.clip },
+  at: 0,
+  duration: ROLL,
+  ease: ROLL_EASE,
+});
+
+const turning = (from: number, to: number): Slide => ({
+  extent: "body",
+  gap: 0,
+  from,
+  to,
+  at: 0,
+  duration: ROLL,
+  ease: ROLL_EASE,
+});
+
+const travelling = (from: number, to: number, at: number): Slide => ({
+  extent: "area",
+  gap: SCREEN_GAP,
+  from,
+  to,
+  at,
+  duration: SLIDE,
+  ease: SLIDE_EASE,
+});
+
+/** When the last part of the motion ends. */
+function lastingOf(windows: WindowPlan[], turns: Turn[]): number {
+  const parts: (Timing | undefined)[] = [
+    ...windows.flatMap((w) => [w.frame, w.fade, w.slide]),
+    ...turns.flatMap((t) => [t.out, t.in]),
+  ];
+  return Math.max(0, ...parts.map((t) => (t ? t.at + t.duration : 0)));
+}
+
+/**
+ * Changing workspace. The old workspace's windows slide up and off one after
+ * another in tiling order as the next workspace's come up from below in the
+ * same order (the reverse going to a lower one), `direction` giving which.
+ * However many workspaces the jump crosses, it travels one screen. A window on
+ * both workspaces leaves as a copy while the real window arrives.
+ */
+function travelPlan(before: Layout, after: Layout, direction: 1 | -1): Plan {
+  const { leaving, arriving } = travelOf(before, after);
+  const windows: WindowPlan[] = [
+    ...leaving.map(
+      (w, i): WindowPlan => ({
+        id: w.id,
+        motion: "changing workspace",
+        shownAt: w.tile,
+        ...(w.shared ? { copy: true } : {}),
+        slide: travelling(0, -direction, i * SLIDE_GAP),
+        leaves: true,
+      }),
+    ),
+    ...arriving.map(
+      (w, i): WindowPlan => ({
+        id: w.id,
+        motion: "changing workspace",
+        slide: travelling(direction, 0, (i + 1) * SLIDE_GAP),
+        leaves: false,
+      }),
+    ),
+  ];
+  return {
+    motion: "changing workspace",
+    direction,
+    windows,
+    turns: [],
+    clipsArea: true,
+    duration: lastingOf(windows, []),
+  };
+}
+
+/**
+ * Re-tiling: a window in both steps moves to its new tile; a window that
+ * opens grows out of its edge along that edge's axis, and one that closes
+ * shrinks back into it, sharing one moving border with the neighbours that
+ * re-tile beside it. A window rolling past stays on its tile as the window
+ * slides through it. A paged window that changes page turns it.
+ */
+function retilePlan(
+  before: Placement,
+  after: Placement,
+  direction: 1 | -1,
+  phone: boolean,
+): Plan {
+  const windows: WindowPlan[] = [];
+  const roll = rollOf(direction);
+  for (const c of sortChanges(before.layout, after.layout, true)) {
+    if (c.from && c.to) {
+      windows.push({
+        id: c.id,
+        motion: c.motion,
+        frame: frameOf(c.from, c.to),
+        leaves: false,
+      });
+    } else if (c.motion === "rolling past") {
+      // the tile stays; the window slides through it, clipped to the tile
+      windows.push({
+        id: c.id,
+        motion: c.motion,
+        ...(c.from ? { shownAt: c.from } : {}),
+        slide: c.to
+          ? rolling(roll.in.from, roll.rest)
+          : rolling(roll.rest, roll.out.to),
+        leaves: !c.to,
+      });
+    } else if (c.motion === "opening" && c.to) {
+      const edge = edgeOf(c.id, before.layout, after.layout, phone);
+      windows.push({
+        id: c.id,
+        motion: c.motion,
+        edge,
+        frame: frameOf(collapsed(c.to, edge), c.to),
+        fade: fadeIn(0),
+        leaves: false,
+      });
+    } else if (c.motion === "closing" && c.from) {
+      const edge = edgeOf(c.id, before.layout, after.layout, phone);
+      // it stays on show until it is in its edge
+      windows.push({
+        id: c.id,
+        motion: c.motion,
+        edge,
+        shownAt: c.from,
+        frame: frameOf(c.from, collapsed(c.from, edge)),
+        fade: fadeOut(MOVE - FADE),
+        leaves: true,
+      });
+    }
+  }
+  // a paged window turning its page, with the layout unchanged around it
+  const turns: Turn[] =
+    phone && sameStep(before, after) && sameLayout(before.layout, after.layout)
+      ? Object.keys(after.layout)
+          .filter((id) => (before.pages[id] ?? 0) !== (after.pages[id] ?? 0))
+          .map((id) => ({
+            id,
+            out: turning(0, -direction),
+            in: turning(direction, 0),
+          }))
+      : [];
+  const rolls = windows.some((w) => w.slide) || turns.length > 0;
+  return {
+    motion: "re-tiling",
+    direction,
+    windows,
+    turns,
+    clipsArea: false,
+    // a step whose windows only appear and go still takes the step's time
+    duration: Math.max(lastingOf(windows, turns), rolls ? ROLL : MOVE),
+  };
+}
+
+/**
+ * First appearance: the step's windows, already on their tiles, each slide
+ * straight into their tile from an edge, one after another in tiling order.
+ * Nothing re-tiles.
+ */
+function appearancePlan(after: Placement, phone: boolean): Plan {
+  const windows = Object.entries(after.layout).map(
+    ([id, tile], i): WindowPlan => {
+      const edge = appearEdgeOf(i, tile, phone);
+      const at = i * APPEAR_GAP;
+      return {
+        id,
+        motion: "first appearance",
+        edge,
+        frame: { ...frameOf(collapsed(tile, edge), tile), at },
+        fade: fadeIn(at),
+        leaves: false,
+      };
+    },
+  );
+  return {
+    motion: "first appearance",
+    direction: 1,
+    windows,
+    turns: [],
+    clipsArea: false,
+    duration: lastingOf(windows, []),
+  };
+}
+
+/**
+ * The whole motion from one placement to another, as data: what each window
+ * does and when, and which windows turn a page. With no `before` the desktop
+ * is loading, and it is the first appearance.
+ */
+export function planMotion(
+  before: Placement | null,
+  after: Placement,
+  phone: boolean,
+): Plan {
+  if (!before) return appearancePlan(after, phone);
+  const direction = isBefore(after.where, before.where) ? -1 : 1;
+  // a phone moving between screens of one step, whose windows all change,
+  // travels like changing workspace
+  const screenMove =
+    phone &&
+    sameStep(before, after) &&
+    !sameLayout(before.layout, after.layout);
+  if (before.workspace !== after.workspace || screenMove)
+    return travelPlan(before.layout, after.layout, direction);
+  return retilePlan(before, after, direction, phone);
 }
