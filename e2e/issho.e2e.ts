@@ -160,11 +160,19 @@ test("the logo is at the top of the drawn site and in the app header, in the the
   // it takes the theme's colours: navy to the foreground, gold to the
   // accent, the sun to the second colour; outlines in the background colour
   for (const theme of ["paper", "tokyo-night", "issho-light", "issho-dark"]) {
-    await page.evaluate((t) => {
+    // the colours ease over .45 s: switch, then wait for every CSS transition
+    // to finish (not the looping animations, which never do), however slowly
+    // a busy machine draws its frames; a fixed 700 ms sleep, then a 5 s poll,
+    // both read them part way
+    await page.evaluate(async (t) => {
       document.documentElement.dataset.theme = t;
+      await Promise.all(
+        document
+          .getAnimations()
+          .filter((a) => a instanceof CSSTransition)
+          .map((a) => a.finished.catch(() => {})),
+      );
     }, theme);
-    // the colours ease over .45 s; poll till they land, however slowly a busy
-    // machine draws its frames (a fixed 700 ms sleep read them part way)
     const colours = () =>
       page.evaluate(() => {
         const named = (v: string) => {
@@ -196,7 +204,9 @@ test("the logo is at the top of the drawn site and in the app header, in the the
           .filter(([, [got, want]]) => got !== want)
           .map(([what, [got, want]]) => `${what}: ${got}, want ${want}`);
       });
-    await expect.poll(colours, `colours on ${theme}`).toEqual([]);
+    await expect
+      .poll(colours, { message: `colours on ${theme}`, timeout: 15_000 })
+      .toEqual([]);
   }
 });
 
