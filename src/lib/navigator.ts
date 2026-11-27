@@ -20,7 +20,7 @@
 // after a Back or Forward that waited. The first appearance has no origin to
 // turn back to, so everything during it waits.
 import { type AddressBook, notFoundTitle } from "./addresses";
-import { moveBy } from "./screens";
+import { fitScreen, moveBy } from "./screens";
 import { inProjects, stepAt, stepCount, type Workspace } from "./workspaces";
 
 /** The archive's own address: the archive alone, on the last featured project. */
@@ -202,7 +202,7 @@ export function createNavigator({
    */
   const fit = (w: Where): Where => ({
     ...w,
-    screen: Math.max(0, Math.min(screens(w.step, w.open) - 1, w.screen)),
+    screen: fitScreen(w.screen, screens(w.step, w.open)),
   });
   function fitAll(): void {
     s.screen = fit(here()).screen;

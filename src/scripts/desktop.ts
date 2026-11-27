@@ -12,7 +12,7 @@ import { Observer } from "gsap/Observer";
 import { interpretKey } from "../lib/keys";
 import { type Plan, planMotion, sameLayout } from "../lib/motion";
 import { createNavigator, type Outcome, type Where } from "../lib/navigator";
-import { focusAmong, type Screen } from "../lib/screens";
+import { fitScreen, focusAmong, type Screen } from "../lib/screens";
 import { windowChanges } from "../lib/signals";
 import { createStepScreens } from "../lib/step-screens";
 import { createSwipe, UNZOOMED } from "../lib/swipe";
@@ -191,7 +191,7 @@ let shown: Shown | null = null;
 /** The screen a place shows, its screen brought in to the screens there are. */
 function screenAt(where: Where): Shown {
   const screens = screensAt(where.step, where.open);
-  const screen = Math.max(0, Math.min(screens.length - 1, where.screen));
+  const screen = fitScreen(where.screen, screens.length);
   const { layout, pages } = screens[screen] ?? { layout: {}, pages: {} };
   return {
     where: { ...where, screen },
