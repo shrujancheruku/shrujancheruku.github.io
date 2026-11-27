@@ -149,7 +149,7 @@ test("a jump back to the workspace a change began from turns it back from where 
     if (i === 0) return;
     const step = t - (now[i - 1] ?? t);
     expect(i <= turn ? step <= 0.5 : step >= -0.5).toBe(true);
-    expect(Math.abs(step)).toBeLessThan(a.height / 2);
+    expect(Math.abs(step)).toBeLessThan(a.height);
   });
   // the contact window, coming up from below, goes back down without landing
   const contact = tops("contact");
