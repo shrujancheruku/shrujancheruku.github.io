@@ -73,7 +73,19 @@ async function load(page: Page, path: string): Promise<Run> {
     };
     requestAnimationFrame(tick);
   }, PANES);
+  // the appearance runs on the page's clock in fixed frames, so a busy machine
+  // cannot skip part of it between two sampled frames
+  await page.clock.install();
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.goto(path);
+  await expect(area(page)).toHaveAttribute("data-ready", "true");
+  for (
+    let f = 0;
+    f < 400 && (await area(page).getAttribute("data-retiling")) !== "false";
+    f++
+  )
+    await page.clock.runFor(16);
+  await page.clock.resume();
   await expect(area(page)).toHaveAttribute("data-retiling", "false");
   await page.waitForFunction(
     () => (window as unknown as { __ids: string[] }).__ids.length > 0,
