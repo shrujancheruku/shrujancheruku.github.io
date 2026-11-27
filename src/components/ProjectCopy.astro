@@ -152,27 +152,40 @@ const { n, copy } = Astro.props;
     cursor: pointer;
   }
 
-  /* a short copy window steps the type down (#160, layout E of #141); after
-     the type it steps from, and before the phone, which sets its own */
-  @container (height < 620px) {
-    .copy {
-      gap: 8px;
-      padding-top: 20px;
-      padding-bottom: 16px;
+  /* a short copy window steps the type down (#160, layout E of #141): on a
+     wide screen with the archive shut only. After the type it steps from;
+     the phone sets its own. */
+  @media (min-width: 761px) {
+    @container (height < 620px) {
+      :global(.area:not([data-open="true"])) .copy {
+        gap: 8px;
+        padding-top: 20px;
+        padding-bottom: 16px;
+      }
+
+      :global(.area:not([data-open="true"])) h2 {
+        font-size: clamp(26px, 10cqw, 38px);
+      }
+
+      :global(.area:not([data-open="true"])) .pitch {
+        font-size: 15px;
+        line-height: 1.4;
+      }
+
+      :global(.area:not([data-open="true"])) .proof {
+        font-size: 12px;
+        line-height: 1.5;
+      }
     }
 
-    h2 {
-      font-size: clamp(26px, 10cqw, 38px);
-    }
-
-    .pitch {
-      font-size: 15px;
-      line-height: 1.4;
-    }
-
-    .proof {
-      font-size: 12px;
-      line-height: 1.5;
+    /* the archive open keeps today's copy: its type, and only its spacing
+       stepping down in a window under 460px */
+    @container (height < 460px) {
+      :global(.area[data-open="true"]) .copy {
+        gap: 6px;
+        padding-top: 18px;
+        padding-bottom: 14px;
+      }
     }
   }
 

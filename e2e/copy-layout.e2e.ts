@@ -174,3 +174,41 @@ test("with the archive open the layout is today's: copy 62%, stack 38%, in the l
   expect(m.stack.height / m.area.height).toBeCloseTo(0.38, 2);
   expect(near(m.stack.top, m.copy.top + m.copy.height)).toBe(true);
 });
+
+// master's values with the archive open: the type never stepped down there,
+// and under 460px only the gap and padding did
+for (const [width, height, h2, gap, pad] of [
+  [1280, 800, 28, "6px", ["18px", "14px"]],
+  [1920, 1080, 28.03, "12px", ["28px", "22px"]],
+] as const) {
+  test(`with the archive open at ${width}x${height} the copy keeps today's type`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    await ready(page, "/work/");
+    await page.locator("#archive-stack").click();
+    await settle(page);
+    await expect(area(page)).toHaveAttribute("data-open", "true");
+    const style = await page
+      .locator('.pane[data-window="copy-1"]')
+      .evaluate((pane) => {
+        const of = (s: string) => {
+          const el = pane.querySelector(s);
+          if (!el) throw new Error(`no ${s}`);
+          return getComputedStyle(el);
+        };
+        return {
+          h2: Number.parseFloat(of("h2").fontSize),
+          pitch: [of(".pitch").fontSize, of(".pitch").lineHeight],
+          proof: [of(".proof").fontSize, of(".proof").lineHeight],
+          gap: of(".copy").gap,
+          pad: [of(".copy").paddingTop, of(".copy").paddingBottom],
+        };
+      });
+    expect(style.h2).toBeCloseTo(h2, 1);
+    expect(style.pitch).toEqual(["16px", "23.2px"]);
+    expect(style.proof).toEqual(["13px", "20.8px"]);
+    expect(style.gap).toBe(gap);
+    expect(style.pad).toEqual([...pad]);
+  });
+}
