@@ -17,7 +17,7 @@ import {
   tilingOf,
 } from "../src/lib/workspaces";
 
-const workspaces = createWorkspaces({ featured: 4 });
+const workspaces = createWorkspaces({ featured: 4, archive: false });
 const ws = (id: string) => workspaces.findIndex((w) => w.id === id);
 const wide = (id: string, open = false, index = 0): Layout =>
   tilingOf(stepAt(workspaces, firstStepOf(workspaces, ws(id)) + index), open);

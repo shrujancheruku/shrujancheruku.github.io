@@ -97,7 +97,7 @@ export interface WorkspaceOptions {
   /** How many featured projects there are (one step each). */
   featured: number;
   /** The stack ends with the line that opens the archive (there is an archive). */
-  archive?: boolean;
+  archive: boolean;
 }
 
 const stepOf = (
@@ -135,16 +135,36 @@ const squeeze = (layout: Layout, share: number): Layout =>
     ]),
   );
 
-/** One row of the stack on a wide screen: a featured project or the archive line. */
-const STACK_ROW = 34;
 /**
- * What the stack's window adds to its rows: the label's band (32px) and its
- * rules (2px), as laid out in the prototype the founder chose (#141, layout E).
+ * One row of the stack on a wide screen, a featured project or the archive
+ * line: the tallest a row grows. ProjectStack.astro reads it as `--stack-row`.
  */
-const STACK_CHROME = 34;
+export const STACK_ROW = 34;
 
-/** The stack's height on a wide screen: its chrome and one row per line. */
-const stackHeight = (rows: number): number => STACK_CHROME + rows * STACK_ROW;
+// What the stack's pane spends besides its rows, top to bottom (#141, layout E):
+/** The label's band (`.stack`'s top inset in ProjectStack.astro). */
+const STACK_LABEL = 32;
+/** The rule under the label (`.stack`'s top border). */
+const STACK_RULE = 1;
+/** The pane's padding, half of `--gap` (global.css, wide) on each side. */
+const STACK_GAP = 14;
+/** The window's border, 2px on each side (`.win` in Window.astro). */
+const STACK_BORDER = 4;
+/** Everything the pane spends besides its rows: 51px. */
+export const STACK_CHROME = STACK_LABEL + STACK_RULE + STACK_GAP + STACK_BORDER;
+
+/**
+ * The chrome the stack's height allows for. The prototype the founder chose
+ * (#141, layout E) allowed only the label's band and two rules, 34px, so the
+ * stack is 204px with four featured and the archive line, and its rows share
+ * what is left after STACK_CHROME: 153px, about 30.6px each. Set this to
+ * STACK_CHROME for rows exactly STACK_ROW tall (221px for those five rows).
+ */
+const STACK_ALLOWANCE = STACK_LABEL + 2 * STACK_RULE;
+
+/** The stack's height on a wide screen with `rows` lines (featured and the archive line). */
+export const stackHeight = (rows: number): number =>
+  STACK_ALLOWANCE + rows * STACK_ROW;
 
 /** The share of a phone screen a project's copy takes; the composition has the rest. */
 const PROJECT_COPY_SHARE = 56;
@@ -160,7 +180,7 @@ const WORKSPACE_NAMES = [
 
 export function createWorkspaces({
   featured,
-  archive = false,
+  archive,
 }: WorkspaceOptions): Workspace[] {
   // on a wide screen with the archive shut the stack is as tall as its rows
   // and the copy takes the rest of the column (#160)

@@ -7,7 +7,7 @@ const area = (layout: Layout) =>
 describe("the projects workspace holds for 3, 4, 5 and 6 featured projects", () => {
   for (const featured of [3, 4, 5, 6]) {
     test(`${featured}: one step each, copy over stack at 30%, composition at 70%`, () => {
-      const projects = createWorkspaces({ featured }).find(
+      const projects = createWorkspaces({ featured, archive: false }).find(
         (w) => w.id === "projects",
       );
       expect(projects?.steps).toHaveLength(featured);
@@ -37,7 +37,7 @@ describe("the projects workspace holds for 3, 4, 5 and 6 featured projects", () 
 
 test("a featured step's tilings are the prototype's, to the percent", () => {
   // prototype/compositions at f4e8d4a, index.html, the step table (S)
-  const projects = createWorkspaces({ featured: 4 }).find(
+  const projects = createWorkspaces({ featured: 4, archive: false }).find(
     (w) => w.id === "projects",
   );
   const step = projects?.steps[1];

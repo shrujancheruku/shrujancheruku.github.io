@@ -8,7 +8,7 @@ import {
 } from "../src/lib/addresses";
 import { createWorkspaces, firstStepOf } from "../src/lib/workspaces";
 
-const workspaces = createWorkspaces({ featured: 3 });
+const workspaces = createWorkspaces({ featured: 3, archive: false });
 const book = createAddressBook(workspaces, [
   { repository: "issho", pitch: "Find your people." },
   { repository: "unmacos", pitch: "A Mac in a tab." },

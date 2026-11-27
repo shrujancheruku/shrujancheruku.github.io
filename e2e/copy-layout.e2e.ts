@@ -1,11 +1,15 @@
 // The copy window's layout on a wide screen (#160): with the archive shut the
 // stack is as tall as its rows and a featured project's copy takes the rest of
 // the column, its type stepping down only when the copy window is short. With
-// the archive open the workspace is today's, squeezed into the left 42%.
+// the archive open the workspace keeps the 62/38 tiling, squeezed into the
+// left 42%.
 import { expect, type Page, test } from "@playwright/test";
+import { stackHeight } from "../src/lib/workspaces";
 import { area, ready, settle } from "./helpers";
 
 const PROJECTS = ["issho", "rapid-radiology", "orca-flow", "unmacos"];
+/** The stack's height: four featured projects and the archive line. */
+const STACK = stackHeight(PROJECTS.length + 1);
 
 /** The heights the desktop gives the stack and copy panes, and the area's box, in px. */
 const measure = (page: Page, n: number) =>
@@ -56,8 +60,8 @@ test("the stack is as tall as its rows and the copy takes the rest of the column
   await page.setViewportSize({ width: 1440, height: 900 });
   await ready(page, "/work/");
   const m = await measure(page, 1);
-  // four featured projects and the archive line: 204px
-  expect(near(m.stack.height, 204)).toBe(true);
+  // four featured projects and the archive line
+  expect(near(m.stack.height, STACK)).toBe(true);
   expect(near(m.stack.top + m.stack.height, m.area.top + m.area.height)).toBe(
     true,
   );
@@ -69,7 +73,7 @@ test("the stack is as tall as its rows and the copy takes the rest of the column
   expect(m.comp.width / m.area.width).toBeCloseTo(0.7, 2);
 });
 
-test("the stack stays put and 204px from one project to the next", async ({
+test("the stack stays put and the same height from one project to the next", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -113,9 +117,7 @@ for (const [width, height] of [
   });
 }
 
-test("at 1280x720 the copy window scrolls, as it does today", async ({
-  page,
-}) => {
+test("at 1280x720 the copy window scrolls", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await ready(page, "/work/");
   await page.evaluate(() => document.fonts.ready);
@@ -127,13 +129,28 @@ test("at 1280x720 the copy window scrolls, as it does today", async ({
   ).toBe("auto");
 });
 
+/** The copy window's height as a window: its pane, as #141 measured it. */
+const copyPane = (page: Page, n: number) =>
+  page
+    .locator(`.pane[data-window="copy-${n}"]`)
+    .evaluate((el) => el.getBoundingClientRect().height);
+
 test("the type steps down only when the copy window is under 620px tall", async ({
   page,
 }) => {
   // 1280x800: the copy window is under 620px, compact type
   await ready(page, "/work/");
+  expect(await copyPane(page, 1)).toBeLessThan(620);
   expect(await pitchSize(page, 1)).toBe("15px");
-  // 1728x1000: 620px or more, full size
+  // 1440x950: the window is 620px or more though its body is under 620px,
+  // full size
+  await page.setViewportSize({ width: 1440, height: 950 });
+  await settle(page);
+  const pane = await copyPane(page, 1);
+  expect(pane).toBeGreaterThanOrEqual(620);
+  expect(pane).toBeLessThan(638);
+  expect(await pitchSize(page, 1)).toBe("16px");
+  // 1728x1000: well over, full size
   await page.setViewportSize({ width: 1728, height: 1000 });
   await settle(page);
   expect(await pitchSize(page, 1)).toBe("16px");
@@ -149,7 +166,7 @@ test("resizing re-resolves the stack's height, with no motion at rest", async ({
     .poll(async () => {
       const m = await measure(page, 1);
       return (
-        near(m.stack.height, 204) &&
+        near(m.stack.height, STACK) &&
         near(m.copy.height + m.stack.height, m.area.height)
       );
     })
@@ -161,7 +178,7 @@ test("resizing re-resolves the stack's height, with no motion at rest", async ({
   expect(style).toBe("");
 });
 
-test("with the archive open the layout is today's: copy 62%, stack 38%, in the left 42%", async ({
+test("with the archive open the layout is the 62/38 tiling: copy 62%, stack 38%, in the left 42%", async ({
   page,
 }) => {
   await ready(page, "/work/");
@@ -175,13 +192,13 @@ test("with the archive open the layout is today's: copy 62%, stack 38%, in the l
   expect(near(m.stack.top, m.copy.top + m.copy.height)).toBe(true);
 });
 
-// master's values with the archive open: the type never stepped down there,
-// and under 460px only the gap and padding did
+// the full type with the archive open: it never steps down there, and under
+// 460px only the gap and padding do
 for (const [width, height, h2, gap, pad] of [
   [1280, 800, 28, "6px", ["18px", "14px"]],
   [1920, 1080, 28.03, "12px", ["28px", "22px"]],
 ] as const) {
-  test(`with the archive open at ${width}x${height} the copy keeps today's type`, async ({
+  test(`with the archive open at ${width}x${height} the copy keeps the full type`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height });
