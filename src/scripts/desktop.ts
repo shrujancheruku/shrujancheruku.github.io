@@ -151,7 +151,9 @@ function pagesOf(id: string, tile: Layout[string]): number[][] {
 /** The screens of step `n`; `opened` says whether its disclosure is open. */
 function screensAt(n: number, opened: boolean): Screen[] {
   const found = stepAt(workspaces, n);
-  if (!touch.matches) return [{ layout: tilingOf(found, opened), pages: {} }];
+  // the stack's height is in px: the area's live height resolves it (#160)
+  if (!touch.matches)
+    return [{ layout: tilingOf(found, opened, area.clientHeight), pages: {} }];
   const layouts = screensOf(found, opened);
   const counts: Record<string, number> = {};
   for (const layout of layouts)
@@ -1342,7 +1344,14 @@ const entriesOf: EntriesOf = (s, id) => {
  * over fewer screens, say), so it is found by its first entry, not its index.
  */
 function remeasure(): void {
-  if (!touch.matches) return;
+  if (!touch.matches) {
+    // a wide tiling in px (the stack's rows) follows the area's new height
+    if (
+      JSON.stringify(screensAt(step, open)[0]?.layout) !== JSON.stringify(shown)
+    )
+      place(step, false);
+    return;
+  }
   fitEntries();
   const before = screensAt(step, open)[screen];
   const anchor = before && anchorOf(before, entriesOf);

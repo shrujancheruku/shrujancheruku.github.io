@@ -8,7 +8,10 @@ export async function getSite() {
   // Reading the projects also fails the build on bad content (#36).
   const featured = await getFeatured();
   const archive = await getArchive();
-  const workspaces = createWorkspaces({ featured: featured.length });
+  const workspaces = createWorkspaces({
+    featured: featured.length,
+    archive: archive.length > 0,
+  });
   const book = createAddressBook(
     workspaces,
     featured.map((p) => ({ repository: p.repository, pitch: p.pitch })),
