@@ -17,7 +17,7 @@ import {
   sameLayout,
 } from "../lib/motion";
 import { createNavigator, type Outcome, type Where } from "../lib/navigator";
-import { fitScreen, focusAmong, type Screen } from "../lib/screens";
+import { fitScreen, focusAmong } from "../lib/screens";
 import { windowChanges } from "../lib/signals";
 import { createStepScreens } from "../lib/step-screens";
 import { createSwipe, UNZOOMED } from "../lib/swipe";
@@ -77,7 +77,7 @@ const archiveEl = area.querySelector<HTMLElement>(
 const navigator = createNavigator({
   workspaces,
   book,
-  screens: (n, opened) => screensAt(n, opened).length,
+  screens: (n, opened) => stepScreens.screens(n, opened).length,
   screenOfEntry: (n, slug) => stepScreens.screenOfEntry(n, slug),
   hasArchive: archiveEl !== null,
 });
@@ -112,10 +112,6 @@ const stepScreens = createStepScreens({
     tilingOf(stepAt(workspaces, n), opened, area.clientHeight),
   reader: layoutReader(pagedWindow),
 });
-
-/** The screens of step `n`; `opened` says whether its disclosure is open. */
-const screensAt = (n: number, opened: boolean): Screen[] =>
-  stepScreens.screens(n, opened);
 
 /** Whether the not-found terminal is on show, as the navigator last placed it. */
 let notFoundShown = false;
@@ -192,7 +188,7 @@ let shown: Shown | null = null;
 
 /** The screen a place shows, its screen brought in to the screens there are. */
 function screenAt(where: Where): Shown {
-  const screens = screensAt(where.step, where.open);
+  const screens = stepScreens.screens(where.step, where.open);
   const screen = fitScreen(where.screen, screens.length);
   const { layout, pages } = screens[screen] ?? { layout: {}, pages: {} };
   return {
@@ -708,7 +704,12 @@ function remeasure(): void {
   const at = shown?.where ?? navigator.where;
   if (!touch.matches) {
     // a wide tiling in px (the stack's rows) follows the area's new height
-    if (!sameLayout(screensAt(at.step, at.open)[0]?.layout, shown?.layout))
+    if (
+      !sameLayout(
+        stepScreens.screens(at.step, at.open)[0]?.layout,
+        shown?.layout,
+      )
+    )
       carry(navigator.take({ kind: "refit" }));
     return;
   }

@@ -161,7 +161,7 @@ export function mount(slot: HTMLElement, composition: Composition): void {
 
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
   const lifecycle = createLifecycle({
-    createClock: () => createClock(),
+    createClock,
     play: (next) => {
       clock = next;
       return composition.play(kit);
