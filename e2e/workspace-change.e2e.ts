@@ -179,11 +179,26 @@ test("a jump of several workspaces travels one screen, like a jump of one", asyn
 }) => {
   await ready(page, "/");
   await settle(page);
-  const far = await sample(page, [...CONTACT], () => page.keyboard.press("6"));
+  // where the contact window starts, read as the key builds the timeline
+  // (GSAP draws a tween's start at once), not on a frame that may come late
+  let start = Number.NaN;
+  const far = await sample(page, [...CONTACT], async () => {
+    start = await page.evaluate(() => {
+      document.body.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "6", bubbles: true }),
+      );
+      const a = document.querySelector("main.area")?.getBoundingClientRect();
+      const c = document
+        .querySelector('.pane[data-window="contact"]')
+        ?.getBoundingClientRect();
+      return a && c ? c.top - a.top : Number.NaN;
+    });
+  });
   const arriving = shown(far.tops.contact ?? []);
   // it comes from one screen below, not five
-  expect(arriving[0] ?? 0).toBeGreaterThanOrEqual(far.height);
-  expect(arriving[0] ?? 0).toBeLessThan(far.height * 1.2);
+  expect(start).toBeGreaterThanOrEqual(far.height);
+  expect(start).toBeLessThan(far.height * 1.2);
+  expect(Math.max(...arriving)).toBeLessThanOrEqual(start + 0.5);
   expect(monotone(arriving, -1)).toBe(true);
   expect(near(far.last.contact?.top ?? -1, 0)).toBe(true);
   expect(near(far.last.contact?.width ?? -1, 58)).toBe(true);
