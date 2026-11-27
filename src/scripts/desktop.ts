@@ -250,6 +250,11 @@ let placedEnds: { from: Placed | null; to: Placed } | null = null;
 let ownBacks = 0;
 /** The input that waits for the running motion to end: the latest only. */
 let waiting: (() => void) | null = null;
+/**
+ * A Back or Forward waits for the running motion: the browser has already
+ * moved the address, so no later input drops it; it runs before `waiting`.
+ */
+let waitingRestore = false;
 /** An input that leads back to where the running motion began is running. */
 let turningBack = false;
 /** One of its steps on the way back was not the origin, and was let pass. */
@@ -272,7 +277,8 @@ const runningEnds = (): Ends | null =>
 function act(target: Where, run: () => void): void {
   const what = actDuring(runningEnds(), target);
   if (what === "wait") {
-    waiting = run;
+    if (run === restore) waitingRestore = true;
+    else waiting = run;
     return;
   }
   if (what === "run") {
@@ -356,7 +362,8 @@ function writeRest(
 
 /**
  * Turn the running motion back: it reverses from where the windows are, to
- * where it began, and anything waiting is dropped. Turned back again, it
+ * where it began, and anything waiting is dropped (but a Back or Forward,
+ * whose address has already moved). Turned back again, it
  * plays forwards.
  */
 function turnBack(): void {
@@ -453,9 +460,7 @@ function place(n: number, animate: boolean): void {
   } else if (interrupted) {
     area.dataset.retiling = "false";
     gate.still();
-    const next = waiting;
-    waiting = null;
-    next?.();
+    runWaiting();
   }
 }
 
@@ -782,10 +787,20 @@ function settled(motion: gsap.core.Timeline): void {
   latest = null;
   placedEnds = null;
   gate.still();
+  runWaiting();
+  if (!latest) area.dataset.retiling = "false";
+}
+
+/** Run what waited for the motion: a Back or Forward first, then the latest other input from where it leaves the windows. */
+function runWaiting(): void {
+  if (waitingRestore) {
+    waitingRestore = false;
+    restore();
+    if (latest) return;
+  }
   const next = waiting;
   waiting = null;
   next?.();
-  if (!latest) area.dataset.retiling = "false";
 }
 
 /** Whether the step's disclosure is the archive (the projects workspace's). */

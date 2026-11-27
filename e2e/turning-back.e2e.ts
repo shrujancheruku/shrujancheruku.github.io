@@ -245,6 +245,30 @@ test("any other input waits for the motion, and a jump that waited adds its hist
   await expect(area(page)).toHaveAttribute("data-workspace", "0");
 });
 
+test("a Back that waits for the motion is never dropped by a later input: the windows end on its address", async ({
+  page,
+}) => {
+  await page.keyboard.press("6");
+  await settle(page);
+  const contact = await stepOf(page);
+  // a step up from contact, then Back (to home) and a second step up, both
+  // waiting: Back runs first, and the step up runs from home, where it is the
+  // top already
+  expect(await midMotion(page, "ArrowUp", ["Back", "ArrowUp"])).toEqual([
+    true,
+    true,
+  ]);
+  await settle(page);
+  await expect(area(page)).toHaveAttribute("data-workspace", "0");
+  expect(await stepOf(page)).toBe(0);
+  expect(await pathOf(page)).toBe("/");
+  await expectNoClone(page);
+  // the entry ahead is the one the first step up scrolled to
+  await page.goForward();
+  await settle(page);
+  expect(await stepOf(page)).toBe(contact - 1);
+});
+
 for (const [how, input] of [
   ["Escape", "Escape"],
   ["the opener again", "click:#archive-stack"],
