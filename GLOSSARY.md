@@ -53,7 +53,7 @@ How a step's windows come on show when the desktop loads, at any address. Each w
 _Avoid_: Launch, boot animation, intro, power-on; "opening a window" (that has neighbours giving up space)
 
 **Turning back**:
-What the windows do when the visitor undoes a step while it is still moving: the opposite flick, key or swipe, Back, closing a window that is opening, or a jump back to where the step began. The motion reverses from where the windows are, and anything waiting is dropped. Any other input during a motion waits until it ends, and only the latest one runs.
+What the windows do when the visitor undoes a step while it is still moving: the opposite flick, key or swipe, Back, closing a window that is opening, or a jump back to where the step began. The motion reverses from where the windows are, and anything waiting is dropped, except a Back or Forward, whose address has already moved. Any other input during a motion waits until it ends, and only the latest one runs (after a Back or Forward that waited).
 _Avoid_: Cancel, interrupt, retarget, snap
 
 **Project**:

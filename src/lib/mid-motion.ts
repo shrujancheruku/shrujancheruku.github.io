@@ -3,9 +3,10 @@
 //
 // An input that leads back to where the running motion began turns it back:
 // the motion reverses from where the windows are now, and anything waiting is
-// dropped. Turned back, the motion runs to where it began, so a second
-// reversal plays it forwards again. Any other input waits until the motion
-// ends, then runs from rest; only the latest one is kept. The first
+// dropped, except a Back or Forward (the address has already moved). Turned
+// back, the motion runs to where it began, so a second reversal plays it
+// forwards again. Any other input waits until the motion ends, then runs from
+// rest; only the latest one is kept, after a Back or Forward that waited. The first
 // appearance has no origin to turn back to, so everything during it waits.
 
 /** Where the windows are: a step, its screen (0 on a wide screen), and whether its disclosure is open. */
