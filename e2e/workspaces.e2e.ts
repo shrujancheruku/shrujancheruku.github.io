@@ -60,22 +60,34 @@ test("wheel scrolling moves one step at a time through all six workspaces", asyn
   expect(await current(page)).toEqual({ step: 0, workspace: 0 });
 });
 
-test("mouse notches that come during a re-tile each still move a step", async ({
+test("mouse notches that come during a re-tile end as one step, the latest", async ({
   page,
 }) => {
-  // over the status bar, so no window's own content takes the wheel
-  const bar = await page.locator("header.bar").boundingBox();
-  await page.mouse.move(640, (bar?.y ?? 0) + (bar?.height ?? 0) / 2);
-  // 700 ms apart, inside the 850 ms re-tile: each waits for the one before
-  for (let i = 0; i < 3; i++) {
-    await page.mouse.wheel(0, 120);
-    await page.waitForTimeout(700);
-  }
-  await expect(area(page)).toHaveAttribute("data-step", "3", {
-    timeout: 3000,
+  // three notches down, each its own gesture (equal, 200 ms apart), sent in
+  // one go so that the second and third surely come while the first one's
+  // motion runs, whatever the machine: they are stamped as a mouse would
+  const during = await page.evaluate(() => {
+    const bar = document.querySelector("header.bar") ?? document.body;
+    const area = document.querySelector<HTMLElement>("main.area");
+    const start = performance.now();
+    const steps: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const e = new WheelEvent("wheel", {
+        deltaY: 120,
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(e, "timeStamp", { value: start + i * 200 });
+      bar.dispatchEvent(e);
+      steps.push(`${area?.dataset.step}:${area?.dataset.retiling}`);
+    }
+    return steps;
   });
+  // the first steps; the others wait, and the wheel steps no more until it settles
+  expect(during).toEqual(["1:true", "1:true", "1:true"]);
   await settle(page);
-  expect((await current(page)).step).toBe(3);
+  // the waiting notch ran from rest: one step, not two
+  expect((await current(page)).step).toBe(2);
 });
 
 test("keyboard scrolling moves one step at a time", async ({ page }) => {
