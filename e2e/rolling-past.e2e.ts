@@ -39,7 +39,7 @@ const monotone = (values: number[], way: 1 | -1): boolean =>
 const near = (a: number, b: number) => Math.abs(a - b) <= 1;
 
 async function rollsOnWide(page: Page, forwards: boolean) {
-  await ready(page, forwards ? "/work/" : "/work/unmacos/");
+  await ready(page, forwards ? "/work/" : "/work/rapid-radiology/");
   await settle(page);
   const [old, next] = forwards ? (["1", "2"] as const) : (["2", "1"] as const);
   const key = forwards ? "ArrowDown" : "ArrowUp";
