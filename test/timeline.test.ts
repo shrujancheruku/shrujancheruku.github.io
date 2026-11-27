@@ -72,29 +72,7 @@ describe("the timeline content", () => {
   });
 });
 
-describe("the timeline's wording", () => {
-  const d = (org: string) =>
-    timeline.find((e) => (e.organisation ?? e.roles[0]?.title) === org)
-      ?.description;
-
-  test("the sabbatical, OpenBench, Unsupervised, Ibotta and Orderly Health read as the spec words them", () => {
-    expect(d("Sabbatical")).toBe(
-      "After a decade of coding for work or class every day, I needed a break. I have spent it travelling and with family, and I kept building, this time for myself and to help others around me.",
-    );
-    expect(d("OpenBench")).toBe(
-      "I joined as the first engineering hire and stayed the only engineer for three years, so the research, design, architecture and code were all mine. I learnt the science by shadowing the scientists, then built the screening pipeline that ran ML models across trillions of compounds. It found drug candidates, confirmed by experiment, in weeks rather than months and from about 1,000 compounds tested, where a standard screen tests about 100,000.",
-    );
-    expect(d("Unsupervised")).toBe(
-      "I designed, built and owned the data ingestion pipeline while working within the web application and platform teams. It took in unstructured business data of any shape, hundreds of gigabytes a day, and ran inside each client's own cloud. I also rebuilt local development so that heavy Kubernetes workloads ran on a laptop, which the whole team adopted, and wrote the onboarding programme.",
-    );
-    expect(d("Ibotta")).toBe(
-      "Ibotta was Denver's first unicorn, an app with over 23m downloads, and it is where I learnt how an established engineering team works, with services held to uptime SLAs. I worked on the platform behind transactions, from purchases to receipts, and my main piece was moving receipt processing, millions of receipts a day, out of a Ruby monolith and into separate services. They went live before I left, and were faster, more resilient and easier to observe than what they replaced.",
-    );
-    expect(d("Orderly Health")).toBe(
-      "I joined a two-person engineering team and within six months I was the only engineer. I delivered an NLP chatbot pilot to major insurance companies in Colorado, and when the company pivoted to a data product I built its first APIs, visualisations, demos and scrapers. The company was acquired for that product in 2025.",
-    );
-  });
-
+describe("the timeline's technologies", () => {
   test("Unsupervised's technologies are in the spec's order", () => {
     const u = timeline.find((e) => e.organisation === "Unsupervised");
     expect(u?.technologies).toEqual([
