@@ -100,14 +100,14 @@ const asResumeEntry = (entry: Entry): Entry => ({
 export function buildResume() {
   return {
     name: "Shrujan Cheruku",
-    title: "Product Engineer",
+    title: "Senior Product Engineer",
     contacts: CONTACTS,
     entries: timeline.map(asResumeEntry),
     education: {
       ...education,
       roles: education.roles.map(asResumeEntry),
     },
-    bars: skillBars(skills),
+    bars: skillBars(skills).filter((b) => !b.joke),
     languages,
     hobbies: hobbies.flatMap((folder) => folder.items.map((h) => h.name)),
   };

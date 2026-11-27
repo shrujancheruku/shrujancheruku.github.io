@@ -60,7 +60,7 @@ test.describe("/resume/", () => {
     for (const s of [
       "Shrujan",
       "Cheruku",
-      "Product Engineer",
+      "Senior Product Engineer",
       "shrujancheruku@gmail.com",
       "linkedin.com/in/shrujancheruku",
       "github.com/shrujancheruku",
@@ -76,14 +76,13 @@ test.describe("/resume/", () => {
       "Sandia National Laboratories",
       "Indian School of Business",
       "EiQ Networks",
-      "Comedic Talent",
       "Telugu - native",
       "pub quizzes",
     ])
       expect(text.toLowerCase()).toContain(s.toLowerCase());
     expect(text).not.toMatch(PHONE);
     expect(text).not.toMatch(/Dallas|American|Who am I/i);
-    await expect(page.locator(".bar")).toHaveCount(5);
+    await expect(page.locator(".bar")).toHaveCount(4);
     await expect(page.locator(".hobbies li")).toHaveCount(9);
   });
 
@@ -137,7 +136,7 @@ test.describe(PDF, () => {
     const pdf = await readPdf(await res.body());
     expect(pdf.pages).toBe(1);
     expect(pdf.size).toEqual([0, 0, 612, 792]);
-    expect(pdf.text).toContain("Product Engineer");
+    expect(pdf.text).toContain("Senior Product Engineer");
     expect(pdf.text).toContain("OpenBench");
     expect(pdf.text).not.toMatch(PHONE);
   });
