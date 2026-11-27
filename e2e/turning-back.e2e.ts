@@ -7,7 +7,19 @@
 // the inputs are sent (Playwright's clock, in fixed frames), so a busy machine
 // cannot skip a motion to its end between two frames.
 import { expect, type Page, test } from "@playwright/test";
-import { area, type Box, framesOf, ready, settle } from "./helpers";
+import {
+  areaBox,
+  expectOpen,
+  expectWorkspace,
+  goTo,
+  type InPage,
+  keyOf,
+  probe,
+  ready,
+  settle,
+  stepNow,
+} from "./desktop";
+import { type Box, framesOf } from "./helpers";
 
 /** An input sent inside the page: a key press, Back, or `click:<selector>`. */
 type Input = string;
@@ -31,12 +43,14 @@ async function midMotion(
 ): Promise<boolean[]> {
   const now = await page.evaluate(() => Date.now());
   await page.clock.pauseAt(new Date(now + 1000));
+  await probe(page);
   const fars = then.map((_, i) => (Array.isArray(far) ? (far[i] ?? 4) : far));
   let done = false;
   const sent = page
     .evaluate(
       ([first, then, fars, watch]) => {
-        const area = document.querySelector<HTMLElement>("main.area");
+        const retiling = () =>
+          (window as unknown as InPage).desktopNow()?.retiling === true;
         const send = (input: string) => {
           if (input === "Back") history.back();
           else if (input.startsWith("click:"))
@@ -66,7 +80,7 @@ async function midMotion(
           let left = [...then];
           const tick = () => {
             if (left.length === 0) return done(during);
-            if (area?.dataset.retiling !== "true") {
+            if (!retiling()) {
               // the motion ended before the input: say so, and send the rest
               for (const input of left) {
                 during.push(false);
@@ -77,7 +91,7 @@ async function midMotion(
             }
             if (movedFrom(was, fars[during.length] ?? 4)) {
               const input = left.shift() ?? "";
-              during.push(area?.dataset.retiling === "true");
+              during.push(retiling());
               send(input);
               was = rects();
             }
@@ -98,8 +112,6 @@ async function midMotion(
 }
 
 const pathOf = (page: Page) => page.evaluate(() => location.pathname);
-const stepOf = async (page: Page) =>
-  Number(await area(page).getAttribute("data-step"));
 
 /** Every window on show, at rest: its rectangle, by id. */
 const restOf = (page: Page) =>
@@ -133,7 +145,7 @@ test.beforeEach(async ({ page }) => {
 test("a jump back to the workspace a change began from turns it back from where the windows are, with no frame jumps and no clone left", async ({
   page,
 }) => {
-  const a = await area(page).boundingBox();
+  const a = await areaBox(page);
   if (!a) throw new Error("no area");
   const start = await restOf(page);
   const ids = ["now", "contact"];
@@ -146,8 +158,8 @@ test("a jump back to the workspace a change began from turns it back from where 
     // well into the change: the opening's last window a fifth of the way off
     during = await midMotion(
       page,
-      "6",
-      ["1"],
+      await keyOf(page, "contact"),
+      [await keyOf(page, "opening")],
       a.height / 5,
       '.pane[data-window="now"]',
     );
@@ -176,7 +188,7 @@ test("a jump back to the workspace a change began from turns it back from where 
   const contact = tops("contact");
   expect(Math.min(...contact, a.height)).toBeGreaterThan(0);
 
-  await expect(area(page)).toHaveAttribute("data-workspace", "0");
+  await expectWorkspace(page, "opening");
   expect(await pathOf(page)).toBe("/");
   await expectNoClone(page);
   expect(await restOf(page)).toEqual(start);
@@ -185,18 +197,22 @@ test("a jump back to the workspace a change began from turns it back from where 
 test("Back after a jump turned back by a jump lands where the visitor settled before it", async ({
   page,
 }) => {
-  await page.keyboard.press("4");
+  await goTo(page, "about");
   await settle(page);
   const about = await pathOf(page);
   // the jump to contact, turned back by the jump to about it began from
-  expect(await midMotion(page, "6", ["4"])).toEqual([true]);
+  expect(
+    await midMotion(page, await keyOf(page, "contact"), [
+      await keyOf(page, "about"),
+    ]),
+  ).toEqual([true]);
   await settle(page);
-  await expect(area(page)).toHaveAttribute("data-workspace", "3");
+  await expectWorkspace(page, "about");
   expect(await pathOf(page)).toBe(about);
   // the turned-back jump left no entry of its own: Back is home, never contact
   await page.goBack();
   await settle(page);
-  await expect(area(page)).toHaveAttribute("data-workspace", "0");
+  await expectWorkspace(page, "opening");
   expect(await pathOf(page)).toBe("/");
 });
 
@@ -204,9 +220,11 @@ test("Back after a jump turns it back, onto the step and address before", async 
   page,
 }) => {
   const start = await restOf(page);
-  expect(await midMotion(page, "2", ["Back"])).toEqual([true]);
+  expect(
+    await midMotion(page, await keyOf(page, "timeline"), ["Back"]),
+  ).toEqual([true]);
   await settle(page);
-  expect(await stepOf(page)).toBe(0);
+  expect(await stepNow(page)).toBe(0);
   expect(await pathOf(page)).toBe("/");
   await expectNoClone(page);
   expect(await restOf(page)).toEqual(start);
@@ -221,7 +239,7 @@ test("the opposite key turns a step back and drops what waited: down, down, up e
     true,
   ]);
   await settle(page);
-  expect(await stepOf(page)).toBe(0);
+  expect(await stepNow(page)).toBe(0);
   expect(await pathOf(page)).toBe("/");
   await expectNoClone(page);
   expect(await restOf(page)).toEqual(start);
@@ -240,7 +258,7 @@ test("a second reversal plays the step forwards again", async ({ page }) => {
     await midMotion(page, "ArrowDown", ["ArrowUp", "ArrowDown"], [40, 4]),
   ).toEqual([true, true]);
   await settle(page);
-  expect(await stepOf(page)).toBe(1);
+  expect(await stepNow(page)).toBe(1);
   expect(await pathOf(page)).toBe(path);
   expect(await restOf(page)).toEqual(end);
 });
@@ -250,25 +268,30 @@ test("any other input waits for the motion, and a jump that waited adds its hist
 }) => {
   // during the change to contact, a jump to the projects and then to about:
   // only the latest runs, once the windows are at rest on contact
-  expect(await midMotion(page, "6", ["3", "4"])).toEqual([true, true]);
+  expect(
+    await midMotion(page, await keyOf(page, "contact"), [
+      await keyOf(page, "projects"),
+      await keyOf(page, "about"),
+    ]),
+  ).toEqual([true, true]);
   await settle(page);
-  await expect(area(page)).toHaveAttribute("data-workspace", "3");
+  await expectWorkspace(page, "about");
   await expectNoClone(page);
   // Back goes to contact, whose entry came first, then home
   await page.goBack();
   await settle(page);
-  await expect(area(page)).toHaveAttribute("data-workspace", "5");
+  await expectWorkspace(page, "contact");
   await page.goBack();
   await settle(page);
-  await expect(area(page)).toHaveAttribute("data-workspace", "0");
+  await expectWorkspace(page, "opening");
 });
 
 test("a Back that waits for the motion is never dropped by a later input: the windows end on its address", async ({
   page,
 }) => {
-  await page.keyboard.press("6");
+  await goTo(page, "contact");
   await settle(page);
-  const contact = await stepOf(page);
+  const contact = await stepNow(page);
   // a step up from contact, then Back (to home) and a second step up, both
   // waiting: Back runs first, and the step up runs from home, where it is the
   // top already
@@ -277,14 +300,14 @@ test("a Back that waits for the motion is never dropped by a later input: the wi
     true,
   ]);
   await settle(page);
-  await expect(area(page)).toHaveAttribute("data-workspace", "0");
-  expect(await stepOf(page)).toBe(0);
+  await expectWorkspace(page, "opening");
+  expect(await stepNow(page)).toBe(0);
   expect(await pathOf(page)).toBe("/");
   await expectNoClone(page);
   // the entry ahead is the one the first step up scrolled to
   await page.goForward();
   await settle(page);
-  expect(await stepOf(page)).toBe(contact - 1);
+  expect(await stepNow(page)).toBe(contact - 1);
 });
 
 for (const [how, input] of [
@@ -294,7 +317,7 @@ for (const [how, input] of [
   test(`closing the archive while it opens (${how}) turns it back onto the projects and their address`, async ({
     page,
   }) => {
-    await page.keyboard.press("3");
+    await goTo(page, "projects");
     await settle(page);
     const start = await restOf(page);
     const path = await pathOf(page);
@@ -302,7 +325,7 @@ for (const [how, input] of [
       true,
     ]);
     await settle(page);
-    await expect(area(page)).toHaveAttribute("data-open", "false");
+    await expectOpen(page, false);
     expect(await pathOf(page)).toBe(path);
     expect(await restOf(page)).toEqual(start);
   });

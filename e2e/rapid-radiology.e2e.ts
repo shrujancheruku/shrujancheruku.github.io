@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { ready } from "./helpers";
+import { ready } from "./desktop";
 
 test.describe.configure({ timeout: 120_000 });
 

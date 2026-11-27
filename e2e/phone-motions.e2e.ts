@@ -6,10 +6,20 @@
 // sampled, on the page's clock in fixed frames, and checked for direction,
 // order, which sides move and the final rectangles. Reduced motion places the
 // windows with no frame between.
-import { devices, expect, type Page, test } from "@playwright/test";
-import { area, type Box, framesOf, ready, settle, whereOf } from "./helpers";
+import { expect, type Page, test } from "@playwright/test";
+import {
+  areaBox,
+  expectNotRetiling,
+  goTo,
+  isRetiling,
+  PHONES,
+  ready,
+  settle,
+  whereOf,
+} from "./desktop";
+import { type Box, framesOf } from "./helpers";
 
-const { defaultBrowserType: _, ...pixel } = devices["Pixel 7"];
+const pixel = PHONES["Pixel 7"];
 test.use({ ...pixel });
 
 const ARCHIVE_PROJECT = "/work/truecrypt-steganography/";
@@ -30,7 +40,7 @@ async function sample(
   selector: string,
   action: () => Promise<unknown>,
 ): Promise<(Box | null)[][]> {
-  const a = await area(page).boundingBox();
+  const a = await areaBox(page);
   if (!a) throw new Error("no area");
   const frames = await framesOf(page, selector, "rect", async () => {
     // the motion runs on the page's clock in fixed frames, so a busy machine
@@ -38,11 +48,7 @@ async function sample(
     const now = await page.evaluate(() => Date.now());
     await page.clock.pauseAt(new Date(now + 1000));
     await action();
-    for (
-      let f = 0;
-      f < 400 && (await area(page).getAttribute("data-retiling")) !== "false";
-      f++
-    )
+    for (let f = 0; f < 400 && (await isRetiling(page)); f++)
       await page.clock.runFor(FRAME);
     await page.clock.resume();
   });
@@ -74,7 +80,7 @@ const startedAt = (series: (number | null)[]): number => {
 
 async function toTimeline(page: Page): Promise<void> {
   await ready(page, "/");
-  await page.locator(".ws button").nth(1).tap();
+  await goTo(page, "timeline", "tap");
   await settle(page);
 }
 
@@ -82,7 +88,7 @@ test("the timeline's two screens travel like changing workspace, and back", asyn
   page,
 }) => {
   await toTimeline(page);
-  const a = await area(page).boundingBox();
+  const a = await areaBox(page);
   if (!a) throw new Error("no area");
   const ids = ["timeline", "education", "skills"];
   const selector = ids.map(pane).join(", ");
@@ -200,7 +206,7 @@ test("the archive opens out of the right edge as the copy and composition close 
   page,
 }) => {
   await ready(page, "/work/");
-  const a = await area(page).boundingBox();
+  const a = await areaBox(page);
   if (!a) throw new Error("no area");
   const selector = `${pane("archive")}, ${pane("copy-1")}, ${pane("comp-1")}`;
   const order = await page.$$eval(selector, (els) =>
@@ -213,14 +219,14 @@ test("the archive opens out of the right edge as the copy and composition close 
   const right = (b: Box) => b.left + b.width;
   const archive = frames.map((f) => f[at("archive")]);
   // the archive grows out of the right edge: its right side stays on the edge, its left comes in
-  const shown = archive.filter((b): b is Box => b !== null);
-  expect(shown.length).toBeGreaterThan(2);
-  for (const b of shown) expect(right(b)).toBeGreaterThanOrEqual(a.width - 1);
-  for (let i = 1; i < shown.length; i++)
-    expect((shown[i] as Box).left).toBeLessThanOrEqual(
-      (shown[i - 1] as Box).left + 0.5,
+  const present = archive.filter((b): b is Box => b !== null);
+  expect(present.length).toBeGreaterThan(2);
+  for (const b of present) expect(right(b)).toBeGreaterThanOrEqual(a.width - 1);
+  for (let i = 1; i < present.length; i++)
+    expect((present[i] as Box).left).toBeLessThanOrEqual(
+      (present[i - 1] as Box).left + 0.5,
     );
-  expect(near((shown.at(-1) as Box).left, 0)).toBe(true);
+  expect(near((present.at(-1) as Box).left, 0)).toBe(true);
   // the copy and the composition keep their left edge and shrink into it
   for (const id of ["copy-1", "comp-1"]) {
     const series = frames
@@ -281,14 +287,16 @@ test("a swipe moves nothing while the finger is down, and moves on release", asy
   const y0 = Math.round(h * 0.7);
   await send("touchStart", y0);
   for (let i = 1; i <= 5; i++) {
+    // the finger moves 30 ms apart: the swipe's own pace
     await page.waitForTimeout(30);
     await send("touchMove", y0 - 60 * i);
   }
   // well past the swipe's distance, finger still down: nothing has moved
+  // time itself is under test: well past the swipe's distance and time, the finger still down
   await page.waitForTimeout(500);
   expect(await panes()).toEqual(still);
   expect(await whereOf(page)).toEqual(before);
-  await expect(area(page)).toHaveAttribute("data-retiling", "false");
+  await expectNotRetiling(page);
   await send("touchEnd", 0);
   await cdp.detach();
   await expect
@@ -303,7 +311,7 @@ test.describe("reduced motion", () => {
     page,
   }) => {
     await toTimeline(page);
-    const a = await area(page).boundingBox();
+    const a = await areaBox(page);
     if (!a) throw new Error("no area");
     const selector = ".pane[data-window]";
     const frames = await sample(page, selector, () =>

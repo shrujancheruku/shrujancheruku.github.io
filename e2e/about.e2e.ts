@@ -1,6 +1,13 @@
-import { devices, expect, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
+import {
+  allPhones,
+  expectScreens,
+  expectWorkspace,
+  ready,
+  settle,
+} from "./desktop";
 import { unseen } from "./fit";
-import { area, ready, SWIPES, settle, swipe, warmUpTouch } from "./helpers";
+import { SWIPES, swipe, warmUpTouch } from "./helpers";
 
 // The about workspace (#99): fourth, at /about/, one window with the founder's
 // text and a closing line in the accent colour that leads to the sabbatical.
@@ -12,7 +19,7 @@ test("about is the fourth workspace, at /about/, with its own title and share ca
   page,
 }) => {
   await ready(page, "/about/");
-  await expect(area(page)).toHaveAttribute("data-workspace", "3");
+  await expectWorkspace(page, "about");
   await expect(page).toHaveTitle("About — Shrujan Cheruku");
   await expect(page.locator(".ws button").nth(3)).toHaveText(/4\s+about/);
   await expect(page.locator(".ws button").nth(3)).toHaveAttribute(
@@ -61,12 +68,12 @@ test("clicking the closing line moves to the sabbatical, and Back returns", asyn
   const before = await page.evaluate(() => history.length);
   await closing(page).click();
   await settle(page);
-  await expect(area(page)).toHaveAttribute("data-workspace", "4");
+  await expectWorkspace(page, "sabbatical");
   expect(pathname(page)).toBe("/now/");
   expect(await page.evaluate(() => history.length)).toBe(before + 1);
   await page.goBack();
   await settle(page);
-  await expect(area(page)).toHaveAttribute("data-workspace", "3");
+  await expectWorkspace(page, "about");
   expect(pathname(page)).toBe("/about/");
   await page.goForward();
   await settle(page);
@@ -105,22 +112,8 @@ test("number keys: 2 is timeline, 3 the projects, 4 about, 5 sabbatical, 6 conta
   }
 });
 
-const PHONES = {
-  "Pixel 7": devices["Pixel 7"],
-  "iPhone 14": devices["iPhone 14"],
-  "375x667": {
-    viewport: { width: 375, height: 667 },
-    hasTouch: true,
-    isMobile: true,
-    deviceScaleFactor: 2,
-  },
-} as const;
-
-for (const [name, emulation] of Object.entries(PHONES)) {
+for (const [name, phone] of allPhones()) {
   test.describe(`on ${name}`, () => {
-    const { defaultBrowserType: _engine, ...phone } = emulation as {
-      defaultBrowserType?: string;
-    };
     test.use(phone);
 
     test("about is one page: the whole text and the closing line, nothing cut off or overlapping", async ({
@@ -129,7 +122,7 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       await ready(page, "/about/");
       await settle(page);
       expect(pathname(page)).toBe("/about/");
-      expect(await area(page).getAttribute("data-screens")).toBe("1");
+      await expectScreens(page, 1);
       expect(await unseen(page)).toEqual([]);
       // every paragraph and the closing line are inside the screen
       const view = page.viewportSize();

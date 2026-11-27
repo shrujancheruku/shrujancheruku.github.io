@@ -1,24 +1,29 @@
-import { devices, expect, test } from "@playwright/test";
-import { ready, settle } from "./helpers";
+import { expect, type Page, test } from "@playwright/test";
+import { areaBox, goTo, PHONES, ready, settle } from "./desktop";
 
-test.use({ ...devices["Pixel 7"] });
+test.use(PHONES["Pixel 7"]);
 
-const box = (page: import("@playwright/test").Page, id: string) =>
-  page.$eval(`[data-window="${id}"]`, (e) => {
-    const area = document.querySelector("main.area")?.getBoundingClientRect();
-    const r = e.getBoundingClientRect();
-    return {
-      shown: getComputedStyle(e).display !== "none",
-      w: r.width / (area?.width ?? 1),
-      h: r.height / (area?.height ?? 1),
-    };
-  });
+const box = async (page: Page, id: string) => {
+  const area = await areaBox(page);
+  return page.$eval(
+    `[data-window="${id}"]`,
+    (e, area) => {
+      const r = e.getBoundingClientRect();
+      return {
+        shown: getComputedStyle(e).display !== "none",
+        w: r.width / (area?.width ?? 1),
+        h: r.height / (area?.height ?? 1),
+      };
+    },
+    area,
+  );
+};
 
 test("the timeline is one screen, then education over skills; opening gives education the workspace", async ({
   page,
 }) => {
   await ready(page, "/");
-  await page.locator(".ws button").nth(1).tap();
+  await goTo(page, "timeline", "tap");
   await settle(page);
   // the first screen: the timeline alone
   const top = await box(page, "timeline");

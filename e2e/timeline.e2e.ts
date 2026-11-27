@@ -1,19 +1,25 @@
 import { expect, type Page, test } from "@playwright/test";
-import { framesOf, ready, settle } from "./helpers";
+import { areaBox, goTo, ready, settle } from "./desktop";
+import { framesOf } from "./helpers";
 
-const rect = (page: Page, id: string) =>
-  page.$eval(`[data-window="${id}"]`, (e) => {
-    const area = document.querySelector("main.area")?.getBoundingClientRect();
-    const r = e.getBoundingClientRect();
-    return {
-      left: r.left - (area?.left ?? 0),
-      width: r.width,
-      top: r.top - (area?.top ?? 0),
-      height: r.height,
-      area: area?.width ?? 0,
-      areaHeight: area?.height ?? 0,
-    };
-  });
+const rect = async (page: Page, id: string) => {
+  const area = await areaBox(page);
+  return page.$eval(
+    `[data-window="${id}"]`,
+    (e, area) => {
+      const r = e.getBoundingClientRect();
+      return {
+        left: r.left - (area?.x ?? 0),
+        width: r.width,
+        top: r.top - (area?.y ?? 0),
+        height: r.height,
+        area: area?.width ?? 0,
+        areaHeight: area?.height ?? 0,
+      };
+    },
+    area,
+  );
+};
 const visible = (page: Page, id: string) =>
   page.$eval(
     `[data-window="${id}"]`,
@@ -22,7 +28,7 @@ const visible = (page: Page, id: string) =>
 
 test.beforeEach(async ({ page }) => {
   await ready(page);
-  await page.keyboard.press("2");
+  await goTo(page, "timeline");
   await settle(page);
 });
 
@@ -125,9 +131,9 @@ test("opening re-tiles to 46 / 54, drops skills, staggers the roles in; closing 
 test("leaving the workspace closes it", async ({ page }) => {
   await page.locator("[data-disclosure=education]").click();
   await settle(page);
-  await page.keyboard.press("5");
+  await goTo(page, "sabbatical");
   await settle(page);
-  await page.keyboard.press("2");
+  await goTo(page, "timeline");
   await settle(page);
   expect(await visible(page, "skills")).toBe(true);
   await expect(page.locator("[data-disclosure=education]")).toHaveAttribute(

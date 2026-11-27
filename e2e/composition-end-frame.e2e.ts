@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { compositions } from "../src/compositions/registry";
-import { ready } from "./helpers";
+import { ready } from "./desktop";
 
 // A composition's live scene, once play() has finished, is its card frame.
 // Compositions that cannot meet that yet are skipped by name, with the reason:
