@@ -412,6 +412,32 @@ describe("an input during a motion (was src/lib/mid-motion.ts)", () => {
     expect(d.move(1).motion).toBe("none");
   });
 
+  test("the first appearance cannot be turned back: the input that would turn a motion back waits, and runs after `ended`", () => {
+    // at rest after a step down, a step up turns that step back
+    const after = booted();
+    after.move(1);
+    expect(after.move(-1).motion).toBe("turn back");
+    // during the first appearance the same step up has no origin to turn
+    // back to: it waits, its history with it
+    const d = desk({ path: "/timeline/" });
+    expect(d.boot()).toMatchObject({ from: null, motion: "animate" });
+    expect(d.move(-1)).toMatchObject({
+      motion: "none",
+      history: [],
+      to: at(TIMELINE),
+    });
+    expect(d.navigator.where).toEqual(at(TIMELINE));
+    // the appearance ends: the step up runs, as a motion of its own
+    expect(d.take({ kind: "ended" })).toMatchObject({
+      from: at(TIMELINE),
+      to: at(OPENING),
+      motion: "animate",
+      history: expect.arrayContaining([{ replace: "/" }]),
+    });
+    // and that one can be turned back
+    expect(d.move(1)).toMatchObject({ to: at(TIMELINE), motion: "turn back" });
+  });
+
   test("a motion turned back runs to where it began, and a second reversal plays it forwards again", () => {
     const d = booted();
     d.move(1);
@@ -509,6 +535,27 @@ describe("the archive", () => {
     });
     d.settle();
     expect(d.browser.path).toBe("/work/truecrypt-steganography/");
+  });
+
+  test("Forward onto the archive's address on the step on show records the screen on show as where closing returns", () => {
+    const d = booted({ ...touch, path: "/work/truecrypt-steganography/" });
+    // opened from screen 0 and closed again: /archive/ is the entry ahead
+    d.take({ kind: "archive", open: true });
+    d.settle();
+    d.take({ kind: "archive", open: false });
+    d.settle();
+    expect(d.browser.path).toBe("/work/truecrypt-steganography/");
+    // scrolled on to screen 1 (no entry), then Forward opens the archive here
+    d.move(1);
+    d.settle();
+    expect(d.navigator.where).toEqual(at(LAST_PROJECT, false, 1));
+    expect(d.forward()[0]).toMatchObject({ to: at(LAST_PROJECT, true, 0) });
+    d.settle();
+    // Back closes it onto screen 1, the screen on show when it opened, not 0
+    expect(d.back()[0]).toMatchObject({
+      to: at(LAST_PROJECT, false, 1),
+      motion: "animate",
+    });
   });
 
   test("closed with ✕ after an address opened it, the address returns with no Back", () => {

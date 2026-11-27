@@ -258,8 +258,9 @@ function screenAt(where: Where): Shown {
   };
 }
 
-/** Where a place sits in the order of steps and screens. */
-const orderOf = (w: Where): number => w.step * 1000 + w.screen;
+/** Whether place `a` comes before `b` in the order of steps, then screens. */
+const isBefore = (a: Where, b: Where): boolean =>
+  a.step < b.step || (a.step === b.step && a.screen < b.screen);
 
 /** Tell the page which layout is on show: its windows' slots, the step, the status bar. */
 function record(p: Shown): void {
@@ -371,8 +372,7 @@ function place(to: Where, animate: boolean): void {
   const sameLayout =
     sameScreens &&
     JSON.stringify(before.layout) === JSON.stringify(next.layout);
-  const direction =
-    !before || orderOf(next.where) >= orderOf(before.where) ? 1 : -1;
+  const direction = !before || !isBefore(next.where, before.where) ? 1 : -1;
   const sameWorkspace =
     before !== null &&
     locate(workspaces, before.where.step).workspace ===
