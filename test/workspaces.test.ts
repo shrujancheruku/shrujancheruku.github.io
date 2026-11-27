@@ -406,8 +406,8 @@ describe("the copy window's layout (#160): the stack as tall as its rows", () =>
 
   test("the chrome is the label's band, its rule, the pane's gap and the window's border", () => {
     expect(STACK_CHROME).toBe(32 + 1 + 14 + 4);
-    // the rows never grow past STACK_ROW: they share what the chrome leaves
-    expect((stackHeight(5) - STACK_CHROME) / 5).toBeLessThanOrEqual(STACK_ROW);
+    // the height allows for all of the chrome: every row is STACK_ROW tall
+    expect((stackHeight(5) - STACK_CHROME) / 5).toBe(STACK_ROW);
   });
 
   test("with the archive open the tiling is 62/38: copy 62%, stack 38%, squeezed into 42%", () => {

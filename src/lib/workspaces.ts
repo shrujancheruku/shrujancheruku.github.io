@@ -154,13 +154,13 @@ const STACK_BORDER = 4;
 export const STACK_CHROME = STACK_LABEL + STACK_RULE + STACK_GAP + STACK_BORDER;
 
 /**
- * The chrome the stack's height allows for. The prototype the founder chose
- * (#141, layout E) allowed only the label's band and two rules, 34px, so the
- * stack is 204px with four featured and the archive line, and its rows share
- * what is left after STACK_CHROME: 153px, about 30.6px each. Set this to
- * STACK_CHROME for rows exactly STACK_ROW tall (221px for those five rows).
+ * The chrome the stack's height allows for: all of it, so every row is
+ * exactly STACK_ROW tall and the stack is 221px with four featured and the
+ * archive line (the founder's ruling on #176, option b). The prototype
+ * (#141, layout E) allowed only the label's band and two rules, 34px, which
+ * left its rows about 30.6px.
  */
-const STACK_ALLOWANCE = STACK_LABEL + 2 * STACK_RULE;
+const STACK_ALLOWANCE = STACK_CHROME;
 
 /** The stack's height on a wide screen with `rows` lines (featured and the archive line). */
 export const stackHeight = (rows: number): number =>

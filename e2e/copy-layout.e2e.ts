@@ -4,7 +4,7 @@
 // the archive open the workspace keeps the 62/38 tiling, squeezed into the
 // left 42%.
 import { expect, type Page, test } from "@playwright/test";
-import { stackHeight } from "../src/lib/workspaces";
+import { STACK_ROW, stackHeight } from "../src/lib/workspaces";
 import { area, ready, settle } from "./helpers";
 
 const PROJECTS = ["issho", "rapid-radiology", "orca-flow", "unmacos"];
@@ -60,8 +60,13 @@ test("the stack is as tall as its rows and the copy takes the rest of the column
   await page.setViewportSize({ width: 1440, height: 900 });
   await ready(page, "/work/");
   const m = await measure(page, 1);
-  // four featured projects and the archive line
+  // four featured projects and the archive line, each row STACK_ROW tall
   expect(near(m.stack.height, STACK)).toBe(true);
+  const rows = await page
+    .locator(".stack > *")
+    .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height));
+  expect(rows).toHaveLength(PROJECTS.length + 1);
+  for (const row of rows) expect(near(row, STACK_ROW, 0.5)).toBe(true);
   expect(near(m.stack.top + m.stack.height, m.area.top + m.area.height)).toBe(
     true,
   );
@@ -82,8 +87,16 @@ test("the stack stays put and the same height from one project to the next", asy
   await page.keyboard.press("ArrowDown");
   await settle(page);
   const after = await measure(page, 2);
-  expect(after.stack).toEqual(before.stack);
-  expect(after.copy).toEqual(before.copy);
+  // to a twentieth of a pixel: the same percentages can snap a layout unit
+  // (1/64px) apart at boot
+  for (const pane of ["stack", "copy"] as const) {
+    for (const side of ["top", "height", "width", "left"] as const) {
+      expect(after[pane][side], `${pane} ${side}`).toBeCloseTo(
+        before[pane][side],
+        1,
+      );
+    }
+  }
 });
 
 for (const [width, height] of [
@@ -142,13 +155,21 @@ test("the type steps down only when the copy window is under 620px tall", async 
   await ready(page, "/work/");
   expect(await copyPane(page, 1)).toBeLessThan(620);
   expect(await pitchSize(page, 1)).toBe("15px");
-  // 1440x950: the window is 620px or more though its body is under 620px,
-  // full size
+  // either side of the threshold: at 1440x950 the window is just under
+  // 620px, compact type
   await page.setViewportSize({ width: 1440, height: 950 });
   await settle(page);
-  const pane = await copyPane(page, 1);
-  expect(pane).toBeGreaterThanOrEqual(620);
-  expect(pane).toBeLessThan(638);
+  const under = await copyPane(page, 1);
+  expect(under).toBeLessThan(620);
+  expect(under).toBeGreaterThanOrEqual(602);
+  expect(await pitchSize(page, 1)).toBe("15px");
+  // at 1440x970 the window is 620px or more though its body is under 620px,
+  // full size
+  await page.setViewportSize({ width: 1440, height: 970 });
+  await settle(page);
+  const over = await copyPane(page, 1);
+  expect(over).toBeGreaterThanOrEqual(620);
+  expect(over).toBeLessThan(638);
   expect(await pitchSize(page, 1)).toBe("16px");
   // 1728x1000: well over, full size
   await page.setViewportSize({ width: 1728, height: 1000 });
