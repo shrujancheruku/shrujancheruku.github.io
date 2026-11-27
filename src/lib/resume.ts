@@ -91,10 +91,10 @@ const CONTACTS: readonly Contact[] = [
 ];
 
 /** An entry as the resume shows it: its description already chosen. */
-const asResumeEntry = ({ resume: _, ...entry }: Entry): Entry => ({
-  ...entry,
-  description: descriptionFor({ ...entry, resume: _ }),
-});
+const asResumeEntry = (entry: Entry): Entry => {
+  const { resume: _, ...rest } = entry;
+  return { ...rest, description: descriptionFor(entry) };
+};
 
 /** Everything the resume page shows, read from the shared content. */
 export function buildResume() {
