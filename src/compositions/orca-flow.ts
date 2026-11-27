@@ -329,11 +329,8 @@ async function play(kit: Kit): Promise<void> {
     view.answer.replaceChildren();
     view.answered.textContent = QUESTION.answered;
     await kit.sleep(500);
-    kit.focus(view.panes.pr);
     running = false;
-    seconds = END_CLOCK_SECONDS;
-    view.clock.textContent = clockLabel(seconds);
-    showReady();
+    end(kit);
   } finally {
     stopSpin();
     stopClock();
