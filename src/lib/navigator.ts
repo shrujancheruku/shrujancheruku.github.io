@@ -64,7 +64,7 @@ export type HistoryEffect =
  * What to do with the windows: nothing; place them at rest; move them from
  * where they are (followed by one `ended`); or turn the running motion back.
  */
-export type Motion = "none" | "place" | "animate" | "turn back";
+export type OutcomeMotion = "none" | "place" | "animate" | "turn back";
 
 export interface Outcome {
   /** Carried out in order, before placing. */
@@ -77,7 +77,7 @@ export interface Outcome {
    */
   rest: readonly Where[];
   to: Where;
-  motion: Motion;
+  motion: OutcomeMotion;
   /** The archive opened on this entry ("" for the archive alone). */
   entry?: string;
   /**
@@ -136,7 +136,7 @@ interface State {
 }
 
 /** What one input does, as it is worked out. */
-interface Plan {
+interface Draft {
   history: HistoryEffect[];
   /**
    * Each place the windows go to, in order, all but the last at rest; with
@@ -177,21 +177,21 @@ export function createNavigator({
   };
 
   const here = (): Where => ({ step: s.step, screen: s.screen, open: s.open });
-  const plan = (): Plan => ({ history: [], placements: [], pushed: false });
-  const place = (p: Plan, animate = true) =>
+  const draft = (): Draft => ({ history: [], placements: [], pushed: false });
+  const place = (p: Draft, animate = true) =>
     p.placements.push({ where: here(), animate, notFound: s.notFound });
-  const title = (p: Plan, t: string) => p.history.push({ title: t });
-  const push = (p: Plan, path: string) => {
+  const title = (p: Draft, t: string) => p.history.push({ title: t });
+  const push = (p: Draft, path: string) => {
     p.history.push({ push: path });
     s.address = path;
     p.pushed = true;
   };
-  const replace = (p: Plan, path: string) => {
+  const replace = (p: Draft, path: string) => {
     p.history.push({ replace: path });
     s.address = path;
   };
   /** Go Back one entry for the visitor: the windows are already going there. */
-  const goBackOver = (p: Plan) => {
+  const goBackOver = (p: Draft) => {
     s.ownBacks++;
     p.history.push({ back: true });
   };
@@ -215,10 +215,10 @@ export function createNavigator({
       };
   }
 
-  // ---- transitions: each changes `s` and adds to the plan
+  // ---- transitions: each changes `s` and adds to the draft
 
   /** Show the address of a step without adding history (scrolling). */
-  function follow(p: Plan, n: number): void {
+  function follow(p: Draft, n: number): void {
     if (s.notFound && n !== 0) s.notFound = false;
     // a Back the page took is on its way: the address it lands on is the step's
     if (s.notFound || s.ownBacks > 0) return;
@@ -235,7 +235,7 @@ export function createNavigator({
   }
 
   /** Move to a step, and a screen of it. */
-  function goTo(p: Plan, n: number, toScreen = 0): void {
+  function goTo(p: Draft, n: number, toScreen = 0): void {
     const next = clamp(n);
     if (next === s.step && toScreen === s.screen) return;
     const changed = next !== s.step;
@@ -248,7 +248,7 @@ export function createNavigator({
   }
 
   /** Open or close the step's disclosure. */
-  function setOpen(p: Plan, next: boolean): void {
+  function setOpen(p: Draft, next: boolean): void {
     if (next === s.open) return;
     if (next && !stepAt(workspaces, s.step).open) return;
     if (next) s.screenBeforeOpen = s.screen;
@@ -265,7 +265,7 @@ export function createNavigator({
    * `pushed`: the archive's address goes in as a history entry of its own.
    * The caller places. False if it does not open.
    */
-  function openArchive(p: Plan, entry: string, pushed: boolean): boolean {
+  function openArchive(p: Draft, entry: string, pushed: boolean): boolean {
     if (!hasArchive || s.open || !inProjects(workspaces, s.step)) return false;
     if (!stepAt(workspaces, s.step).open) return false;
     if (pushed) {
@@ -282,7 +282,7 @@ export function createNavigator({
     return true;
   }
 
-  function closeArchive(p: Plan): void {
+  function closeArchive(p: Draft): void {
     if (!s.open || !inProjects(workspaces, s.step)) return;
     const address = book.forStep(s.step);
     // the archive's own entry: Back to the address underneath, whose popstate
@@ -294,7 +294,7 @@ export function createNavigator({
   }
 
   /** Jump to step `next`; `undo` goes Back over the running jump's entry instead of adding one. */
-  function jumpNow(p: Plan, next: number, undo: boolean): void {
+  function jumpNow(p: Draft, next: number, undo: boolean): void {
     const there = !s.notFound && book.stepFor(s.address) === next;
     if (undo) {
       s.archivePushed = false;
@@ -316,7 +316,7 @@ export function createNavigator({
   }
 
   /** Back or Forward: show the address's step, with no new entry. */
-  function restore(p: Plan): void {
+  function restore(p: Draft): void {
     const n = book.stepFor(s.address);
     s.notFound = n === undefined;
     const next = n ?? 0;
@@ -350,7 +350,7 @@ export function createNavigator({
   };
 
   /** Work out what an input does, from the state as it is now. */
-  function run(p: Plan, input: Input, undo: boolean): void {
+  function run(p: Draft, input: Input, undo: boolean): void {
     switch (input.kind) {
       case "move": {
         const next = oneScreenOn(input.direction);
@@ -387,7 +387,7 @@ export function createNavigator({
 
   // ---- outcomes
 
-  const outcome = (p: Plan, handled = true): Outcome => ({
+  const outcome = (p: Draft, handled = true): Outcome => ({
     history: p.history,
     from: s.placed,
     rest: [],
@@ -398,8 +398,8 @@ export function createNavigator({
     handled,
   });
 
-  /** The plan's placements become what to place, and the last one's motion runs. */
-  function commit(p: Plan, rests = true): Outcome {
+  /** The draft's placements become what to place, and the last one's motion runs. */
+  function commit(p: Draft, rests = true): Outcome {
     const last = p.placements.at(-1);
     if (!last) return outcome(p);
     const from = s.placed;
@@ -429,7 +429,7 @@ export function createNavigator({
   function act(input: Exclude<Input, { kind: "popstate" }> | null): Outcome {
     const running = s.running;
     if (!running) {
-      const p = plan();
+      const p = draft();
       if (input) run(p, input, false);
       else restore(p);
       return commit(p);
@@ -437,7 +437,7 @@ export function createNavigator({
     // worked out on a copy: a waiting input changes nothing
     const before = s;
     s = { ...before };
-    const p = plan();
+    const p = draft();
     // a jump that turns back a jump goes Back over that jump's entry, so the
     // history holds only where the visitor settled
     if (input) run(p, input, running.pushed);
@@ -447,7 +447,7 @@ export function createNavigator({
       s = before;
       if (input) s.waiting = input;
       else s.waitingBack = true;
-      return outcome(plan());
+      return outcome(draft());
     }
     s.waiting = null;
     s.running = { from: running.to, to: running.from, pushed: false };
@@ -468,7 +468,7 @@ export function createNavigator({
         s.step = clamp(input.step);
         s.address = input.path;
         s.notFound = input.notFound;
-        const p = plan();
+        const p = draft();
         // /archive/ and an archive project's address boot with the archive open
         const entry = input.notFound
           ? undefined
@@ -488,11 +488,11 @@ export function createNavigator({
         }
         const waiting = s.waiting;
         s.waiting = null;
-        return waiting ? act(waiting) : outcome(plan());
+        return waiting ? act(waiting) : outcome(draft());
       }
       case "refit": {
         if (input.screen !== undefined) s.screen = input.screen;
-        const p = plan();
+        const p = draft();
         place(p, false);
         return commit(p);
       }
@@ -501,7 +501,7 @@ export function createNavigator({
         if (s.ownBacks > 0) {
           // a Back the page took itself: the windows are already on their way
           s.ownBacks--;
-          const p = plan();
+          const p = draft();
           const address = book.forPath(input.path);
           if (address) title(p, address.title);
           return outcome(p);
@@ -510,7 +510,7 @@ export function createNavigator({
       }
       case "path":
         if (book.stepFor(input.path) === undefined)
-          return outcome(plan(), false);
+          return outcome(draft(), false);
         return act(input);
       default:
         return act(input);
