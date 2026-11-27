@@ -125,9 +125,9 @@ test("an unknown path boots the desktop with a not-found terminal offering the s
     /^6\s+contact$/,
   ]);
   expect(
-    await term.locator("a").evaluateAll((els) =>
-      els.map((e) => e.getAttribute("href")),
-    ),
+    await term
+      .locator("a")
+      .evaluateAll((els) => els.map((e) => e.getAttribute("href"))),
   ).toEqual(["/", "/timeline/", "/work/", "/about/", "/now/", "/contact/"]);
 
   await term.getByRole("link", { name: "timeline" }).click();
