@@ -1,13 +1,12 @@
 import { devices, expect, type Page, test } from "@playwright/test";
-import { area, SWIPES, settle, swipe, warmUpTouch } from "./helpers";
+import { area, ready, SWIPES, settle, swipe, warmUpTouch } from "./helpers";
 
 const win = (page: Page, id: string) => page.locator(`[data-window="${id}"]`);
 const box = (page: Page, id: string) => win(page, id).boundingBox();
 
 test.describe("arriving directly at /contact/", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/contact/");
-    await expect(area(page)).toHaveAttribute("data-ready", "true");
+    await ready(page, "/contact/");
     await expect(area(page)).toHaveAttribute("data-workspace", "5");
   });
 
@@ -84,8 +83,7 @@ test.describe("arriving directly at /contact/", () => {
 test("returning to contact after leaving shows the command at once, without typing", async ({
   page,
 }) => {
-  await page.goto("/");
-  await expect(area(page)).toHaveAttribute("data-ready", "true");
+  await ready(page, "/");
   // key 6 jumps to the contact workspace
   await page.keyboard.press("6");
   await expect(area(page)).toHaveAttribute("data-workspace", "5");
@@ -124,8 +122,7 @@ for (const [name, emulation] of Object.entries(PHONES))
     };
     const context = await browser.newContext(phone);
     const page = await context.newPage();
-    await page.goto("/contact/");
-    await expect(area(page)).toHaveAttribute("data-ready", "true");
+    await ready(page, "/contact/");
     // contact is the last step and one screen: no second screen for the name
     await expect(area(page)).toHaveAttribute("data-screens", "1");
     await expect(area(page)).toHaveAttribute("data-screen", "0");

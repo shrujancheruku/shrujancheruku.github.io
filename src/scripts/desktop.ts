@@ -1,13 +1,25 @@
-// The window manager: places the windows of the current step, re-tiles them
-// with GSAP Flip when the step changes, and turns wheel, keys and clicks into
-// steps. On touch nothing scrolls: a swipe is one gesture and moves one
-// screen, like a wheel flick moves one step (src/lib/swipe.ts). A step is one
-// or more screens on touch (src/lib/screens.ts), the same step and address.
+// The window manager: places the windows of the current step, moves them with
+// one GSAP timeline when the step changes (src/lib/motion.ts says how), and
+// turns wheel, keys and clicks into steps. On touch nothing scrolls: a swipe is
+// one gesture and moves one screen, like a wheel flick moves one step
+// (src/lib/swipe.ts). A step is one or more screens on touch
+// (src/lib/screens.ts), the same step and address.
+// An input during a motion waits for it to end, the latest only, unless it
+// undoes the step: then the motion turns back from where the windows are
+// (src/lib/mid-motion.ts).
 import { gsap } from "gsap";
-import { Flip } from "gsap/Flip";
 import { Observer } from "gsap/Observer";
 import { notFoundTitle as NOT_FOUND_TITLE } from "../lib/addresses";
 import { interpretKey } from "../lib/keys";
+import { actDuring, type Ends, type Where } from "../lib/mid-motion";
+import {
+  appearEdgeOf,
+  collapsed,
+  edgeOf,
+  rollOf,
+  sortChanges,
+  travelOf,
+} from "../lib/motion";
 import {
   anchorOf,
   type EntriesOf,
@@ -25,6 +37,7 @@ import {
   focusOf,
   type Layout,
   locate,
+  type Rect,
   screensOf,
   stepAt,
   stepCount,
@@ -35,11 +48,29 @@ import { addresses, model } from "./page-data";
 import { measurePages, type Paged, pagedOf, showPage } from "./paged";
 import { fitTimeline } from "./timeline-entries";
 
-gsap.registerPlugin(Flip, Observer);
+gsap.registerPlugin(Observer);
 
-/** How long a re-tile takes, in seconds. */
-const RETILE = 0.85;
-/** One step per wheel gesture; held shut while a re-tile runs. */
+/** How long a step's motion takes, in seconds. */
+const MOVE = 0.32;
+const EASE = "power3.out";
+/** Rolling past: one project gives way to the next inside its tile. */
+const ROLL = 0.38;
+const ROLL_EASE = "power3.inOut";
+/**
+ * Changing workspace: each window takes this long, starting this long after
+ * the one before, and the whole workspace travels one screen plus this gap.
+ */
+const SLIDE = 0.27;
+const SLIDE_GAP = 0.032;
+const SLIDE_EASE = "power3.inOut";
+const SCREEN_GAP = 14;
+/** First appearance: each window starts this long after the one before. */
+const APPEAR_GAP = 0.05;
+/** A window opening fades in over its first this long; closing, its last. */
+const FADE = 0.12;
+/** Reduced motion: no timeline, the windows are simply there. */
+const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+/** One step per wheel gesture, its tail absorbed (longer while a motion runs). */
 const gate = createWheelGate({ tailMs: 500, steadyMs: 150, threshold: 40 });
 
 const found = document.querySelector<HTMLElement>("main.area");
@@ -69,6 +100,14 @@ let screen = 0;
 let screenBeforeOpen = 0;
 /** The layout on show, to tell the windows that come and go. */
 let shown: Layout | null = null;
+/** The workspace of the layout on show. */
+let shownWorkspace = -1;
+/** The step, disclosure and pages of the layout on show (a phone's screens). */
+let shownStep = -1;
+let shownOpen = false;
+let shownPages: Readonly<Record<string, number>> = {};
+/** Where the layout on show sits in the order of steps and screens. */
+let shownOrder = -1;
 /** The current step's disclosure (Education & Internships) is open. */
 let open = false;
 /** An unknown path booted the desktop: the not-found terminal is on show. */
@@ -193,103 +232,583 @@ function markStack(index: number): void {
   }
 }
 
-/** Put the windows of a step in place; animate from where they are if asked. */
-function place(n: number, animate: boolean): void {
-  const screens = screensAt(n, open);
-  screen = Math.max(0, Math.min(screens.length - 1, screen));
-  const { layout, pages } = screens[screen] ?? { layout: {}, pages: {} };
-  const focus = focusAmong(layout, focusOf(stepAt(workspaces, n), open));
-  const state = animate ? Flip.getState(panes) : null;
+/** A layout on show: where it is, and what the page says about it. */
+interface Placed {
+  where: Where;
+  layout: Layout;
+  pages: Readonly<Record<string, number>>;
+  screens: number;
+  focus: string | undefined;
+  /** Where it sits in the order of steps and screens. */
+  order: number;
+}
+/** The layout on show, as placed. */
+let placed: Placed | null = null;
+/**
+ * The running motion's two ends, as placed; `from` is null for the first
+ * appearance. `pushed`: the input that began it added a history entry.
+ */
+let placedEnds: { from: Placed | null; to: Placed; pushed: boolean } | null =
+  null;
+/** The step being placed comes from an input that just added a history entry. */
+let pushing = false;
+/** Back steps the page took itself, whose popstate only reconciles the address. */
+let ownBacks = 0;
+/** The input that waits for the running motion to end: the latest only. */
+let waiting: (() => void) | null = null;
+/**
+ * A Back or Forward waits for the running motion: the browser has already
+ * moved the address, so no later input drops it; it runs before `waiting`.
+ */
+let waitingRestore = false;
+/** An input that leads back to where the running motion began is running. */
+let turningBack = false;
+/** One of its steps on the way back was not the origin, and was let pass. */
+let passedBy = false;
+/** Whether it turned the motion back. */
+let turnedBack = false;
 
+/** The running motion's ends, for the rule (src/lib/mid-motion.ts). */
+const runningEnds = (): Ends | null =>
+  latest && placedEnds
+    ? { from: placedEnds.from?.where ?? null, to: placedEnds.to.where }
+    : null;
+
+/**
+ * Every input goes through here with where it leads. At rest it runs at once.
+ * During a motion, one that leads back to where the motion began runs and
+ * turns the motion back (its own `place` does, from where the windows are);
+ * any other waits for the motion to end, the latest only.
+ */
+function act(target: Where, run: () => void): void {
+  const what = actDuring(runningEnds(), target);
+  if (what === "wait") {
+    if (run === restore) waitingRestore = true;
+    else waiting = run;
+    return;
+  }
+  if (what === "run") {
+    run();
+    return;
+  }
+  turningBack = true;
+  passedBy = false;
+  turnedBack = false;
+  try {
+    run();
+  } finally {
+    turningBack = false;
+  }
+  // it led somewhere else after all: go there from where the windows are
+  if (passedBy && !turnedBack) place(step, true);
+}
+
+/** Tell the page which layout is on show: its windows' slots, the step, the status bar. */
+function record(p: Placed): void {
+  for (const pane of panes)
+    pane.classList.toggle("focus", pane.dataset.window === p.focus);
+  signal(shown, p.layout);
+  shown = p.layout;
+  placed = p;
+  shownStep = p.where.step;
+  shownOpen = p.where.open;
+  shownPages = p.pages;
+  shownOrder = p.order;
+  const { workspace, index } = locate(workspaces, p.where.step);
+  shownWorkspace = workspace;
+  markStack(workspaces[workspace]?.id === "projects" ? index : -1);
+  area.dataset.step = String(p.where.step);
+  area.dataset.screen = String(p.where.screen);
+  area.dataset.screens = String(p.screens);
+  area.dataset.workspace = String(workspace);
+  for (const [i, b] of numbers.entries()) {
+    if (i === workspace) b.setAttribute("aria-current", "true");
+    else b.removeAttribute("aria-current");
+  }
+}
+
+/**
+ * Write a layout's windows at rest: on their tiles, in tiling order, each
+ * paged window on its page. With `turnsFrom`, the pages on show before, a
+ * paged window that changes page first leaves a copy of its old page to turn.
+ */
+function writeRest(
+  layout: Layout,
+  pages: Readonly<Record<string, number>>,
+  turnsFrom?: Readonly<Record<string, number>>,
+): void {
   let z = 1;
   for (const pane of panes) {
     const rect = layout[pane.dataset.window ?? ""];
-    pane.classList.toggle("focus", pane.dataset.window === focus);
     if (!rect) {
       pane.style.display = "none";
       continue;
     }
-    const [left, top, width, height] = rect;
     Object.assign(pane.style, {
       display: "block",
-      left: `${left}%`,
-      top: `${top}%`,
-      width: `${width}%`,
-      height: `${height}%`,
+      ...css(rect),
       zIndex: String(z++),
     });
   }
-
   // the entries of a paged window: its page on touch, all of them wide
   for (const pane of panes) {
     const id = pane.dataset.window ?? "";
     const paged = pagedWindow(id);
     const tile = layout[id];
     if (!paged || !tile) continue;
+    if (turnsFrom && (turnsFrom[id] ?? 0) !== (pages[id] ?? 0))
+      turning.push(turnFrom(paged));
     showPage(
       paged,
       touch.matches ? pagesOf(id, tile)[pages[id] ?? 0] : undefined,
     );
   }
-
   showNotFound();
-  signal(shown, layout);
-  shown = layout;
-
-  const { workspace, index } = locate(workspaces, n);
-  markStack(workspaces[workspace]?.id === "projects" ? index : -1);
-  area.dataset.step = String(n);
-  area.dataset.screen = String(screen);
-  area.dataset.screens = String(screens.length);
-  area.dataset.workspace = String(workspace);
-  for (const [i, b] of numbers.entries()) {
-    if (i === workspace) b.setAttribute("aria-current", "true");
-    else b.removeAttribute("aria-current");
-  }
-
-  if (state) {
-    // the wheel stays shut for the whole re-tile, which on a busy page starts
-    // late and ends well after the wheel event that asked for it
-    gate.hold();
-    // for the page and its tests: a re-tile is running until `settled`
-    area.dataset.retiling = "true";
-    const retiling = Flip.from(state, {
-      targets: panes,
-      duration: RETILE,
-      ease: "expo.out",
-      // animate width and height, so text is re-set rather than stretched
-      scale: false,
-      overwrite: true,
-      onComplete: () => settled(retiling),
-      onInterrupt: () => settled(retiling),
-      onEnter: (els) =>
-        gsap.fromTo(
-          els,
-          { opacity: 0, scale: 0.94 },
-          { opacity: 1, scale: 1, duration: RETILE, ease: "expo.out" },
-        ),
-      onLeave: (els) =>
-        gsap.to(els, {
-          opacity: 0,
-          scale: 0.94,
-          duration: RETILE * 0.45,
-          ease: "expo.out",
-        }),
-    });
-    latest = retiling;
-  }
 }
 
 /**
- * The newest re-tile; one that a later one overwrote does not open the wheel.
- * When the newest ends, a wheel gesture that came during it steps now.
+ * Turn the running motion back: it reverses from where the windows are, to
+ * where it began, and anything waiting is dropped (but a Back or Forward,
+ * whose address has already moved). Turned back again, it
+ * plays forwards.
+ */
+function turnBack(): void {
+  const timeline = latest;
+  const ends = placedEnds;
+  if (!timeline || !ends?.from) return;
+  turnedBack = true;
+  waiting = null;
+  placedEnds = { from: ends.to, to: ends.from, pushed: false };
+  record(ends.from);
+  if (timeline.reversed()) timeline.play();
+  else timeline.reverse();
+  // turned back before it moved: it is already where it began
+  if (timeline.reversed() && timeline.time() === 0) backAtStart(timeline);
+}
+
+/** A motion turned back reached where it began: its windows go to rest there. */
+function backAtStart(timeline: gsap.core.Timeline): void {
+  if (timeline !== latest) return;
+  timeline.kill();
+  rest?.();
+  rest = null;
+  if (placed) writeRest(placed.layout, placed.pages);
+  settled(timeline);
+}
+
+/** Put the windows of a step in place; animate from where they are if asked. */
+function place(n: number, animate: boolean): void {
+  const screens = screensAt(n, open);
+  screen = Math.max(0, Math.min(screens.length - 1, screen));
+  const { layout, pages } = screens[screen] ?? { layout: {}, pages: {} };
+  const focus = focusAmong(layout, focusOf(stepAt(workspaces, n), open));
+  // a re-measure that changes nothing lets the first appearance run on
+  if (
+    !animate &&
+    appearing &&
+    appearing === latest &&
+    JSON.stringify(shown) === JSON.stringify(layout)
+  )
+    return;
+  const where: Where = { step: n, screen, open };
+  if (animate && latest) {
+    // the input undoes the running motion: it turns back from where the windows are
+    if (actDuring(runningEnds(), where) === "turn back") {
+      turnBack();
+      return;
+    }
+    // an input on its way back (an archive address: its step, then the archive)
+    if (turningBack) {
+      passedBy = true;
+      return;
+    }
+  }
+  const before = shown;
+  const from = placed;
+  const beforePages = shownPages;
+  const sameScreens =
+    touch.matches && shownStep === n && shownOpen === open && before !== null;
+  const sameLayout =
+    sameScreens && JSON.stringify(before) === JSON.stringify(layout);
+  const order = n * 1000 + screen;
+  const direction = order >= shownOrder ? 1 : -1;
+  const beforeWorkspace = shownWorkspace;
+  // a motion still running ends here: its windows go to rest first
+  const stopped = stopMotion();
+  turning = [];
+
+  const moving = animate && before !== null && !reduced.matches;
+  writeRest(layout, pages, moving && sameLayout ? beforePages : undefined);
+  const next: Placed = {
+    where,
+    layout,
+    pages,
+    screens: screens.length,
+    focus,
+    order,
+  };
+  record(next);
+
+  if (moving && before) {
+    // the wheel stays open, so a gesture that turns the motion back reaches
+    // the rule; the gesture's own tail stays tail until the motion ends
+    gate.moving();
+    // for the page and its tests: a motion is running until `settled`
+    area.dataset.retiling = "true";
+    placedEnds = { from, to: next, pushed: pushing };
+    latest = motionBetween(
+      before,
+      layout,
+      shownWorkspace === beforeWorkspace,
+      direction,
+      sameScreens && !sameLayout,
+    );
+  } else if (stopped) {
+    area.dataset.retiling = "false";
+    gate.still();
+    runWaiting();
+  }
+}
+
+const css = ([left, top, width, height]: Rect) => ({
+  left: `${left}%`,
+  top: `${top}%`,
+  width: `${width}%`,
+  height: `${height}%`,
+});
+
+/** The running motion's clean-up: what leaves goes, and fades are cleared. */
+let rest: (() => void) | null = null;
+
+/** A paged window turning its page: its old entries, as a copy that leaves. */
+interface Turn {
+  paged: Paged;
+  old: HTMLElement;
+  /** What the window's own list was positioned against, to put back. */
+  parent: HTMLElement;
+  position: string;
+}
+/** The page turns of the step being placed, taken before its pages change. */
+let turning: Turn[] = [];
+
+/**
+ * A copy of `el` that is only seen: marked as a clone, with no ids, hidden from
+ * assistive technology and inert.
+ */
+function inertClone(el: HTMLElement): HTMLElement {
+  const copy = el.cloneNode(true) as HTMLElement;
+  copy.removeAttribute("id");
+  for (const e of copy.querySelectorAll("[id]")) e.removeAttribute("id");
+  copy.dataset.clone = "true";
+  copy.setAttribute("aria-hidden", "true");
+  copy.inert = true;
+  return copy;
+}
+
+/**
+ * Copy the entries a paged window shows now and lay the copy over them, so
+ * that the old page can leave while the next comes in. Taken before the window
+ * shows its next page.
+ */
+function turnFrom(paged: Paged): Turn {
+  const { list } = paged;
+  const parent = list.parentElement ?? paged.root;
+  const position = parent.style.position;
+  if (getComputedStyle(parent).position === "static")
+    parent.style.position = "relative";
+  const old = inertClone(list);
+  old.removeAttribute("data-paged");
+  for (const e of old.querySelectorAll("[data-entry]"))
+    e.removeAttribute("data-entry");
+  for (const e of old.querySelectorAll("[aria-current]"))
+    e.removeAttribute("aria-current");
+  Object.assign(old.style, {
+    position: "absolute",
+    top: `${list.offsetTop}px`,
+    left: `${list.offsetLeft}px`,
+    width: `${list.offsetWidth}px`,
+    margin: "0",
+  });
+  parent.append(old);
+  return { paged, old, parent, position };
+}
+
+/** End the running motion, if any, with its windows at rest. */
+function stopMotion(): boolean {
+  if (!latest) return false;
+  const running = latest;
+  latest = null;
+  placedEnds = null;
+  running.kill();
+  rest?.();
+  rest = null;
+  return true;
+}
+
+/**
+ * The step's one timeline, from the old to the new written rectangles
+ * (`left/top/width/height`, never scale, so text re-sets rather than
+ * stretches). A window in both steps re-tiles. On a wide screen, a window that
+ * opens grows out of its edge along that edge's axis, and one that closes
+ * shrinks back into it, sharing one moving border with the neighbours that
+ * re-tile beside it.
+ */
+function motionBetween(
+  before: Layout,
+  after: Layout,
+  sameWorkspace: boolean,
+  direction: 1 | -1,
+  screenMove = false,
+): gsap.core.Timeline {
+  // a phone moving between screens of one step, whose windows all change,
+  // travels like changing workspace
+  if (!sameWorkspace || screenMove)
+    return travelBetween(before, after, direction);
+  const leaving: HTMLElement[] = [];
+  const faded: HTMLElement[] = [];
+  const rolled: HTMLElement[] = [];
+  const timeline = gsap.timeline({
+    onComplete: () => {
+      if (timeline !== latest) return;
+      rest?.();
+      rest = null;
+      settled(timeline);
+    },
+    onReverseComplete: () => backAtStart(timeline),
+  });
+  const tween = (pane: HTMLElement, from: Rect, to: Rect) =>
+    timeline.fromTo(
+      pane,
+      css(from),
+      { ...css(to), duration: MOVE, ease: EASE },
+      0,
+    );
+  for (const c of sortChanges(before, after, sameWorkspace)) {
+    const pane = windowOf.get(c.id);
+    if (!pane) continue;
+    if (c.from && c.to) {
+      tween(pane, c.from, c.to);
+    } else if (c.motion === "rolling past") {
+      // the tile stays; the window slides through it, clipped to the tile
+      if (c.from) {
+        pane.style.display = "block";
+        Object.assign(pane.style, css(c.from));
+        leaving.push(pane);
+      }
+      const roll = rollOf(direction, pane.offsetHeight);
+      const [start, end] = c.to
+        ? [roll.in.from, roll.rest]
+        : [roll.rest, roll.out.to];
+      timeline.fromTo(
+        pane,
+        { y: start.y, clipPath: start.clip },
+        { y: end.y, clipPath: end.clip, duration: ROLL, ease: ROLL_EASE },
+        0,
+      );
+      rolled.push(pane);
+    } else if (c.motion === "opening" && c.to) {
+      tween(
+        pane,
+        collapsed(c.to, edgeOf(c.id, before, after, touch.matches)),
+        c.to,
+      );
+      timeline.fromTo(
+        pane,
+        { opacity: 0 },
+        { opacity: 1, duration: FADE, ease: "none" },
+        0,
+      );
+      faded.push(pane);
+    } else if (c.motion === "closing" && c.from) {
+      // it stays on show until it is in its edge
+      pane.style.display = "block";
+      tween(
+        pane,
+        c.from,
+        collapsed(c.from, edgeOf(c.id, before, after, touch.matches)),
+      );
+      timeline.fromTo(
+        pane,
+        { opacity: 1 },
+        { opacity: 0, duration: FADE, ease: "none" },
+        MOVE - FADE,
+      );
+      leaving.push(pane);
+      faded.push(pane);
+    }
+  }
+  // a paged window turning its page: its entries roll past inside the window
+  // (the window's body clips them); its frame and title bar stay
+  const turned = turning;
+  turning = [];
+  const entries: HTMLElement[] = [];
+  for (const { paged, old } of turned) {
+    const roll = rollOf(direction, paged.root.clientHeight);
+    timeline.fromTo(
+      old,
+      { y: roll.rest.y },
+      { y: roll.out.to.y, duration: ROLL, ease: ROLL_EASE },
+      0,
+    );
+    timeline.fromTo(
+      paged.list,
+      { y: roll.in.from.y },
+      { y: roll.rest.y, duration: ROLL, ease: ROLL_EASE },
+      0,
+    );
+    entries.push(paged.list);
+  }
+  // a step whose windows only appear and go still takes the step's time
+  timeline.set({}, {}, rolled.length > 0 || turned.length > 0 ? ROLL : MOVE);
+  rest = () => {
+    for (const pane of leaving) pane.style.display = "none";
+    gsap.set(faded, { clearProps: "opacity" });
+    gsap.set(rolled, { clearProps: "transform,clipPath" });
+    gsap.set(entries, { clearProps: "transform" });
+    for (const { old, parent, position } of turned) {
+      old.remove();
+      parent.style.position = position;
+    }
+  };
+  return timeline;
+}
+
+/** The first appearance's timeline while it runs. */
+let appearing: gsap.core.Timeline | null = null;
+
+/**
+ * First appearance, as one timeline: the step's windows, already on their
+ * tiles, each slide straight into their tile from an edge, one after another
+ * in tiling order. Nothing re-tiles.
+ */
+function appearBetween(layout: Layout): gsap.core.Timeline {
+  const faded: HTMLElement[] = [];
+  const timeline = gsap.timeline({
+    onComplete: () => {
+      if (timeline !== latest) return;
+      rest?.();
+      rest = null;
+      appearing = null;
+      settled(timeline);
+    },
+  });
+  for (const [i, [id, tile]] of Object.entries(layout).entries()) {
+    const pane = windowOf.get(id);
+    if (!pane) continue;
+    const at = i * APPEAR_GAP;
+    timeline.fromTo(
+      pane,
+      css(collapsed(tile, appearEdgeOf(i, tile, touch.matches))),
+      { ...css(tile), duration: MOVE, ease: EASE },
+      at,
+    );
+    timeline.fromTo(
+      pane,
+      { opacity: 0 },
+      { opacity: 1, duration: FADE, ease: "none" },
+      at,
+    );
+    faded.push(pane);
+  }
+  rest = () => {
+    appearing = null;
+    gsap.set(faded, { clearProps: "opacity" });
+  };
+  return timeline;
+}
+
+/**
+ * Changing workspace, as one timeline. The old workspace's windows slide up
+ * and off one after another in tiling order as the next workspace's come up
+ * from below in the same order (the reverse going to a lower one), `direction`
+ * giving which. However many workspaces the jump crosses, it travels one
+ * screen. The area is clipped while it runs, so no window passes over the
+ * status bar. A window on both workspaces leaves as a clone of its pane while
+ * the real pane arrives; the clone goes when the motion ends or is stopped.
+ */
+function travelBetween(
+  before: Layout,
+  after: Layout,
+  direction: 1 | -1,
+): gsap.core.Timeline {
+  const { leaving, arriving } = travelOf(before, after);
+  const away = (area.clientHeight + SCREEN_GAP) * direction;
+  const goes: HTMLElement[] = [];
+  const clones: HTMLElement[] = [];
+  const comes: HTMLElement[] = [];
+  const clipped = area.style.overflow;
+  area.style.overflow = "hidden";
+  const timeline = gsap.timeline({
+    onComplete: () => {
+      if (timeline !== latest) return;
+      rest?.();
+      rest = null;
+      settled(timeline);
+    },
+    onReverseComplete: () => backAtStart(timeline),
+  });
+  const slide = (pane: HTMLElement, from: number, to: number, at: number) =>
+    timeline.fromTo(
+      pane,
+      { y: from },
+      { y: to, duration: SLIDE, ease: SLIDE_EASE },
+      at,
+    );
+  for (const [i, w] of leaving.entries()) {
+    const pane = windowOf.get(w.id);
+    if (!pane) continue;
+    let mover = pane;
+    if (w.shared) {
+      // the pane is already on its new tile: a copy leaves from the old one
+      mover = inertClone(pane);
+      mover.removeAttribute("data-window");
+      area.append(mover);
+      clones.push(mover);
+    } else goes.push(pane);
+    mover.style.display = "block";
+    Object.assign(mover.style, css(w.tile));
+    slide(mover, 0, -away, i * SLIDE_GAP);
+  }
+  for (const [i, w] of arriving.entries()) {
+    const pane = windowOf.get(w.id);
+    if (!pane) continue;
+    comes.push(pane);
+    slide(pane, away, 0, (i + 1) * SLIDE_GAP);
+  }
+  rest = () => {
+    for (const pane of goes) pane.style.display = "none";
+    for (const clone of clones) clone.remove();
+    gsap.set([...goes, ...comes], { clearProps: "transform" });
+    area.style.overflow = clipped;
+  };
+  return timeline;
+}
+
+/**
+ * The newest step's motion; one that a later one stopped does not end the
+ * re-tile. When the newest ends, the input that waited for it runs from rest,
+ * and `data-retiling` stays true until the last motion of the chain ends.
  */
 let latest: gsap.core.Timeline | null = null;
-function settled(retiling: gsap.core.Timeline): void {
-  if (retiling !== latest) return;
-  area.dataset.retiling = "false";
-  const waiting = gate.release();
-  if (waiting) moveOneScreen(waiting);
+function settled(motion: gsap.core.Timeline): void {
+  if (motion !== latest) return;
+  latest = null;
+  placedEnds = null;
+  gate.still();
+  runWaiting();
+  if (!latest) area.dataset.retiling = "false";
+}
+
+/** Run what waited for the motion: a Back or Forward first, then the latest other input from where it leaves the windows. */
+function runWaiting(): void {
+  if (waitingRestore) {
+    waitingRestore = false;
+    restore();
+    if (latest) return;
+  }
+  const next = waiting;
+  waiting = null;
+  next?.();
 }
 
 /** Whether the step's disclosure is the archive (the projects workspace's). */
@@ -382,38 +901,45 @@ function openArchive(slug = "", push = true): void {
   if (push) {
     history.pushState(null, "", ARCHIVE_PATH);
     archivePushed = true;
+    pushing = true;
   }
   document.title = book.forPath(ARCHIVE_PATH)?.title ?? document.title;
   setOpen(true, true, screenOfEntry(slug));
+  pushing = false;
   markEntry(slug);
   staggerEntries();
 }
 
 function closeArchive(): void {
   if (!open || !inProjects()) return;
-  if (archivePushed) {
-    // Back to the address underneath; popstate re-tiles
-    archivePushed = false;
-    history.back();
-    return;
-  }
   const address = book.forStep(step);
-  history.replaceState(null, "", address.path);
+  // the archive's own entry: Back to the address underneath, whose popstate
+  // only reconciles the title; the windows close (or turn back) here and now
+  if (archivePushed) goBackOver();
+  else history.replaceState(null, "", address.path);
   document.title = address.title;
   setOpen(false);
 }
 
 const ARCHIVE_PATH = "/archive/";
 
+/** Where closing the step's disclosure leads: the screen it was opened from. */
+const closed = (): Where => ({ step, screen: screenBeforeOpen, open: false });
+/** Where opening the step's disclosure leads: its first screen. */
+const opened = (): Where => ({ step, screen: 0, open: true });
+
 document.addEventListener("click", (e) => {
   const target = e.target as Element | null;
   const cue = target?.closest("[data-disclosure]");
-  if (cue) setOpen(!open);
-  if (target?.closest(ARCHIVE_OPENERS)) {
-    if (open) closeArchive();
-    else openArchive();
+  if (cue) {
+    const next = !open;
+    act(next ? opened() : closed(), () => setOpen(next));
   }
-  if (target?.closest("[data-archive-close]")) closeArchive();
+  if (target?.closest(ARCHIVE_OPENERS)) {
+    if (open) act(closed(), closeArchive);
+    else act(opened(), () => openArchive());
+  }
+  if (target?.closest("[data-archive-close]")) act(closed(), closeArchive);
 });
 
 /** Move to a step, and a screen of it, and re-tile (wide screen and touch alike). */
@@ -436,7 +962,8 @@ function goTo(n: number, toScreen = 0): void {
 /** Show the address of a step without adding history (scrolling). */
 function follow(n: number): void {
   if (notFound && n !== 0) notFound = false;
-  if (notFound) return;
+  // a Back the page took is on its way: the address it lands on is the step's
+  if (notFound || ownBacks > 0) return;
   const address = book.forStep(n);
   document.title = address.title;
   if (
@@ -445,6 +972,16 @@ function follow(n: number): void {
   ) {
     history.replaceState(null, "", address.path);
   }
+}
+
+/** Where Back or Forward leads: the step of the address, its archive open if it is one. */
+function whereOfAddress(): Where {
+  const next = book.stepFor(location.pathname) ?? 0;
+  const archive = book.forPath(location.pathname)?.archive;
+  if (archive !== undefined && archiveEl)
+    return { step: next, screen: screenOfEntry(archive), open: true };
+  const returning = open && next === step;
+  return { step: next, screen: returning ? screenBeforeOpen : 0, open: false };
 }
 
 /** Back or Forward: show the step of the address, with no new entry. */
@@ -469,7 +1006,21 @@ function restore(): void {
   }
   place(step, true);
 }
-addEventListener("popstate", restore);
+addEventListener("popstate", () => {
+  if (ownBacks > 0) {
+    // a Back the page took itself: the windows are already on their way
+    ownBacks--;
+    document.title = book.forPath(location.pathname)?.title ?? document.title;
+    return;
+  }
+  act(whereOfAddress(), restore);
+});
+
+/** Go Back one entry for the visitor: the windows are already going there. */
+function goBackOver(): void {
+  ownBacks++;
+  history.back();
+}
 
 /**
  * A deliberate jump to a step: adds a history entry (unless it is where we
@@ -478,10 +1029,24 @@ addEventListener("popstate", restore);
  */
 export function jump(n: number): void {
   const next = Math.max(0, Math.min(steps - 1, n));
+  // a jump that turns back a jump goes Back over that jump's entry, so the
+  // history holds only where the visitor settled
+  act({ step: next, screen: 0, open: false }, () =>
+    jumpNow(next, turningBack && placedEnds?.pushed === true),
+  );
+}
+
+/** Jump to step `next`; `undo` goes Back over the running jump's entry instead of adding one. */
+function jumpNow(next: number, undo = false): void {
   const here = !notFound && book.stepFor(location.pathname) === next;
-  if (!here) {
+  if (undo) {
+    archivePushed = false;
+    goBackOver();
+    document.title = book.forStep(next).title;
+  } else if (!here) {
     const address = book.forStep(next);
     history.pushState(null, "", address.path);
+    pushing = true;
     document.title = address.title;
   }
   if (notFound) {
@@ -491,6 +1056,7 @@ export function jump(n: number): void {
   // a jump to the step the archive is open on closes it, with no re-tile of its own
   if (open && next === step) setOpen(false);
   goTo(next);
+  pushing = false;
 }
 
 /** A deliberate jump to an address of the site; false if the path is not one. */
@@ -503,8 +1069,10 @@ export function jumpToPath(path: string): boolean {
     return true;
   }
   // an archive address: go to its step, then open the archive on its entry
-  if (n !== step) jump(n);
-  openArchive(archive);
+  act({ step: n, screen: screenOfEntry(archive), open: true }, () => {
+    if (n !== step) jumpNow(n);
+    openArchive(archive);
+  });
   return true;
 }
 
@@ -513,14 +1081,21 @@ export function jumpToPath(path: string): boolean {
  * step. Follows the address without a history entry.
  */
 export function moveOneScreen(direction: 1 | -1): void {
-  const next = moveBy(
+  const next = oneScreenOn(direction);
+  act({ ...next, open: next.step === step && open }, () => {
+    const now = oneScreenOn(direction);
+    goTo(now.step, now.screen);
+  });
+}
+
+/** The step and screen one screen on from those on show. */
+const oneScreenOn = (direction: 1 | -1) =>
+  moveBy(
     { step, screen },
     direction,
     (n) => screensAt(n, n === step && open).length,
     steps,
   );
-  goTo(next.step, next.screen);
-}
 
 /** The global step on show. */
 export const currentStep = (): number => step;
@@ -564,6 +1139,9 @@ markZoom();
 const fingerEvent = (e: PointerEvent): boolean =>
   touch.matches && e.pointerType === "touch";
 
+/** A swipe the finger has made, which moves once the finger lifts. */
+let swiping: 1 | -1 | 0 = 0;
+
 const fingerOf = (e: PointerEvent) => ({
   id: e.pointerId,
   x: e.clientX,
@@ -571,12 +1149,24 @@ const fingerOf = (e: PointerEvent) => ({
   time: e.timeStamp,
 });
 
+/**
+ * A swipe moves one screen, starting when the finger lifts (the windows don't
+ * track the finger). During a motion it waits, or turns the motion back, like
+ * any other input.
+ */
+function swiped(direction: 1 | -1): void {
+  moveOneScreen(direction);
+}
+
 // Pointer events, not touch events: the browser can hand a gesture to its own
 // handling and stop sending `touchmove`, but the pointer stream keeps coming.
 document.addEventListener(
   "pointerdown",
   (e) => {
-    if (fingerEvent(e)) swipe.down(fingerOf(e), e.isPrimary, zoom());
+    if (!fingerEvent(e)) return;
+    // a second finger is a pinch, never a step
+    swiping = 0;
+    swipe.down(fingerOf(e), e.isPrimary, zoom());
   },
   { passive: true },
 );
@@ -584,8 +1174,8 @@ document.addEventListener(
   "pointermove",
   (e) => {
     if (!fingerEvent(e)) return;
-    const direction = swipe.move(fingerOf(e));
-    if (direction) moveOneScreen(direction);
+    // the rule says the swipe is made; it moves when the finger lifts
+    swiping = swipe.move(fingerOf(e)) || swiping;
   },
   { passive: true },
 );
@@ -593,15 +1183,19 @@ document.addEventListener(
   "pointerup",
   (e) => {
     if (!fingerEvent(e)) return;
-    const direction = swipe.up(fingerOf(e));
-    if (direction) moveOneScreen(direction);
+    const direction = swipe.up(fingerOf(e)) || swiping;
+    if (!direction) return;
+    swiping = 0;
+    swiped(direction);
   },
   { passive: true },
 );
 document.addEventListener(
   "pointercancel",
   (e) => {
-    if (fingerEvent(e)) swipe.cancel(e.pointerId);
+    if (!fingerEvent(e)) return;
+    swiping = 0;
+    swipe.cancel(e.pointerId);
   },
   { passive: true },
 );
@@ -694,7 +1288,7 @@ addEventListener("keydown", (e: KeyboardEvent) => {
   if (e.key === " " && t instanceof HTMLElement && t.closest(".tgl")) return;
   if (e.key === "Escape" && open && inProjects()) {
     e.preventDefault();
-    closeArchive();
+    act(closed(), closeArchive);
     return;
   }
   const command = interpretKey(e, workspaces.length);
@@ -715,12 +1309,12 @@ for (const b of numbers) {
 }
 
 // home and contact: deliberate jumps to the opening and the last workspace.
-for (const [act, index] of [
+for (const [cue, index] of [
   ["home", 0],
   ["contact", workspaces.length - 1],
 ] as const) {
   document
-    .querySelector(`[data-act="${act}"]`)
+    .querySelector(`[data-act="${cue}"]`)
     ?.addEventListener("click", () => jump(firstStepOf(workspaces, index)));
 }
 
@@ -728,6 +1322,7 @@ for (const [act, index] of [
 // and when the screen's size or the fonts change what fits a page
 function onLayoutChange(): void {
   swipe.reset();
+  swiping = 0;
   if (touch.matches) fitEntries();
   pageCache.clear();
   screen = 0;
@@ -796,4 +1391,11 @@ if (bootArchive !== undefined && archiveEl && inProjects()) {
 if (touch.matches) fitEntries();
 place(step, false);
 area.dataset.retiling ??= "false";
+// the first appearance: every window slides in, and any input waits for them
+if (shown && placed && !reduced.matches) {
+  gate.moving();
+  area.dataset.retiling = "true";
+  placedEnds = { from: null, to: placed, pushed: false };
+  appearing = latest = appearBetween(shown);
+}
 area.dataset.ready = "true";

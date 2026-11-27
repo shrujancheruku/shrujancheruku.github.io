@@ -1,12 +1,12 @@
 import { devices, expect, test } from "@playwright/test";
+import { ready } from "./helpers";
 
 test.use({ ...devices["Pixel 7"] });
 
 test("at touch width the windows stack in one column and the bar shows numbers at 40px", async ({
   page,
 }) => {
-  await page.goto("/");
-  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
+  await ready(page, "/");
   const bar = await page.locator("header.bar").boundingBox();
   expect(bar?.height).toBe(40);
   // numbers only: the names are not shown
@@ -31,8 +31,7 @@ test("at touch width the windows stack in one column and the bar shows numbers a
 test("the page does not scroll on touch: a swipe is a step", async ({
   page,
 }) => {
-  await page.goto("/");
-  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
+  await ready(page, "/");
   const css = await page.evaluate(() => {
     const html = getComputedStyle(document.documentElement);
     return { snap: html.scrollSnapType, action: html.touchAction };
@@ -44,8 +43,7 @@ test("the page does not scroll on touch: a swipe is a step", async ({
 });
 
 test("tapping a number jumps to its workspace", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
+  await ready(page, "/");
   await page.locator(".ws button").nth(5).tap();
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
@@ -60,8 +58,7 @@ test("tapping a number jumps to its workspace", async ({ page }) => {
 test("a featured project is one screen: its copy over its composition, no stack", async ({
   page,
 }) => {
-  await page.goto("/work/");
-  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
+  await ready(page, "/work/");
   await expect(page.locator("main.area")).toHaveAttribute("data-screens", "1");
   const shown = () =>
     page.$$eval(
@@ -82,8 +79,7 @@ test("a featured project is one screen: its copy over its composition, no stack"
 test("no hover tooltips and no clock on touch, before or after interaction", async ({
   page,
 }) => {
-  await page.goto("/");
-  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
+  await ready(page, "/");
   // before any interaction: no tooltip is written out on a phone, none has keys to name
   await page.waitForTimeout(1200);
   await expect(page.locator(".tg .tip")).toHaveCount(4);
@@ -96,9 +92,8 @@ test("no hover tooltips and no clock on touch, before or after interaction", asy
 });
 
 test("on touch the archive takes the whole workspace", async ({ page }) => {
-  await page.goto("/archive/");
+  await ready(page, "/archive/");
   const area = page.locator("main.area");
-  await expect(area).toHaveAttribute("data-ready", "true");
   await page.waitForTimeout(1100);
   const shown = await page.$$eval(".pane", (els) =>
     els

@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { ready } from "./helpers";
 
 const settle = (page: Page) => page.waitForTimeout(1300);
 const fills = (page: Page) =>
@@ -11,8 +12,7 @@ const fills = (page: Page) =>
   );
 
 async function enter(page: Page) {
-  await page.goto("/");
-  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
+  await ready(page, "/");
   await page.keyboard.press("4");
 }
 

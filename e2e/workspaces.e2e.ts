@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { area, flick, framesOf, settle } from "./helpers";
+import { area, flick, framesOf, ready, settle } from "./helpers";
 
 const NAMES = [
   "opening",
@@ -24,8 +24,7 @@ const shown = (page: Page) =>
   );
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/");
-  await expect(area(page)).toHaveAttribute("data-ready", "true");
+  await ready(page, "/");
 });
 
 test("boots on the opening workspace with its three windows", async ({
@@ -61,22 +60,34 @@ test("wheel scrolling moves one step at a time through all six workspaces", asyn
   expect(await current(page)).toEqual({ step: 0, workspace: 0 });
 });
 
-test("mouse notches that come during a re-tile each still move a step", async ({
+test("mouse notches that come during a re-tile end as one step, the latest", async ({
   page,
 }) => {
-  // over the status bar, so no window's own content takes the wheel
-  const bar = await page.locator("header.bar").boundingBox();
-  await page.mouse.move(640, (bar?.y ?? 0) + (bar?.height ?? 0) / 2);
-  // 700 ms apart, inside the 850 ms re-tile: each waits for the one before
-  for (let i = 0; i < 3; i++) {
-    await page.mouse.wheel(0, 120);
-    await page.waitForTimeout(700);
-  }
-  await expect(area(page)).toHaveAttribute("data-step", "3", {
-    timeout: 3000,
+  // three notches down, each its own gesture (equal, 200 ms apart), sent in
+  // one go so that the second and third surely come while the first one's
+  // motion runs, whatever the machine: they are stamped as a mouse would
+  const during = await page.evaluate(() => {
+    const bar = document.querySelector("header.bar") ?? document.body;
+    const area = document.querySelector<HTMLElement>("main.area");
+    const start = performance.now();
+    const steps: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const e = new WheelEvent("wheel", {
+        deltaY: 120,
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(e, "timeStamp", { value: start + i * 200 });
+      bar.dispatchEvent(e);
+      steps.push(`${area?.dataset.step}:${area?.dataset.retiling}`);
+    }
+    return steps;
   });
+  // the first steps; the others wait, and the wheel steps no more until it settles
+  expect(during).toEqual(["1:true", "1:true", "1:true"]);
   await settle(page);
-  expect((await current(page)).step).toBe(3);
+  // the waiting notch ran from rest: one step, not two
+  expect((await current(page)).step).toBe(2);
 });
 
 test("keyboard scrolling moves one step at a time", async ({ page }) => {
@@ -160,22 +171,16 @@ test("the status bar lists the numbers with names and marks the current workspac
 });
 
 test("windows animate between tilings, not cut", async ({ page }) => {
-  const frames = await framesOf(page, '[data-window="name"]', "left", () =>
+  // the name travels with its workspace: it comes up from below onto its tile
+  const frames = await framesOf(page, '[data-window="name"]', "top", () =>
     page.keyboard.press("6"),
   );
-  const lefts = frames.map(([l]) => l ?? 0);
-  const before = lefts[0] ?? 0;
-  const after = lefts[lefts.length - 1] ?? 0;
-  expect(before).toBeLessThan(after);
+  const tops = frames.map(([t]) => t ?? 0);
+  const after = tops[tops.length - 1] ?? 0;
+  const start = Math.max(...tops);
+  expect(start).toBeGreaterThan(after + 1);
   // it passes through the places between, frame by frame
-  expect(lefts.some((l) => l > before + 1 && l < after - 1)).toBe(true);
-});
-
-test("windows arriving fade in rather than appearing", async ({ page }) => {
-  const frames = await framesOf(page, '[data-window="comp-1"]', "opacity", () =>
-    page.keyboard.press("3"),
-  );
-  expect(frames.some(([o = 0]) => o > 0 && o < 1)).toBe(true);
+  expect(tops.some((t) => t > after + 1 && t < start - 1)).toBe(true);
 });
 
 test("windows have the decided gap, border, radius and focus gradient", async ({

@@ -1,12 +1,11 @@
 import { expect, type Page, test } from "@playwright/test";
-import { area } from "./helpers";
+import { area, ready } from "./helpers";
 
 const box = (page: Page, id: string) =>
   page.locator(`[data-window="${id}"]`).boundingBox();
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/");
-  await expect(area(page)).toHaveAttribute("data-ready", "true");
+  await ready(page, "/");
 });
 
 test("the terminal types whoami, cat claim and cat ask, with the replies in the accent", async ({
@@ -132,8 +131,7 @@ test.describe("at touch width", () => {
   test("the three windows stack in reading order: name, terminal, now", async ({
     page,
   }) => {
-    await page.goto("/");
-    await expect(area(page)).toHaveAttribute("data-ready", "true");
+    await ready(page, "/");
     const [name, term, now] = [
       await box(page, "name"),
       await box(page, "term"),

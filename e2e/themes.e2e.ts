@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { ready } from "./helpers";
+import { ready, settle } from "./helpers";
 
 const root = (page: Page) => page.locator("html");
 
@@ -263,6 +263,7 @@ test("Back after H returns to the previous place, and C is a jump too", async ({
 }) => {
   await ready(page);
   await page.keyboard.press("4");
+  await settle(page);
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
     "3",
