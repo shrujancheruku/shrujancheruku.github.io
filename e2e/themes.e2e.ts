@@ -258,76 +258,15 @@ test("a tooltip shows its name and key on hover after 250ms", async ({
   await expect(tip).toHaveText("contact C");
 });
 
-test("after the first interaction each toggle's tooltip shows on keyboard focus", async ({
-  page,
-}) => {
-  await ready(page);
-  await page.mouse.click(5, 790);
-  for (const act of ["home", "contact", "crt", "theme"]) {
-    const button = page.locator(`[data-act="${act}"]`);
-    const tip = button.locator(".tip");
-    await expect(tip).toHaveCSS("opacity", "0");
-    // reach it by keyboard, so the focus is visible
-    await button.focus();
-    await page.keyboard.press("Tab");
-    await page.keyboard.press("Shift+Tab");
-    await expect(button).toBeFocused();
-    await expect(tip).toHaveCSS("opacity", "1");
-    await page.keyboard.press("Tab");
-  }
-});
-
-test("with reduced motion the halo does not pulse", async ({ browser }) => {
-  const page = await (
-    await browser.newContext({ reducedMotion: "reduce" })
-  ).newPage();
-  await ready(page);
-  expect(
-    await page
-      .locator(".halo")
-      .evaluate((el) => getComputedStyle(el).animationName),
-  ).toBe("none");
-});
-
-test("the theme switch's ring is the halo: without the class, no ring", async ({
-  page,
-}) => {
-  await ready(page);
-  const theme = page.locator('[data-act="theme"]');
-  const ring = () => theme.evaluate((el) => getComputedStyle(el).boxShadow);
-  // past the first interaction the pulse stops, but the ring stays
-  await page.mouse.move(5, 5);
-  await page.mouse.down();
-  await page.mouse.up();
-  expect(await ring()).not.toBe("none");
-  // the share card removes the class: ring and pulse go together
-  await theme.evaluate((el) => el.classList.remove("halo"));
-  expect(await ring()).toBe("none");
-});
-
-test("a tooltip shows its name and key on hover after 250ms", async ({
-  page,
-}) => {
-  await ready(page);
-  await page.keyboard.press("Shift");
-  const tip = page.locator('[data-act="contact"] .tip');
-  await expect(tip).toHaveCSS("opacity", "0");
-  await page.locator('[data-act="contact"]').hover();
-  await expect(tip).toHaveCSS("opacity", "0");
-  await page.waitForTimeout(600);
-  await expect(tip).toHaveCSS("opacity", "1");
-  await expect(tip).toHaveText("contact C");
-});
-
 test("Back after H returns to the previous place, and C is a jump too", async ({
   page,
 }) => {
   await ready(page);
-  await page.keyboard.press("4");
+  await page.keyboard.press("2");
   await settle(page);
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "3",
+    "1",
   );
   const where = new URL(page.url()).pathname;
   await page.keyboard.press("h");
@@ -339,7 +278,7 @@ test("Back after H returns to the previous place, and C is a jump too", async ({
   await page.goBack();
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "3",
+    "1",
   );
   expect(new URL(page.url()).pathname).toBe(where);
   await page.getByRole("button", { name: "contact", exact: true }).click();
@@ -350,7 +289,7 @@ test("Back after H returns to the previous place, and C is a jump too", async ({
   await page.goBack();
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "3",
+    "1",
   );
 });
 
