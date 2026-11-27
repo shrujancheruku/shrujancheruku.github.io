@@ -262,11 +262,11 @@ test("Back after H returns to the previous place, and C is a jump too", async ({
   page,
 }) => {
   await ready(page);
-  await page.keyboard.press("4");
+  await page.keyboard.press("2");
   await settle(page);
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "3",
+    "1",
   );
   const where = new URL(page.url()).pathname;
   await page.keyboard.press("h");
@@ -278,7 +278,7 @@ test("Back after H returns to the previous place, and C is a jump too", async ({
   await page.goBack();
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "3",
+    "1",
   );
   expect(new URL(page.url()).pathname).toBe(where);
   await page.getByRole("button", { name: "contact", exact: true }).click();
@@ -289,7 +289,7 @@ test("Back after H returns to the previous place, and C is a jump too", async ({
   await page.goBack();
   await expect(page.locator("main.area")).toHaveAttribute(
     "data-workspace",
-    "3",
+    "1",
   );
 });
 

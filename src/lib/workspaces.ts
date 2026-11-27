@@ -97,9 +97,9 @@ const PROJECT_COPY_SHARE = 56;
 
 const WORKSPACE_NAMES = [
   ["opening", "opening"],
-  ["about", "about"],
-  ["projects", "projects"],
   ["timeline", "timeline"],
+  ["projects", "projects"],
+  ["about", "about"],
   ["sabbatical", "sabbatical"],
   ["contact", "contact"],
 ] as const;

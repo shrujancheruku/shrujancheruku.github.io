@@ -32,9 +32,9 @@ describe("the six workspaces", () => {
   test("are fixed, in order", () => {
     expect(ws.map((w) => w.id)).toEqual([
       "opening",
-      "about",
-      "projects",
       "timeline",
+      "projects",
+      "about",
       "sabbatical",
       "contact",
     ]);
@@ -161,9 +161,9 @@ describe("the decided proportions", () => {
   });
 
   test("about: one window across the whole workspace", () => {
-    expect(desktop(1)).toEqual({ about: [0, 0, 100, 100] });
-    expect(at(at(ws, 1).steps, 0).focus).toBe("about");
-    expect(at(at(ws, 1).steps, 0).touch).toEqual([{ about: [0, 0, 100, 100] }]);
+    expect(desktop(3)).toEqual({ about: [0, 0, 100, 100] });
+    expect(at(at(ws, 3).steps, 0).focus).toBe("about");
+    expect(at(at(ws, 3).steps, 0).touch).toEqual([{ about: [0, 0, 100, 100] }]);
   });
 
   test("a project step: copy 30% above the stack, composition 70%", () => {
@@ -178,7 +178,7 @@ describe("the decided proportions", () => {
   });
 
   test("timeline: 62% window, 38% x 40% above 38% x 60%", () => {
-    const l = desktop(3);
+    const l = desktop(1);
     expect(tile(l, "timeline")[2]).toBe(62);
     expect(tile(l, "education").slice(2)).toEqual([38, 40]);
     expect(tile(l, "skills").slice(2)).toEqual([38, 60]);
@@ -206,7 +206,7 @@ describe("the decided proportions", () => {
 
 describe("the timeline's open variant (Education & Internships)", () => {
   const ws = createWorkspaces({ featured: 4 });
-  const step = at(at(ws, 3).steps, 0);
+  const step = at(at(ws, 1).steps, 0);
 
   test("closed it is the decided tiling", () => {
     expect(tilingOf(step, false)).toBe(step.desktop);
@@ -284,7 +284,7 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
   });
 
   test("about is one screen, its window whole", () => {
-    expect(ids(touch(1))).toEqual([["about"]]);
+    expect(ids(touch(3))).toEqual([["about"]]);
   });
 
   test("contact is its terminal alone: one screen, the last step", () => {
@@ -298,7 +298,7 @@ describe("the touch screens of a step (src/lib/screens.ts walks them)", () => {
   });
 
   test("the timeline workspace is two screens: the timeline, then education over skills", () => {
-    expect(ids(touch(3))).toEqual([["timeline"], ["education", "skills"]]);
+    expect(ids(touch(1))).toEqual([["timeline"], ["education", "skills"]]);
   });
 
   test("the sabbatical is one touch screen: the copy over the four photos in a 2 x 2 grid", () => {

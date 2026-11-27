@@ -30,7 +30,7 @@ test("scrolling steps through the featured projects in order, one at a time", as
   }
   await page.keyboard.press("ArrowDown");
   await settle(page);
-  expect(await shown(page)).toContain("timeline");
+  expect(await shown(page)).toContain("about");
 });
 
 test("the copy window shows the counter, name, pitch, proof, links and facts", async ({

@@ -152,7 +152,7 @@ test("going to a higher workspace, the old windows slide up and off in tiling or
   await settle(page);
   let start: Record<string, number> = {};
   const run = await sample(page, [...OPENING, ...ABOUT], async () => {
-    start = await pressReading(page, "2", ABOUT);
+    start = await pressReading(page, "4", ABOUT);
   });
 
   // the old windows only go up, and end off the area

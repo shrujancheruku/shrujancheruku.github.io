@@ -18,7 +18,7 @@ test("the timeline is one screen, then education over skills; opening gives educ
   page,
 }) => {
   await ready(page, "/");
-  await page.locator(".ws button").nth(3).tap();
+  await page.locator(".ws button").nth(1).tap();
   await settle(page);
   // the first screen: the timeline alone
   const top = await box(page, "timeline");

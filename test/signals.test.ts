@@ -17,7 +17,7 @@ describe("which windows come and go between two layouts", () => {
   test("leaving the projects workspace takes every project window away", () => {
     const { entered, left } = windowChanges(desktop(5), desktop(6));
     expect(left).toEqual(["comp-4", "copy-4", "stack"]);
-    expect(entered).toContain("timeline");
+    expect(entered).toContain("about");
   });
 
   test("the first layout has everything entering and nothing leaving", () => {

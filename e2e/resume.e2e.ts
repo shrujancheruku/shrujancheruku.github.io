@@ -159,9 +159,9 @@ test.describe("the desktop and the resume", () => {
   test("no page of the desktop links to /resume/", async ({ page }) => {
     for (const path of [
       "/",
-      "/about/",
-      "/work/",
       "/timeline/",
+      "/work/",
+      "/about/",
       "/now/",
       "/contact/",
     ]) {

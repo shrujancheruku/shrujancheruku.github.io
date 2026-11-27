@@ -74,7 +74,7 @@ const startedAt = (series: (number | null)[]): number => {
 
 async function toTimeline(page: Page): Promise<void> {
   await ready(page, "/");
-  await page.locator(".ws button").nth(3).tap();
+  await page.locator(".ws button").nth(1).tap();
   await settle(page);
 }
 
