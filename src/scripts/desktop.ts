@@ -486,6 +486,20 @@ interface Turn {
 let turning: Turn[] = [];
 
 /**
+ * A copy of `el` that is only seen: marked as a clone, with no ids, hidden from
+ * assistive technology and inert.
+ */
+function inertClone(el: HTMLElement): HTMLElement {
+  const copy = el.cloneNode(true) as HTMLElement;
+  copy.removeAttribute("id");
+  for (const e of copy.querySelectorAll("[id]")) e.removeAttribute("id");
+  copy.dataset.clone = "true";
+  copy.setAttribute("aria-hidden", "true");
+  copy.inert = true;
+  return copy;
+}
+
+/**
  * Copy the entries a paged window shows now and lay the copy over them, so
  * that the old page can leave while the next comes in. Taken before the window
  * shows its next page.
@@ -496,13 +510,8 @@ function turnFrom(paged: Paged): Turn {
   const position = parent.style.position;
   if (getComputedStyle(parent).position === "static")
     parent.style.position = "relative";
-  const old = list.cloneNode(true) as HTMLElement;
-  old.removeAttribute("id");
+  const old = inertClone(list);
   old.removeAttribute("data-paged");
-  old.dataset.clone = "true";
-  old.setAttribute("aria-hidden", "true");
-  old.inert = true;
-  for (const e of old.querySelectorAll("[id]")) e.removeAttribute("id");
   for (const e of old.querySelectorAll("[data-entry]"))
     e.removeAttribute("data-entry");
   for (const e of old.querySelectorAll("[aria-current]"))
@@ -745,13 +754,8 @@ function travelBetween(
     let mover = pane;
     if (w.shared) {
       // the pane is already on its new tile: a copy leaves from the old one
-      mover = pane.cloneNode(true) as HTMLElement;
+      mover = inertClone(pane);
       mover.removeAttribute("data-window");
-      mover.dataset.clone = "true";
-      mover.setAttribute("aria-hidden", "true");
-      mover.inert = true;
-      for (const e of mover.querySelectorAll("[id]")) e.removeAttribute("id");
-      mover.removeAttribute("id");
       area.append(mover);
       clones.push(mover);
     } else goes.push(pane);
