@@ -7,9 +7,7 @@ import {
 
 describe("the contact line", () => {
   test("is the spec's wording, word for word", () => {
-    expect(CONTACT_LINE).toBe(
-      "Feel free to get in touch. I always love hearing what people are building, and whether I can help.",
-    );
+    expect(CONTACT_LINE).toBe("Email reaches me fastest, wherever I am.");
   });
 
   test("copying prints a plain confirmation line", () => {

@@ -8,15 +8,15 @@ test.beforeEach(async ({ page }) => {
   await ready(page, "/");
 });
 
-test("the terminal types whoami, cat claim and cat ask, with the replies in the accent", async ({
+test("the terminal types whoami, cat ask and ls -t ~/your-problem, with the replies in the accent", async ({
   page,
 }) => {
   const term = page.locator('[data-window="term"] .term');
   // the three replies arrive after the three commands are typed
   for (const reply of [
-    "product engineer",
-    "I design and build.",
-    "Give me a problem, not a spec.",
+    "A senior product engineer. I design things and I build them.",
+    "Give me a problem, not a spec. Here’s what usually comes back:",
+    "month-1  shipped",
   ]) {
     await expect(term.locator(".reply", { hasText: reply })).toBeVisible({
       timeout: 6000,
@@ -24,8 +24,15 @@ test("the terminal types whoami, cat claim and cat ask, with the replies in the 
   }
   await expect(term.locator(".row")).toHaveText([
     "❯ whoami",
-    "❯ cat claim",
     "❯ cat ask",
+    "❯ ls -t ~/your-problem",
+  ]);
+  await expect(term.locator(".reply")).toHaveText([
+    "A senior product engineer. I design things and I build them.",
+    "Give me a problem, not a spec. Here’s what usually comes back:",
+    "day-1    designs",
+    "week-1   prototype",
+    "month-1  shipped",
   ]);
 
   // compare the rendered colours with the theme tokens, resolved to rgb
@@ -55,7 +62,9 @@ test("~/now is a one-line teaser; clicking it jumps to sabbatical and adds a his
   page,
 }) => {
   const teaser = page.locator('[data-window="now"] a.teaser');
-  await expect(teaser).toHaveText(/sabbatical/);
+  await expect(teaser).toHaveText(
+    "Nov 2025 → now · on sabbatical, still building",
+  );
   const height = await teaser.evaluate(
     (el) => el.getBoundingClientRect().height,
   );

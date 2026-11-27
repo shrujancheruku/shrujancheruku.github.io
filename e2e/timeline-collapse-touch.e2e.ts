@@ -30,9 +30,9 @@ const EDUCATION_OPEN_SCREENS: Record<keyof typeof PHONES, number> = {
 // The most entries that fit open together on the timeline's screen, measured
 // from the layout (the page's data-limit says it; this pins what it measured).
 const LIMIT: Record<keyof typeof PHONES, number> = {
-  "Pixel 7": 3,
-  "iPhone 14": 2,
-  "375x667": 2,
+  "Pixel 7": 2,
+  "iPhone 14": 1,
+  "375x667": 1,
 };
 
 const limitOf = (page: Page) =>

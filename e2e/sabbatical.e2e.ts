@@ -29,20 +29,55 @@ test("the sabbatical workspace shows the copy and four photo windows", async ({
   ]);
 });
 
-test("the copy window reads the dates, the heading, the three lines and the foot", async ({
+test("the copy window reads the dates, the heading, the reason, the four lines and the foot", async ({
   page,
 }) => {
   const copy = page.locator('.pane[data-window="sabbatical"]');
   await expect(copy).toContainText("Nov 2025 → Now");
   await expect(copy.locator("h2")).toHaveText("sabbatical");
+  await expect(copy.locator(".reason")).toHaveText(
+    "After a decade of coding for work or class every day, I needed a break.",
+  );
   await expect(copy.locator("li")).toHaveText([
     "travelling the world",
     "time with family",
     "helping friends launch their products",
+    "building things for myself",
   ]);
   await expect(copy.locator(".foot")).toHaveText(
     "10/10 would recommend to a friend.",
   );
+});
+
+test("the first line ends with six flag images, in order, drawn from files", async ({
+  page,
+}) => {
+  const flags = page
+    .locator('.pane[data-window="sabbatical"] li')
+    .first()
+    .locator("img");
+  await expect(flags).toHaveCount(6);
+  expect(
+    await flags.evaluateAll((els) => els.map((e) => e.getAttribute("alt"))),
+  ).toEqual([
+    "United Kingdom",
+    "Japan",
+    "Switzerland",
+    "India",
+    "Vietnam",
+    "Indonesia",
+  ]);
+  const drawn = await flags.evaluateAll((els) =>
+    els.map((e) => {
+      const i = e as HTMLImageElement;
+      return (
+        i.complete &&
+        i.naturalWidth > 0 &&
+        new URL(i.src).origin === location.origin
+      );
+    }),
+  );
+  expect(drawn).toEqual([true, true, true, true, true, true]);
 });
 
 test("each photo window fills its tile and carries a place · date caption", async ({

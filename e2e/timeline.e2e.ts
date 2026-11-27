@@ -47,7 +47,7 @@ test("the timeline lists the five entries newest first with Unsupervised stacked
     "Nov 2020 – Apr 2022",
   ]);
   await expect(unsupervised.locator(".org")).toHaveText("Unsupervised");
-  await expect(unsupervised.locator(".tag").first()).toHaveText("AWS");
+  await expect(unsupervised.locator(".tag").first()).toHaveText("Airflow");
 });
 
 test("the timeline scrolls inside its window on a short screen", async ({

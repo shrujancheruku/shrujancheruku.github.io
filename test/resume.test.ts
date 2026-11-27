@@ -88,7 +88,7 @@ describe("the resume's content", () => {
 
   test("the header is the name, the title and four ways to reach Shrujan", () => {
     expect(r.name).toBe("Shrujan Cheruku");
-    expect(r.title).toBe("Product Engineer");
+    expect(r.title).toBe("Senior Product Engineer");
     expect(r.contacts.map((c) => [c.label, c.text])).toEqual([
       ["Email", "shrujancheruku@gmail.com"],
       ["LinkedIn", "linkedin.com/in/shrujancheruku"],
@@ -128,13 +128,12 @@ describe("the resume's content", () => {
     ]);
   });
 
-  test("five skill bars with Comedic Talent last, languages and all nine hobbies", () => {
+  test("the four real skill bars and no Comedic Talent, languages and all nine hobbies", () => {
     expect(r.bars.map((b) => b.name)).toEqual([
       "Python",
       "React + TypeScript",
       "Kubernetes + Helm",
       "Go",
-      "Comedic Talent",
     ]);
     expect(r.languages).toHaveLength(5);
     expect(r.hobbies).toHaveLength(9);

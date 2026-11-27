@@ -46,7 +46,7 @@ test("the resume shares its own card", async ({ page }) => {
   expect(await meta(page, "og:image")).toBe(`${SITE}/cards/resume.png`);
   expect(await meta(page, "og:title")).toBe("Resume — Shrujan Cheruku");
   expect(await meta(page, "description")).toBe(
-    "I design and build. Give me a problem, not a spec.",
+    "I design things and I build them. Give me a problem, not a spec.",
   );
   expect(await meta(page, "og:description")).toBe(
     await meta(page, "description"),

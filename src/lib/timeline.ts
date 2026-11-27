@@ -41,14 +41,14 @@ export const timeline: readonly Entry[] = [
   {
     roles: [{ dates: "Nov 2025 – Now", title: "Sabbatical" }],
     description:
-      "Travelling, time with family, and helping friends launch their products. 10/10 would recommend to a friend.",
+      "After a decade of coding for work or class every day, I needed a break. I have spent it travelling and with family, and I kept building, this time for myself and to help others around me.",
     technologies: [],
   },
   {
     roles: [{ dates: "Jan 2023 – Nov 2025", title: "Lead Engineer" }],
     organisation: "OpenBench",
     description:
-      "First engineering hire at a computational chemistry startup. I built the workflows that ran cutting-edge AI models across trillions of compounds to find new drug candidates.",
+      "I joined as the first engineering hire and stayed the only engineer for three years, so the research, design, architecture and code were all mine. I learnt the science by shadowing the scientists, then built the screening pipeline that ran ML models across trillions of compounds. It found drug candidates, confirmed by experiment, in weeks rather than months and from about 1,000 compounds tested, where a standard screen tests about 100,000.",
     technologies: [
       "Machine Learning",
       "Kubernetes",
@@ -65,21 +65,26 @@ export const timeline: readonly Entry[] = [
     ],
     organisation: "Unsupervised",
     description:
-      "Helped design and build a new cloud-native microservice platform for unsupervised machine learning on unstructured customer data. I mentored other engineers and set up the tooling we used for documentation and architecture decisions.",
+      "I designed, built and owned the data ingestion pipeline while working within the web application and platform teams. It took in unstructured business data of any shape, hundreds of gigabytes a day, and ran inside each client's own cloud. I also rebuilt local development so that heavy Kubernetes workloads ran on a laptop, which the whole team adopted, and wrote the onboarding programme.",
     technologies: [
-      "AWS",
-      "Go",
-      "Docker",
+      "Airflow",
+      "Python",
       "Kubernetes + Helm",
-      "gRPC",
+      "AWS",
       "React + TypeScript",
+      "Go",
     ],
   },
   {
     roles: [{ dates: "Nov 2019 – Oct 2020", title: "Platform Engineer" }],
     organisation: "Ibotta",
     description:
-      "Built high-throughput microservices for critical transaction data at Denver's first unicorn, an app with over 23m downloads, and kept them within their uptime SLAs.",
+      "Ibotta was Denver's first unicorn, an app with over 23m downloads, and it is where I learnt how an established engineering team works, with services held to uptime SLAs. I worked on the platform behind transactions, from purchases to receipts, and my main piece was moving receipt processing, millions of receipts a day, out of a Ruby monolith and into separate services. They went live before I left, and were faster, more resilient and easier to observe than what they replaced.",
+    resume: {
+      description:
+        "I moved receipt processing, millions of receipts a day, out of a Ruby monolith and into separate services that were faster, more resilient and easier to observe. They went live before I left.",
+      from: "97d15571dbad",
+    },
     technologies: [
       "Kotlin + Spring",
       "Microservices",
@@ -92,7 +97,12 @@ export const timeline: readonly Entry[] = [
     roles: [{ dates: "Aug 2018 – Aug 2019", title: "Software Engineer" }],
     organisation: "Orderly Health",
     description:
-      "Joined a two-person engineering team at a health-tech startup and was the solo lead within six months. I delivered an NLP chatbot pilot to clients, then built the APIs, visualisations, demos and scrapers behind the pivot to a data science product.",
+      "I joined a two-person engineering team and within six months I was the only engineer. I delivered an NLP chatbot pilot to major insurance companies in Colorado, and when the company pivoted to a data product I built its first APIs, visualisations, demos and scrapers. The company was acquired for that product in 2025.",
+    resume: {
+      description:
+        "Within six months of joining a two-person team I was the only engineer. I delivered an NLP chatbot pilot to major insurance companies in Colorado, then built the first version of the data product the company was acquired for in 2025.",
+      from: "5499072027e1",
+    },
     technologies: [
       "React + Redux",
       "Django + MySQL",
