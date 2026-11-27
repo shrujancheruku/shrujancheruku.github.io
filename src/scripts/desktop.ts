@@ -10,7 +10,7 @@
 import { gsap } from "gsap";
 import { Observer } from "gsap/Observer";
 import { interpretKey } from "../lib/keys";
-import { type Plan, planMotion } from "../lib/motion";
+import { type Plan, planMotion, sameLayout } from "../lib/motion";
 import { createNavigator, type Outcome, type Where } from "../lib/navigator";
 import { focusAmong, type Screen } from "../lib/screens";
 import { windowChanges } from "../lib/signals";
@@ -289,7 +289,7 @@ function place(to: Where, animate: boolean): void {
   if (
     !animate &&
     player.motion === "first appearance" &&
-    JSON.stringify(before?.layout) === JSON.stringify(next.layout)
+    sameLayout(before?.layout, next.layout)
   )
     return;
   // a motion still running ends here: its windows go to rest first
@@ -706,10 +706,7 @@ function remeasure(): void {
   const at = shown?.where ?? navigator.where;
   if (!touch.matches) {
     // a wide tiling in px (the stack's rows) follows the area's new height
-    if (
-      JSON.stringify(screensAt(at.step, at.open)[0]?.layout) !==
-      JSON.stringify(shown?.layout)
-    )
+    if (!sameLayout(screensAt(at.step, at.open)[0]?.layout, shown?.layout))
       carry(navigator.take({ kind: "refit" }));
     return;
   }

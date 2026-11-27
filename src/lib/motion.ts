@@ -342,8 +342,11 @@ export interface Placement {
 const isBefore = (a: Where, b: Where): boolean =>
   a.step < b.step || (a.step === b.step && a.screen < b.screen);
 
-const sameLayout = (a: Layout, b: Layout): boolean =>
-  JSON.stringify(a) === JSON.stringify(b);
+/** Whether two layouts put the same windows on the same tiles (none is only the same as none). */
+export const sameLayout = (
+  a: Layout | undefined,
+  b: Layout | undefined,
+): boolean => JSON.stringify(a) === JSON.stringify(b);
 
 /** Two places on one step, its disclosure as open in each (the screens of a phone). */
 const sameStep = (a: Placement, b: Placement): boolean =>
