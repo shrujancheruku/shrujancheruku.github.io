@@ -107,6 +107,21 @@ export function edgeOf(id: string, before: Layout, after: Layout): Edge {
   return l + w >= 100 - EPSILON ? "right" : "bottom";
 }
 
+/**
+ * The edge a window comes from when the desktop loads. Wide: the edge its tile
+ * sits on, checked as right, else bottom, else left, else top. Phone, where
+ * every tile spans the width: right and left by turns in tiling order (`index`
+ * is the window's place in it), the first from the right.
+ */
+export function appearEdgeOf(index: number, tile: Rect, phone: boolean): Edge {
+  if (phone) return index % 2 === 0 ? "right" : "left";
+  const [l, t, w, h] = tile;
+  if (l + w >= 100 - EPSILON) return "right";
+  if (t + h >= 100 - EPSILON) return "bottom";
+  if (l <= EPSILON) return "left";
+  return "top";
+}
+
 /** A tile collapsed onto one of its sides: no extent across that edge. */
 export function collapsed([l, t, w, h]: Rect, edge: Edge): Rect {
   switch (edge) {

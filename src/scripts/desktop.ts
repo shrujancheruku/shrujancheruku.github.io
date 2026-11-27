@@ -9,6 +9,7 @@ import { Observer } from "gsap/Observer";
 import { notFoundTitle as NOT_FOUND_TITLE } from "../lib/addresses";
 import { interpretKey } from "../lib/keys";
 import {
+  appearEdgeOf,
   collapsed,
   edgeOf,
   rollOf,
@@ -59,6 +60,8 @@ const SLIDE = 0.27;
 const SLIDE_GAP = 0.032;
 const SLIDE_EASE = "power3.inOut";
 const SCREEN_GAP = 14;
+/** First appearance: each window starts this long after the one before. */
+const APPEAR_GAP = 0.05;
 /** A window opening fades in over its first this long; closing, its last. */
 const FADE = 0.12;
 /** Reduced motion: no timeline, the windows are simply there. */
@@ -227,6 +230,14 @@ function place(n: number, animate: boolean): void {
   screen = Math.max(0, Math.min(screens.length - 1, screen));
   const { layout, pages } = screens[screen] ?? { layout: {}, pages: {} };
   const focus = focusAmong(layout, focusOf(stepAt(workspaces, n), open));
+  // a re-measure that changes nothing lets the first appearance run on
+  if (
+    !animate &&
+    appearing &&
+    appearing === latest &&
+    JSON.stringify(shown) === JSON.stringify(layout)
+  )
+    return;
   const before = shown;
   const beforeWorkspace = shownWorkspace;
   const order = n * 1000 + screen;
@@ -410,6 +421,50 @@ function motionBetween(
     for (const pane of leaving) pane.style.display = "none";
     gsap.set(faded, { clearProps: "opacity" });
     gsap.set(rolled, { clearProps: "transform,clipPath" });
+  };
+  return timeline;
+}
+
+/** The first appearance's timeline while it runs. */
+let appearing: gsap.core.Timeline | null = null;
+
+/**
+ * First appearance, as one timeline: the step's windows, already on their
+ * tiles, each slide straight into their tile from an edge, one after another
+ * in tiling order. Nothing re-tiles.
+ */
+function appearBetween(layout: Layout): gsap.core.Timeline {
+  const faded: HTMLElement[] = [];
+  const timeline = gsap.timeline({
+    onComplete: () => {
+      if (timeline !== latest) return;
+      rest?.();
+      rest = null;
+      appearing = null;
+      settled(timeline);
+    },
+  });
+  for (const [i, [id, tile]] of Object.entries(layout).entries()) {
+    const pane = windowOf.get(id);
+    if (!pane) continue;
+    const at = i * APPEAR_GAP;
+    timeline.fromTo(
+      pane,
+      css(collapsed(tile, appearEdgeOf(i, tile, touch.matches))),
+      { ...css(tile), duration: MOVE, ease: EASE },
+      at,
+    );
+    timeline.fromTo(
+      pane,
+      { opacity: 0 },
+      { opacity: 1, duration: FADE, ease: "none" },
+      at,
+    );
+    faded.push(pane);
+  }
+  rest = () => {
+    appearing = null;
+    gsap.set(faded, { clearProps: "opacity" });
   };
   return timeline;
 }
@@ -1002,4 +1057,10 @@ if (bootArchive !== undefined && archiveEl && inProjects()) {
 if (touch.matches) fitEntries();
 place(step, false);
 area.dataset.retiling ??= "false";
+// the first appearance: every window slides in, and the wheel waits for them
+if (shown && !reduced.matches) {
+  gate.hold();
+  area.dataset.retiling = "true";
+  appearing = latest = appearBetween(shown);
+}
 area.dataset.ready = "true";
