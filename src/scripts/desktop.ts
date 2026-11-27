@@ -1,23 +1,16 @@
-// The window manager: places the windows of the current step, moves them with
-// one GSAP timeline when the step changes (src/lib/motion.ts says how), and
-// turns wheel, keys and clicks into steps. On touch nothing scrolls: a swipe is
+// The window manager: places the windows of the current step, moves them when
+// the step changes (src/lib/motion.ts plans the motion, src/scripts/
+// motion-player.ts plays it), and turns wheel, keys and clicks into steps. On touch nothing scrolls: a swipe is
 // one gesture and moves one screen, like a wheel flick moves one step
 // (src/lib/swipe.ts). A step is one or more screens on touch
 // (src/lib/screens.ts), the same step and address.
 // Where the visitor is, and what to do with each input (wait, run, or turn the
 // running motion back), is the navigator's (src/lib/navigator.ts): this script
-// carries out what it says, and plays the motions.
+// carries out what it says, and hands each motion's plan to the player.
 import { gsap } from "gsap";
 import { Observer } from "gsap/Observer";
 import { interpretKey } from "../lib/keys";
-import {
-  appearEdgeOf,
-  collapsed,
-  edgeOf,
-  rollOf,
-  sortChanges,
-  travelOf,
-} from "../lib/motion";
+import { type Plan, planMotion } from "../lib/motion";
 import { createNavigator, type Outcome, type Where } from "../lib/navigator";
 import { focusAmong, type Screen } from "../lib/screens";
 import { windowChanges } from "../lib/signals";
@@ -29,7 +22,6 @@ import {
   focusOf,
   type Layout,
   locate,
-  type Rect,
   screensOf,
   stepAt,
   stepCount,
@@ -37,30 +29,13 @@ import {
   type Workspace,
 } from "../lib/workspaces";
 import { layoutReader } from "./layout-reader";
+import { createMotionPlayer, css } from "./motion-player";
 import { addresses, model } from "./page-data";
 import { type Paged, pagedOf, showPage } from "./paged";
 
 gsap.registerPlugin(Observer);
 
-/** How long a step's motion takes, in seconds. */
-const MOVE = 0.32;
-const EASE = "power3.out";
-/** Rolling past: one project gives way to the next inside its tile. */
-const ROLL = 0.38;
-const ROLL_EASE = "power3.inOut";
-/**
- * Changing workspace: each window takes this long, starting this long after
- * the one before, and the whole workspace travels one screen plus this gap.
- */
-const SLIDE = 0.27;
-const SLIDE_GAP = 0.032;
-const SLIDE_EASE = "power3.inOut";
-const SCREEN_GAP = 14;
-/** First appearance: each window starts this long after the one before. */
-const APPEAR_GAP = 0.05;
-/** A window opening fades in over its first this long; closing, its last. */
-const FADE = 0.12;
-/** Reduced motion: no timeline, the windows are simply there. */
+/** Reduced motion: no motion is played, the windows are simply there. */
 const reduced = matchMedia("(prefers-reduced-motion: reduce)");
 /** One step per wheel gesture, its tail absorbed (longer while a motion runs). */
 const gate = createWheelGate({ tailMs: 500, steadyMs: 150, threshold: 40 });
@@ -120,6 +95,17 @@ const pagedWindow = (id: string): Paged | undefined => {
   }
   return pagedByWindow.get(id);
 };
+
+/** Plays the motions (src/lib/motion.ts plans them). */
+const player = createMotionPlayer({
+  area,
+  windows: windowOf,
+  paged: pagedWindow,
+  atStart: () => {
+    if (shown) writeRest(shown.layout, shown.pages);
+  },
+  settled: () => settled(),
+});
 
 const stepScreens = createStepScreens({
   steps,
@@ -201,6 +187,8 @@ function markStack(index: number): void {
 interface Shown {
   /** Its screen as placed: brought in to the screens the step has. */
   where: Where;
+  /** The workspace the step is in. */
+  workspace: number;
   layout: Layout;
   pages: Readonly<Record<string, number>>;
   screens: number;
@@ -216,6 +204,7 @@ function screenAt(where: Where): Shown {
   const { layout, pages } = screens[screen] ?? { layout: {}, pages: {} };
   return {
     where: { ...where, screen },
+    workspace: locate(workspaces, where.step).workspace,
     layout,
     pages,
     screens: screens.length,
@@ -225,10 +214,6 @@ function screenAt(where: Where): Shown {
     ),
   };
 }
-
-/** Whether place `a` comes before `b` in the order of steps, then screens. */
-const isBefore = (a: Where, b: Where): boolean =>
-  a.step < b.step || (a.step === b.step && a.screen < b.screen);
 
 /** Tell the page which layout is on show: its windows' slots, the step, the status bar. */
 function record(p: Shown): void {
@@ -250,13 +235,13 @@ function record(p: Shown): void {
 
 /**
  * Write a layout's windows at rest: on their tiles, in tiling order, each
- * paged window on its page. With `turnsFrom`, the pages on show before, a
- * paged window that changes page first leaves a copy of its old page to turn.
+ * paged window on its page. With a `plan`, a paged window that turns its page
+ * first leaves a copy of its old page to turn.
  */
 function writeRest(
   layout: Layout,
   pages: Readonly<Record<string, number>>,
-  turnsFrom?: Readonly<Record<string, number>>,
+  plan?: Plan,
 ): void {
   let z = 1;
   for (const pane of panes) {
@@ -271,14 +256,13 @@ function writeRest(
       zIndex: String(z++),
     });
   }
+  if (plan) player.prepare(plan);
   // the entries of a paged window: its page on touch, all of them wide
   for (const pane of panes) {
     const id = pane.dataset.window ?? "";
     const paged = pagedWindow(id);
     const tile = layout[id];
     if (!paged || !tile) continue;
-    if (turnsFrom && (turnsFrom[id] ?? 0) !== (pages[id] ?? 0))
-      turning.push(turnFrom(paged));
     showPage(
       paged,
       touch.matches ? stepScreens.pagesOf(id, tile)[pages[id] ?? 0] : undefined,
@@ -292,28 +276,14 @@ function writeRest(
  * `to`, where it began. Turned back again, it plays forwards.
  */
 function turnBack(to: Where): void {
-  const timeline = latest;
-  if (!timeline) {
+  if (!player.motion) {
     // nothing moves after all: the windows go there at rest
     place(to, false);
     ended();
     return;
   }
   record(screenAt(to));
-  if (timeline.reversed()) timeline.play();
-  else timeline.reverse();
-  // turned back before it moved: it is already where it began
-  if (timeline.reversed() && timeline.time() === 0) backAtStart(timeline);
-}
-
-/** A motion turned back reached where it began: its windows go to rest there. */
-function backAtStart(timeline: gsap.core.Timeline): void {
-  if (timeline !== latest) return;
-  timeline.kill();
-  rest?.();
-  rest = null;
-  if (shown) writeRest(shown.layout, shown.pages);
-  settled(timeline);
+  player.reverse();
 }
 
 /**
@@ -327,49 +297,27 @@ function place(to: Where, animate: boolean): void {
   // a re-measure that changes nothing lets the first appearance run on
   if (
     !animate &&
-    appearing &&
-    appearing === latest &&
+    player.motion === "first appearance" &&
     JSON.stringify(before?.layout) === JSON.stringify(next.layout)
   )
     return;
-  const sameScreens =
-    touch.matches &&
-    before !== null &&
-    before.where.step === to.step &&
-    before.where.open === to.open;
-  const sameLayout =
-    sameScreens &&
-    JSON.stringify(before.layout) === JSON.stringify(next.layout);
-  const direction = !before || !isBefore(next.where, before.where) ? 1 : -1;
-  const sameWorkspace =
-    before !== null &&
-    locate(workspaces, before.where.step).workspace ===
-      locate(workspaces, to.step).workspace;
   // a motion still running ends here: its windows go to rest first
-  const stopped = stopMotion();
-  turning = [];
+  const stopped = player.stop();
 
-  const moving = animate && before !== null && !reduced.matches;
-  writeRest(
-    next.layout,
-    next.pages,
-    moving && sameLayout ? before.pages : undefined,
-  );
+  const plan =
+    animate && before !== null && !reduced.matches
+      ? planMotion(before, next, touch.matches)
+      : null;
+  writeRest(next.layout, next.pages, plan ?? undefined);
   record(next);
 
-  if (moving && before) {
+  if (plan) {
     // the wheel stays open, so a gesture that turns the motion back reaches
     // the navigator; the gesture's own tail stays tail until the motion ends
     gate.moving();
     // for the page and its tests: a motion is running until `settled`
     area.dataset.retiling = "true";
-    latest = motionBetween(
-      before.layout,
-      next.layout,
-      sameWorkspace,
-      direction,
-      sameScreens && !sameLayout,
-    );
+    player.play(plan);
   } else if (stopped || animate) {
     area.dataset.retiling = "false";
     gate.still();
@@ -377,331 +325,11 @@ function place(to: Where, animate: boolean): void {
   }
 }
 
-const css = ([left, top, width, height]: Rect) => ({
-  left: `${left}%`,
-  top: `${top}%`,
-  width: `${width}%`,
-  height: `${height}%`,
-});
-
-/** The running motion's clean-up: what leaves goes, and fades are cleared. */
-let rest: (() => void) | null = null;
-
-/** A paged window turning its page: its old entries, as a copy that leaves. */
-interface Turn {
-  paged: Paged;
-  old: HTMLElement;
-  /** What the window's own list was positioned against, to put back. */
-  parent: HTMLElement;
-  position: string;
-}
-/** The page turns of the step being placed, taken before its pages change. */
-let turning: Turn[] = [];
-
-/**
- * A copy of `el` that is only seen: marked as a clone, with no ids, hidden from
- * assistive technology and inert.
- */
-function inertClone(el: HTMLElement): HTMLElement {
-  const copy = el.cloneNode(true) as HTMLElement;
-  copy.removeAttribute("id");
-  for (const e of copy.querySelectorAll("[id]")) e.removeAttribute("id");
-  copy.dataset.clone = "true";
-  copy.setAttribute("aria-hidden", "true");
-  copy.inert = true;
-  return copy;
-}
-
-/**
- * Copy the entries a paged window shows now and lay the copy over them, so
- * that the old page can leave while the next comes in. Taken before the window
- * shows its next page.
- */
-function turnFrom(paged: Paged): Turn {
-  const { list } = paged;
-  const parent = list.parentElement ?? paged.root;
-  const position = parent.style.position;
-  if (getComputedStyle(parent).position === "static")
-    parent.style.position = "relative";
-  const old = inertClone(list);
-  old.removeAttribute("data-paged");
-  for (const e of old.querySelectorAll("[data-entry]"))
-    e.removeAttribute("data-entry");
-  for (const e of old.querySelectorAll("[aria-current]"))
-    e.removeAttribute("aria-current");
-  Object.assign(old.style, {
-    position: "absolute",
-    top: `${list.offsetTop}px`,
-    left: `${list.offsetLeft}px`,
-    width: `${list.offsetWidth}px`,
-    margin: "0",
-  });
-  parent.append(old);
-  return { paged, old, parent, position };
-}
-
-/** End the running motion, if any, with its windows at rest. */
-function stopMotion(): boolean {
-  if (!latest) return false;
-  const running = latest;
-  latest = null;
-  running.kill();
-  rest?.();
-  rest = null;
-  return true;
-}
-
-/**
- * The step's one timeline, from the old to the new written rectangles
- * (`left/top/width/height`, never scale, so text re-sets rather than
- * stretches). A window in both steps re-tiles. On a wide screen, a window that
- * opens grows out of its edge along that edge's axis, and one that closes
- * shrinks back into it, sharing one moving border with the neighbours that
- * re-tile beside it.
- */
-function motionBetween(
-  before: Layout,
-  after: Layout,
-  sameWorkspace: boolean,
-  direction: 1 | -1,
-  screenMove = false,
-): gsap.core.Timeline {
-  // a phone moving between screens of one step, whose windows all change,
-  // travels like changing workspace
-  if (!sameWorkspace || screenMove)
-    return travelBetween(before, after, direction);
-  const leaving: HTMLElement[] = [];
-  const faded: HTMLElement[] = [];
-  const rolled: HTMLElement[] = [];
-  const timeline = gsap.timeline({
-    onComplete: () => {
-      if (timeline !== latest) return;
-      rest?.();
-      rest = null;
-      settled(timeline);
-    },
-    onReverseComplete: () => backAtStart(timeline),
-  });
-  const tween = (pane: HTMLElement, from: Rect, to: Rect) =>
-    timeline.fromTo(
-      pane,
-      css(from),
-      { ...css(to), duration: MOVE, ease: EASE },
-      0,
-    );
-  for (const c of sortChanges(before, after, sameWorkspace)) {
-    const pane = windowOf.get(c.id);
-    if (!pane) continue;
-    if (c.from && c.to) {
-      tween(pane, c.from, c.to);
-    } else if (c.motion === "rolling past") {
-      // the tile stays; the window slides through it, clipped to the tile
-      if (c.from) {
-        pane.style.display = "block";
-        Object.assign(pane.style, css(c.from));
-        leaving.push(pane);
-      }
-      const roll = rollOf(direction, pane.offsetHeight);
-      const [start, end] = c.to
-        ? [roll.in.from, roll.rest]
-        : [roll.rest, roll.out.to];
-      timeline.fromTo(
-        pane,
-        { y: start.y, clipPath: start.clip },
-        { y: end.y, clipPath: end.clip, duration: ROLL, ease: ROLL_EASE },
-        0,
-      );
-      rolled.push(pane);
-    } else if (c.motion === "opening" && c.to) {
-      tween(
-        pane,
-        collapsed(c.to, edgeOf(c.id, before, after, touch.matches)),
-        c.to,
-      );
-      timeline.fromTo(
-        pane,
-        { opacity: 0 },
-        { opacity: 1, duration: FADE, ease: "none" },
-        0,
-      );
-      faded.push(pane);
-    } else if (c.motion === "closing" && c.from) {
-      // it stays on show until it is in its edge
-      pane.style.display = "block";
-      tween(
-        pane,
-        c.from,
-        collapsed(c.from, edgeOf(c.id, before, after, touch.matches)),
-      );
-      timeline.fromTo(
-        pane,
-        { opacity: 1 },
-        { opacity: 0, duration: FADE, ease: "none" },
-        MOVE - FADE,
-      );
-      leaving.push(pane);
-      faded.push(pane);
-    }
-  }
-  // a paged window turning its page: its entries roll past inside the window
-  // (the window's body clips them); its frame and title bar stay
-  const turned = turning;
-  turning = [];
-  const entries: HTMLElement[] = [];
-  for (const { paged, old } of turned) {
-    const roll = rollOf(direction, paged.root.clientHeight);
-    timeline.fromTo(
-      old,
-      { y: roll.rest.y },
-      { y: roll.out.to.y, duration: ROLL, ease: ROLL_EASE },
-      0,
-    );
-    timeline.fromTo(
-      paged.list,
-      { y: roll.in.from.y },
-      { y: roll.rest.y, duration: ROLL, ease: ROLL_EASE },
-      0,
-    );
-    entries.push(paged.list);
-  }
-  // a step whose windows only appear and go still takes the step's time
-  timeline.set({}, {}, rolled.length > 0 || turned.length > 0 ? ROLL : MOVE);
-  rest = () => {
-    for (const pane of leaving) pane.style.display = "none";
-    gsap.set(faded, { clearProps: "opacity" });
-    gsap.set(rolled, { clearProps: "transform,clipPath" });
-    gsap.set(entries, { clearProps: "transform" });
-    for (const { old, parent, position } of turned) {
-      old.remove();
-      parent.style.position = position;
-    }
-  };
-  return timeline;
-}
-
-/** The first appearance's timeline while it runs. */
-let appearing: gsap.core.Timeline | null = null;
-
-/**
- * First appearance, as one timeline: the step's windows, already on their
- * tiles, each slide straight into their tile from an edge, one after another
- * in tiling order. Nothing re-tiles.
- */
-function appearBetween(layout: Layout): gsap.core.Timeline {
-  const faded: HTMLElement[] = [];
-  const timeline = gsap.timeline({
-    onComplete: () => {
-      if (timeline !== latest) return;
-      rest?.();
-      rest = null;
-      appearing = null;
-      settled(timeline);
-    },
-  });
-  for (const [i, [id, tile]] of Object.entries(layout).entries()) {
-    const pane = windowOf.get(id);
-    if (!pane) continue;
-    const at = i * APPEAR_GAP;
-    timeline.fromTo(
-      pane,
-      css(collapsed(tile, appearEdgeOf(i, tile, touch.matches))),
-      { ...css(tile), duration: MOVE, ease: EASE },
-      at,
-    );
-    timeline.fromTo(
-      pane,
-      { opacity: 0 },
-      { opacity: 1, duration: FADE, ease: "none" },
-      at,
-    );
-    faded.push(pane);
-  }
-  rest = () => {
-    appearing = null;
-    gsap.set(faded, { clearProps: "opacity" });
-  };
-  return timeline;
-}
-
-/**
- * Changing workspace, as one timeline. The old workspace's windows slide up
- * and off one after another in tiling order as the next workspace's come up
- * from below in the same order (the reverse going to a lower one), `direction`
- * giving which. However many workspaces the jump crosses, it travels one
- * screen. The area is clipped while it runs, so no window passes over the
- * status bar. A window on both workspaces leaves as a clone of its pane while
- * the real pane arrives; the clone goes when the motion ends or is stopped.
- */
-function travelBetween(
-  before: Layout,
-  after: Layout,
-  direction: 1 | -1,
-): gsap.core.Timeline {
-  const { leaving, arriving } = travelOf(before, after);
-  const away = (area.clientHeight + SCREEN_GAP) * direction;
-  const goes: HTMLElement[] = [];
-  const clones: HTMLElement[] = [];
-  const comes: HTMLElement[] = [];
-  const clipped = area.style.overflow;
-  area.style.overflow = "hidden";
-  const timeline = gsap.timeline({
-    onComplete: () => {
-      if (timeline !== latest) return;
-      rest?.();
-      rest = null;
-      settled(timeline);
-    },
-    onReverseComplete: () => backAtStart(timeline),
-  });
-  const slide = (pane: HTMLElement, from: number, to: number, at: number) =>
-    timeline.fromTo(
-      pane,
-      { y: from },
-      { y: to, duration: SLIDE, ease: SLIDE_EASE },
-      at,
-    );
-  for (const [i, w] of leaving.entries()) {
-    const pane = windowOf.get(w.id);
-    if (!pane) continue;
-    let mover = pane;
-    if (w.shared) {
-      // the pane is already on its new tile: a copy leaves from the old one
-      mover = inertClone(pane);
-      mover.removeAttribute("data-window");
-      area.append(mover);
-      clones.push(mover);
-    } else goes.push(pane);
-    mover.style.display = "block";
-    Object.assign(mover.style, css(w.tile));
-    slide(mover, 0, -away, i * SLIDE_GAP);
-  }
-  for (const [i, w] of arriving.entries()) {
-    const pane = windowOf.get(w.id);
-    if (!pane) continue;
-    comes.push(pane);
-    slide(pane, away, 0, (i + 1) * SLIDE_GAP);
-  }
-  rest = () => {
-    for (const pane of goes) pane.style.display = "none";
-    for (const clone of clones) clone.remove();
-    gsap.set([...goes, ...comes], { clearProps: "transform" });
-    area.style.overflow = clipped;
-  };
-  return timeline;
-}
-/**
- * The newest step's motion; one that a later one stopped does not end the
- * re-tile. When the newest ends, the navigator hears `ended` (the input that
- * waited for it runs from rest), and `data-retiling` stays true until the last
- * motion of the chain ends.
- */
-let latest: gsap.core.Timeline | null = null;
-function settled(motion: gsap.core.Timeline): void {
-  if (motion !== latest) return;
-  latest = null;
+/** The motion's end: the wheel settles, and what waited for it runs. */
+function settled(): void {
   gate.still();
   ended();
-  if (!latest) area.dataset.retiling = "false";
+  if (!player.motion) area.dataset.retiling = "false";
 }
 
 /** No motion runs any more: what waited for it runs. */
@@ -1114,7 +742,7 @@ function appear(): void {
   }
   gate.moving();
   area.dataset.retiling = "true";
-  appearing = latest = appearBetween(shown.layout);
+  player.play(planMotion(null, shown, touch.matches));
 }
 
 // ---- boot
