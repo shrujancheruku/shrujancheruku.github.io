@@ -359,3 +359,61 @@ describe("the phone premise: one touch screen per step, two for the timeline", (
     });
   }
 });
+
+describe("the copy window's layout (#160): the stack as tall as its rows", () => {
+  /** A window's height in px, in a tiling area `height` px tall. */
+  const px = (r: Rect, height: number) => (r[3] * height) / 100;
+
+  test("four featured and the archive line: the stack is 204px, the copy takes the rest of the column", () => {
+    const projects = at(createWorkspaces({ featured: 4, archive: true }), 2);
+    for (const [i, step] of projects.steps.entries()) {
+      for (const height of [640, 720, 843, 1013]) {
+        const l = tilingOf(step, false, height);
+        const copy = tile(l, `copy-${i + 1}`);
+        const stack = tile(l, "stack");
+        expect(px(stack, height)).toBeCloseTo(204);
+        expect(stack[1] + stack[3]).toBeCloseTo(100);
+        expect(copy[1]).toBe(0);
+        expect(copy[3]).toBeCloseTo(stack[1]);
+        expect([copy[0], copy[2], stack[0], stack[2]]).toEqual([0, 30, 0, 30]);
+        expect(tile(l, `comp-${i + 1}`)).toEqual([30, 0, 70, 100]);
+      }
+    }
+  });
+
+  test("the height follows the row count, not a typed 204", () => {
+    const stackPx = (featured: number, archive: boolean) =>
+      px(
+        tile(
+          tilingOf(
+            at(at(createWorkspaces({ featured, archive }), 2).steps, 0),
+            false,
+            800,
+          ),
+          "stack",
+        ),
+        800,
+      );
+    expect(stackPx(3, true)).toBeCloseTo(170);
+    expect(stackPx(4, false)).toBeCloseTo(170);
+    expect(stackPx(6, true)).toBeCloseTo(272);
+  });
+
+  test("with the archive open the tiling is today's: copy 62%, stack 38%, squeezed into 42%", () => {
+    const step = at(
+      at(createWorkspaces({ featured: 4, archive: true }), 2).steps,
+      0,
+    );
+    const l = tilingOf(step, true, 800);
+    expect(tile(l, "copy-1")).toEqual([0, 0, 30 * 0.42, 62]);
+    expect(tile(l, "stack")).toEqual([0, 62, 30 * 0.42, 38]);
+    expect(tile(l, "archive")).toEqual([42, 0, 58, 100]);
+  });
+
+  test("every other step's wide tiling ignores the area's height", () => {
+    for (const w of createWorkspaces({ featured: 4, archive: true }))
+      if (w.id !== "projects")
+        for (const step of w.steps)
+          expect(tilingOf(step, false, 800)).toBe(step.desktop);
+  });
+});

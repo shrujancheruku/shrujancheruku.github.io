@@ -44,7 +44,10 @@ const card = cardPathFor(
   path,
   featured.map((p) => p.repository),
 );
-const workspaces = createWorkspaces({ featured: featured.length });
+const workspaces = createWorkspaces({
+  featured: featured.length,
+  archive: archive.length > 0,
+});
 const themeCss = THEME_NAMES.map(
   (n) =>
     `[data-theme="${n}"]{${[
