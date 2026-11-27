@@ -56,9 +56,13 @@ try {
   // ---- the site's card
   {
     const page = await context.newPage();
-    await page.clock.setFixedTime(new Date("2026-01-01T09:41:00"));
+    // the clock starts at 09:41 and runs: the windows' first appearance is a
+    // GSAP timeline, which a frozen clock would hold at its first frame
+    await page.clock.setSystemTime(new Date("2026-01-01T09:41:00"));
     await page.goto(`${base}/`);
     await page.locator("main.area[data-ready=true]").waitFor();
+    // the windows are in
+    await page.locator("main.area[data-retiling=false]").waitFor();
     // the terminal's end state: the last reply typed
     await page
       .locator('[data-window="term"] .reply', {
