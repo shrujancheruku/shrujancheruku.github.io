@@ -4,7 +4,13 @@
 // sampled and checked for which edge each window comes from, the order they
 // start moving in, no other side moving, and the final rectangles.
 import { devices, expect, type Page, test } from "@playwright/test";
-import { area, ready } from "./helpers";
+import {
+  screensOf,
+  stepAt,
+  tilingOf,
+  type Workspace,
+} from "../src/lib/workspaces";
+import { area, ready, whereOf } from "./helpers";
 
 interface Box {
   left: number;
@@ -75,7 +81,7 @@ async function load(page: Page, path: string): Promise<Run> {
   await page.evaluate(
     () => new Promise((r) => requestAnimationFrame(() => r(null))),
   );
-  return page.evaluate(() => {
+  const sampled = await page.evaluate(() => {
     const w = window as unknown as {
       __frames: (Box | null)[][];
       __ids: string[];
@@ -83,6 +89,35 @@ async function load(page: Page, path: string): Promise<Run> {
     };
     return { ids: w.__ids, frames: w.__frames, waited: w.__waited };
   });
+  // in tiling order: the order the step's layout writes its windows in
+  const order = await tilingOrder(page, sampled.ids);
+  const at = order.map((id) => sampled.ids.indexOf(id));
+  return {
+    ids: order,
+    frames: sampled.frames.map((f) => at.map((i) => f[i] ?? null)),
+    waited: sampled.waited,
+  };
+}
+
+/** The windows on show, in the order the layout on show writes them. */
+async function tilingOrder(page: Page, ids: string[]): Promise<string[]> {
+  const { model, step, open } = await page.evaluate(() => {
+    const a = document.querySelector<HTMLElement>("main.area");
+    return {
+      model: JSON.parse(
+        document.getElementById("desktop-model")?.textContent ?? "[]",
+      ) as Workspace[],
+      step: Number(a?.dataset.step),
+      open: a?.dataset.open === "true",
+    };
+  });
+  const at = stepAt(model, step);
+  const shown = [...ids].sort().join();
+  const layout = [tilingOf(at, open), ...screensOf(at, open)].find(
+    (l) => Object.keys(l).sort().join() === shown,
+  );
+  if (!layout) throw new Error(`no layout of step ${step} shows ${shown}`);
+  return Object.keys(layout);
 }
 
 /** Where the step's windows rest with no motion at all (reduced motion). */
@@ -169,6 +204,30 @@ function expectSlid(frames: Box[], end: Box, edge: string) {
   );
 }
 
+/** An archive project's address: it boots with the archive open on its entry. */
+const ARCHIVE_PROJECT = "/work/truecrypt-steganography/";
+
+/**
+ * Every window slid in from the edge `edgeOf` gives its final box, and they
+ * started moving in tiling order.
+ */
+function expectAppeared(run: Run, edgeOf: (final: Box, i: number) => string) {
+  expect(run.ids.length).toBeGreaterThan(0);
+  const end = run.frames.at(-1) as (Box | null)[];
+  for (const [i] of run.ids.entries()) {
+    const final = end[i];
+    expect(final).not.toBeNull();
+    if (!final) continue;
+    const moving = live(run.frames, i);
+    expect(moving.length).toBeGreaterThan(1);
+    expectSlid(moving, final, edgeOf(final, i));
+  }
+  const starts = run.ids.map((_, i) => startedAt(run.frames, i));
+  expect(starts.every((s) => s >= 0)).toBe(true);
+  for (const [i, s] of starts.entries())
+    if (i > 0) expect(s).toBeGreaterThanOrEqual(starts[i - 1] ?? 0);
+}
+
 test.describe("wide screen", () => {
   test("each window slides in from the edge its tile sits on, in tiling order, and nothing re-tiles", async ({
     page,
@@ -212,15 +271,15 @@ test.describe("wide screen", () => {
     }
   });
 
-  test("every address comes on show the same way", async ({ page }) => {
-    for (const path of ["/archive/", "/work/"]) {
+  test("every address comes on show the same way: the archive, an archive project's and the work's", async ({
+    page,
+  }) => {
+    for (const path of ["/archive/", ARCHIVE_PROJECT, "/work/"]) {
       const run = await load(page, path);
+      const a = await area(page).boundingBox();
+      if (!a) throw new Error("no area");
       expect(run.waited).toBe(true);
-      const end = run.frames.at(-1) as (Box | null)[];
-      const starts = run.ids.map((_, i) => startedAt(run.frames, i));
-      expect(starts.every((s) => s >= 0)).toBe(true);
-      expect(starts.at(-1) ?? 0).toBeGreaterThanOrEqual(starts[0] ?? 0);
-      expect(end.every((b) => b && b.width > 1 && b.height > 1)).toBe(true);
+      expectAppeared(run, (final) => edgeOfBox(final, a));
     }
   });
 
@@ -257,5 +316,64 @@ test.describe("phone", () => {
     const starts = run.ids.map((_, i) => startedAt(run.frames, i));
     for (const [i, s] of starts.entries())
       if (i > 0) expect(s).toBeGreaterThanOrEqual(starts[i - 1] ?? 0);
+  });
+
+  test("a swipe during the first appearance does not cut it short", async ({
+    page,
+  }) => {
+    // on the first frame the windows are coming in, a finger swipes up the
+    // screen (a step down), as the page's pointer handlers see one: sent from
+    // the page, so it can't arrive after the windows are in
+    await page.addInitScript(() => {
+      const w = window as unknown as { __swiped: boolean };
+      w.__swiped = false;
+      const finger = (type: string, y: number) =>
+        document.dispatchEvent(
+          new PointerEvent(type, {
+            pointerId: 7,
+            pointerType: "touch",
+            isPrimary: true,
+            clientX: 200,
+            clientY: y,
+            bubbles: true,
+          }),
+        );
+      const tick = () => {
+        const a = document.querySelector<HTMLElement>("main.area");
+        if (a?.dataset.ready === "true" && a.dataset.retiling === "true") {
+          finger("pointerdown", 600);
+          for (const y of [560, 500, 420, 360]) finger("pointermove", y);
+          finger("pointerup", 360);
+          w.__swiped = true;
+          return;
+        }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    const run = await load(page, "/");
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { __swiped: boolean }).__swiped,
+      ),
+    ).toBe(true);
+    // the step stays, and every window still slid all the way into its tile
+    expect(await whereOf(page)).toMatchObject({ step: 0, screen: 0 });
+    expectAppeared(run, (_, i) => (i % 2 === 0 ? "right" : "left"));
+  });
+});
+
+test.describe("short phone", () => {
+  // short enough that the archive takes two pages
+  test.use({ ...pixel, viewport: { width: 412, height: 450 } });
+
+  test("a paged window at its booted page comes on show the same way", async ({
+    page,
+  }) => {
+    const run = await load(page, ARCHIVE_PROJECT);
+    expect(run.waited).toBe(true);
+    // the archive boots on the page holding the project, not its first
+    expect((await whereOf(page)).screen).toBeGreaterThan(0);
+    expectAppeared(run, (_, i) => (i % 2 === 0 ? "right" : "left"));
   });
 });
