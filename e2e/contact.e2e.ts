@@ -18,7 +18,7 @@ test.describe("arriving directly at /contact/", () => {
       timeout: 4000,
     });
     await expect(term).toContainText(
-      "Feel free to get in touch. I always love hearing what people are building, and whether I can help.",
+      "Email reaches me fastest, wherever I am.",
     );
     const rows = term.locator(".channel");
     await expect(rows).toHaveCount(4);

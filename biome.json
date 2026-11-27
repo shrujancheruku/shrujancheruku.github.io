@@ -6,7 +6,14 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!legacy", "!docs", "!**/*.md", "!test/fixtures"]
+    "includes": [
+      "**",
+      "!legacy",
+      "!docs",
+      "!**/*.md",
+      "!test/fixtures",
+      "!src/assets/flags"
+    ]
   },
   "formatter": {
     "enabled": true,

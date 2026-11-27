@@ -33,6 +33,18 @@ export async function settle(page: Page): Promise<void> {
   });
 }
 
+/**
+ * Start the page with the crt effect off, as a visitor who turned it off. The
+ * effect is a full-screen WebGL shader drawn every frame at the device's pixel
+ * ratio; headless Chromium in CI draws it in software, so on a phone with a
+ * pixel ratio of 3 each frame costs the runner a 1170x2532 render. Every tap
+ * and settle waits for frames, so a spec about something else spent its 30s on
+ * the shader and timed out mid-tap. Call before the page loads.
+ */
+export async function crtOff(page: Page): Promise<void> {
+  await page.addInitScript(() => localStorage.setItem("crt", "off"));
+}
+
 /** A window's rectangle on the screen, in px. */
 export interface Box {
   left: number;

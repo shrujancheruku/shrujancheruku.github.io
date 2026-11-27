@@ -99,7 +99,9 @@ test("no curvature or fringing: text stays real and untransformed", async ({
   await ready(page);
   await expect(page.locator(".screen")).toHaveCSS("filter", "none");
   await expect(page.locator(".screen")).toHaveCSS("transform", "none");
-  await expect(page.locator("main.area")).toContainText("product engineer");
+  await expect(page.locator("main.area")).toContainText(
+    "senior product engineer",
+  );
 });
 
 /**

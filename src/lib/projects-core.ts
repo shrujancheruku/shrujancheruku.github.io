@@ -54,7 +54,7 @@ export class ProjectsError extends Error {
 const FEATURED_MIN = 3;
 const FEATURED_MAX = 6;
 const PROOF_MIN = 2;
-const PROOF_MAX = 5;
+const PROOF_MAX = 3;
 
 export function buildProjects(input: ProjectInput): Project[] {
   const { ordering, contents, facts } = input;

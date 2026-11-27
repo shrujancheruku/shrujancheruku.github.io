@@ -1,6 +1,6 @@
 import { devices, expect, type Page, test } from "@playwright/test";
 import { unseen } from "./fit";
-import { area, ready, settle, warmUpTouch, whereOf } from "./helpers";
+import { area, crtOff, ready, settle, warmUpTouch, whereOf } from "./helpers";
 
 // On a phone the timeline step is two screens: the timeline alone, its entries
 // collapsed to their headings (a tap opens or closes one), then education over
@@ -30,9 +30,9 @@ const EDUCATION_OPEN_SCREENS: Record<keyof typeof PHONES, number> = {
 // The most entries that fit open together on the timeline's screen, measured
 // from the layout (the page's data-limit says it; this pins what it measured).
 const LIMIT: Record<keyof typeof PHONES, number> = {
-  "Pixel 7": 3,
-  "iPhone 14": 2,
-  "375x667": 2,
+  "Pixel 7": 2,
+  "iPhone 14": 1,
+  "375x667": 1,
 };
 
 const limitOf = (page: Page) =>
@@ -63,6 +63,9 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       defaultBrowserType?: string;
     };
     test.use(phone);
+    // the entries, not the crt effect: its software-drawn frames starved the
+    // taps and settles on a busy CI runner (see crtOff)
+    test.beforeEach(({ page }) => crtOff(page));
 
     test("the timeline step is exactly two screens, neither paged: the timeline, then education over skills", async ({
       page,

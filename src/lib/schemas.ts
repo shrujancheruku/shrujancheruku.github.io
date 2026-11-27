@@ -19,7 +19,7 @@ export const orderingSchema = z
 export const contentSchema = z
   .object({
     pitch: z.string().trim().min(1, "a project needs a pitch"),
-    /** Featured projects only: two to five, checked with the lists. */
+    /** Featured projects only: two to three, checked with the lists. */
     proof: z.array(z.string().trim().min(1)).optional(),
     live: z.url().optional(),
     /** Replaces the repository name as the display name. */

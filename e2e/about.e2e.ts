@@ -34,10 +34,10 @@ test("the window holds the whole draft text and adds no facts", async ({
     (await page.locator('[data-window="about"] .text').textContent()) ?? "";
   expect(text).toContain("I was born in the US and grew up in India");
   expect(text).toContain("made Colorado home for a while.");
-  expect(text).toContain("the way I make sense of a new place.");
-  await expect(closing(page)).toHaveText(
-    "here are some of my personal projects →",
-  );
+  expect(text).toContain("so that we have a thing to disagree about.");
+  expect(text).toContain("mostly by people in other time zones.");
+  await expect(page.locator('[data-window="about"] .text p')).toHaveCount(3);
+  await expect(closing(page)).toHaveText("and lately, a sabbatical →");
 });
 
 test("the closing line is in the accent colour", async ({ page }) => {
@@ -54,15 +54,15 @@ test("the closing line is in the accent colour", async ({ page }) => {
   expect(line).toBe(accent);
 });
 
-test("clicking the closing line moves to the projects, and Back returns", async ({
+test("clicking the closing line moves to the sabbatical, and Back returns", async ({
   page,
 }) => {
   await ready(page, "/about/");
   const before = await page.evaluate(() => history.length);
   await closing(page).click();
   await settle(page);
-  await expect(area(page)).toHaveAttribute("data-workspace", "2");
-  expect(pathname(page)).toBe("/work/");
+  await expect(area(page)).toHaveAttribute("data-workspace", "4");
+  expect(pathname(page)).toBe("/now/");
   expect(await page.evaluate(() => history.length)).toBe(before + 1);
   await page.goBack();
   await settle(page);
@@ -70,7 +70,7 @@ test("clicking the closing line moves to the projects, and Back returns", async 
   expect(pathname(page)).toBe("/about/");
   await page.goForward();
   await settle(page);
-  expect(pathname(page)).toBe("/work/");
+  expect(pathname(page)).toBe("/now/");
 });
 
 test("an arrow key from about reaches the projects, and up returns to the opening", async ({
@@ -141,7 +141,7 @@ for (const [name, emulation] of Object.entries(PHONES)) {
             return { top: r.top, bottom: r.bottom, right: r.right };
           }),
         );
-      expect(boxes).toHaveLength(3);
+      expect(boxes).toHaveLength(4);
       for (const b of boxes) {
         expect(b.bottom).toBeLessThanOrEqual(view?.height ?? 0);
         expect(b.right).toBeLessThanOrEqual(view?.width ?? 0);
@@ -156,14 +156,14 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       ).toBe(true);
     });
 
-    test("tapping the closing line, or swiping, reaches the projects", async ({
+    test("tapping the closing line reaches the sabbatical, and swiping the projects", async ({
       page,
     }) => {
       await ready(page, "/about/");
       await warmUpTouch(page);
       await closing(page).tap();
       await settle(page);
-      expect(pathname(page)).toBe("/work/");
+      expect(pathname(page)).toBe("/now/");
 
       await ready(page, "/about/");
       await warmUpTouch(page);

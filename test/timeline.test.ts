@@ -63,14 +63,26 @@ describe("the timeline content", () => {
     ]);
   });
 
-  test("uses British spelling and carries the sabbatical joke", () => {
+  test("uses British spelling and carries no joke", () => {
     const text = JSON.stringify([timeline, education]);
     expect(text).toContain("visualisations");
     expect(text).toContain("Data Visualisation");
     expect(text).not.toMatch(/visualiz|organiz/i);
-    expect(timeline[0]?.description).toContain(
-      "10/10 would recommend to a friend.",
-    );
+    expect(JSON.stringify(timeline)).not.toContain("10/10");
+  });
+});
+
+describe("the timeline's technologies", () => {
+  test("Unsupervised's technologies are in the spec's order", () => {
+    const u = timeline.find((e) => e.organisation === "Unsupervised");
+    expect(u?.technologies).toEqual([
+      "Airflow",
+      "Python",
+      "Kubernetes + Helm",
+      "AWS",
+      "React + TypeScript",
+      "Go",
+    ]);
   });
 });
 

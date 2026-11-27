@@ -1,12 +1,13 @@
 import { expect, type Page, test } from "@playwright/test";
 import { area, ready as boot, flick, settle } from "./helpers";
 
-const DESCRIPTION = "I design and build. Give me a problem, not a spec.";
+const DESCRIPTION =
+  "I design things and I build them. Give me a problem, not a spec.";
 const workspace = async (page: Page) =>
   Number(await area(page).getAttribute("data-workspace"));
 
 const ADDRESSES: [string, number, string][] = [
-  ["/", 0, "Shrujan Cheruku — Product Engineer"],
+  ["/", 0, "Shrujan Cheruku — Senior Product Engineer"],
   ["/about/", 1, "About — Shrujan Cheruku"],
   ["/work/", 2, "Projects — Shrujan Cheruku"],
   ["/timeline/", 3, "Timeline — Shrujan Cheruku"],
@@ -31,7 +32,7 @@ test("a project's address opens its step with the repository name as title", asy
   page,
 }) => {
   await boot(page, "/work/unmacos/");
-  expect(await area(page).getAttribute("data-step")).toBe("3");
+  expect(await area(page).getAttribute("data-step")).toBe("5");
   await expect(page).toHaveTitle("unmacos — Shrujan Cheruku");
   await expect(page.locator('meta[name="description"]')).not.toHaveAttribute(
     "content",
@@ -54,8 +55,8 @@ test("scrolling changes address and title and adds no history entry", async ({
   await expect(page).toHaveTitle("Projects — Shrujan Cheruku");
   await flick(page, { x: 640, y: 400 });
   await settle(page);
-  expect(new URL(page.url()).pathname).toBe("/work/unmacos/");
-  await expect(page).toHaveTitle("unmacos — Shrujan Cheruku");
+  expect(new URL(page.url()).pathname).toBe("/work/rapid-radiology/");
+  await expect(page).toHaveTitle("rapid-radiology — Shrujan Cheruku");
   await page.keyboard.press("ArrowUp");
   await settle(page);
   await page.keyboard.press("ArrowUp");

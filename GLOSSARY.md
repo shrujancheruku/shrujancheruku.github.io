@@ -9,7 +9,7 @@ The form the whole portfolio takes: one tiled desktop the visitor stays in from 
 _Avoid_: Page, site shell, app
 
 **Workspace**:
-One part of the portfolio's story, shown as a numbered workspace of the desktop. The set is fixed and does not change when the featured projects change; all featured projects share one workspace.
+One part of the portfolio's story, shown as a numbered workspace of the desktop. The set is fixed, in the order opening, timeline, projects, about, sabbatical, contact (the work before the person), and does not change when the featured projects change; all featured projects share one workspace.
 _Avoid_: Section, page, screen, slide
 
 **Step**:
@@ -69,11 +69,11 @@ The compact listing of projects that are selected but not featured. A visitor op
 _Avoid_: Other projects, the rest, graveyard
 
 **Pitch**:
-The one-line claim Shrujan writes for a project. Every project has one, and it is not the repository's GitHub description.
+The one line Shrujan writes saying what a project is. Every project has one, and it is not the repository's GitHub description.
 _Avoid_: Description, tagline, blurb
 
 **Proof line**:
-A full sentence in Shrujan's own voice under a featured project's pitch, saying something he did or decided on that project. A featured project has two to four: at least one says what his part was and who it was for, at least one says where the project stands or what it achieved, and the rest are decisions he made. Each is true when a visitor checks it against the project; none repeats the pitch or sells the project to its users.
+A full sentence in Shrujan's own voice under a featured project's pitch. A featured project has two that tell its story: the first says why he built it, what his part was and who it was for, and the second says what happened, where the project stands or what it achieved. A third may follow as a joke, which comes last and never sits inside a fact. Each is true when a visitor checks it against the project; none repeats the pitch or sells the project to its users.
 _Avoid_: Bullet, feature, highlight, selling point
 
 **Claim**:
@@ -113,11 +113,11 @@ A skill Shrujan rates himself on out of ten, shown as the length of a bar with n
 _Avoid_: Skill meter, proficiency, rating
 
 **Resume**:
-The one-page document of Shrujan's career that a visitor can download or be sent straight to. It states the same facts as the timeline and Education & Internships and may word a description more briefly. It is the one part of the portfolio that stands outside the desktop.
+The one-page document of Shrujan's career that a visitor can download or be sent straight to. It states the same facts as the timeline and Education & Internships in the same words, wording an entry more briefly only where one page forces it, oldest entry first. It carries no jokes. It is the one part of the portfolio that stands outside the desktop.
 _Avoid_: CV, resume section
 
 **Sabbatical**:
-The period from Nov 2025 to now: travelling, time with family, and helping friends launch their products. It is both a workspace of the portfolio and the top entry of the timeline.
+The period from Nov 2025 to now, a break Shrujan chose after a decade of coding every day for work or class: travelling, time with family, helping friends launch their products and building projects of his own. It is both a workspace of the portfolio and the top entry of the timeline, and neither says what comes after it.
 _Avoid_: Career break, gap
 
 **Canonical address**:

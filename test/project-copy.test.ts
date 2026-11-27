@@ -32,10 +32,10 @@ describe("the copy window", () => {
     expect(c.pitch).toBe("A keyboard-first desktop for macOS.");
   });
 
-  test("proof lines carry no full stop", () => {
+  test("proof lines keep their full stops", () => {
     expect(copyOf(project(), 1, 4, 0).proof).toEqual([
       "tiling windows, fuzzy menus",
-      "23 themes",
+      "23 themes.",
     ]);
   });
 

@@ -45,9 +45,9 @@ describe("the real content with the recorded GitHub response", () => {
     const projects = buildProjects(real());
     expect(projects.map((p) => [p.repository, p.featured])).toEqual([
       ["issho", true],
-      ["unmacos", true],
-      ["orca-flow", true],
       ["rapid-radiology", true],
+      ["orca-flow", true],
+      ["unmacos", true],
       ["claude-orchestrate", false],
       ["TrueCrypt-Steganography", false],
       ["aidan-landing-page", false],
@@ -62,19 +62,19 @@ describe("the real content with the recorded GitHub response", () => {
     ]);
     expect(versions).toEqual([
       ["issho", "v1.0.0", "release"],
-      ["unmacos", "v1.5.0", "release"],
-      ["orca-flow", "v0.9.1", "tag"],
       ["rapid-radiology", null, null],
+      ["orca-flow", "v0.9.1", "tag"],
+      ["unmacos", "v1.5.0", "release"],
       ["claude-orchestrate", "v0.8.0", "release"],
       ["TrueCrypt-Steganography", null, null],
       ["aidan-landing-page", null, null],
     ]);
   });
 
-  test("rapid-radiology gives no live link; every project has a pitch", () => {
+  test("rapid-radiology links its live site; every project has a pitch", () => {
     const projects = buildProjects(real());
     const rr = projects.find((p) => p.repository === "rapid-radiology");
-    expect(rr?.live).toBeNull();
+    expect(rr?.live).toBe("https://shrujancheruku.github.io/rapid-radiology/");
     expect(projects.every((p) => p.pitch.length > 0)).toBe(true);
     expect(projects.find((p) => p.repository === "issho")?.live).toBe(
       "https://joinissho.com",
