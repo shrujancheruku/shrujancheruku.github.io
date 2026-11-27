@@ -536,9 +536,7 @@ function stopMotion(): boolean {
  * stretches). A window in both steps re-tiles. On a wide screen, a window that
  * opens grows out of its edge along that edge's axis, and one that closes
  * shrinks back into it, sharing one moving border with the neighbours that
- * re-tile beside it. Rolling past, changing workspace and the phone's own
- * motions are their own tickets: until then their windows simply appear or
- * go, and only those in both steps move.
+ * re-tile beside it.
  */
 function motionBetween(
   before: Layout,
