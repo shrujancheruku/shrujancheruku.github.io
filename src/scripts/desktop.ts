@@ -2,17 +2,23 @@
 // the step changes (src/lib/motion.ts plans the motion, src/scripts/
 // motion-player.ts plays it), and turns wheel, keys and clicks into steps. On
 // touch nothing scrolls: a swipe is one gesture and moves one screen, like a
-// wheel flick moves one step (src/lib/swipe.ts). A step is one or more screens on touch
-// (src/lib/screens.ts), the same step and address.
+// wheel flick moves one step (src/lib/swipe.ts). A step is one or more screens
+// on touch (src/lib/screens.ts), the same step and address.
+//
 // Where the visitor is, and what to do with each input (wait, run, or turn the
 // running motion back), is the navigator's (src/lib/navigator.ts): this script
 // carries out what it says, and hands each motion's plan to the player.
 import { gsap } from "gsap";
 import { Observer } from "gsap/Observer";
 import { interpretKey } from "../lib/keys";
-import { type Plan, planMotion } from "../lib/motion";
+import {
+  type Placement,
+  type Plan,
+  planMotion,
+  sameLayout,
+} from "../lib/motion";
 import { createNavigator, type Outcome, type Where } from "../lib/navigator";
-import { focusAmong, type Screen } from "../lib/screens";
+import { fitScreen, focusAmong } from "../lib/screens";
 import { windowChanges } from "../lib/signals";
 import { createStepScreens } from "../lib/step-screens";
 import { createSwipe, UNZOOMED } from "../lib/swipe";
@@ -20,6 +26,7 @@ import { createWheelGate } from "../lib/wheel-gate";
 import {
   firstStepOf,
   focusOf,
+  inProjects,
   type Layout,
   locate,
   screensOf,
@@ -28,10 +35,10 @@ import {
   tilingOf,
   type Workspace,
 } from "../lib/workspaces";
-import { layoutReader } from "./layout-reader";
+import { layoutReader, pagedWindows } from "./layout-reader";
 import { createMotionPlayer, css } from "./motion-player";
 import { addresses, model } from "./page-data";
-import { type Paged, pagedOf, showPage } from "./paged";
+import { showPage } from "./paged";
 
 gsap.registerPlugin(Observer);
 
@@ -71,30 +78,19 @@ const archiveEl = area.querySelector<HTMLElement>(
 const navigator = createNavigator({
   workspaces,
   book,
-  screens: (n, opened) => screensAt(n, opened).length,
+  screens: (n, opened) => stepScreens.screens(n, opened).length,
   screenOfEntry: (n, slug) => stepScreens.screenOfEntry(n, slug),
   hasArchive: archiveEl !== null,
 });
 
-const inProjects = (n: number): boolean =>
-  workspaces[locate(workspaces, n).workspace]?.id === "projects";
-
 // ---- screens
 // A step's screens on touch are the step-screens module's (src/lib/
-// step-screens.ts), which reads the windows through the layout reader. This
-// stays for the timeline step's two phone screens (#108, see src/lib/
-// screens.ts); the archive pages the same way.
+// step-screens.ts), which reads the windows through the layout reader (src/
+// scripts/layout-reader.ts).
 
 const windowOf = new Map(panes.map((p) => [p.dataset.window ?? "", p]));
-const pagedByWindow = new Map<string, Paged | undefined>();
 /** The paged parts of a window, to show a page of its entries. */
-const pagedWindow = (id: string): Paged | undefined => {
-  if (!pagedByWindow.has(id)) {
-    const pane = windowOf.get(id);
-    pagedByWindow.set(id, pane && pagedOf(pane));
-  }
-  return pagedByWindow.get(id);
-};
+const pagedWindow = pagedWindows(windowOf);
 
 /** Plays the motions (src/lib/motion.ts plans them). */
 const player = createMotionPlayer({
@@ -114,12 +110,8 @@ const stepScreens = createStepScreens({
   // the stack's height is in px: the area's live height resolves it (#160)
   wide: (n, opened) =>
     tilingOf(stepAt(workspaces, n), opened, area.clientHeight),
-  reader: layoutReader(panes),
+  reader: layoutReader(pagedWindow),
 });
-
-/** The screens of step `n`; `opened` says whether its disclosure is open. */
-const screensAt = (n: number, opened: boolean): Screen[] =>
-  stepScreens.screens(n, opened);
 
 /** Whether the not-found terminal is on show, as the navigator last placed it. */
 let notFoundShown = false;
@@ -183,14 +175,11 @@ function markStack(index: number): void {
   }
 }
 
-/** A layout on show: where it is, and what the page says about it. */
-interface Shown {
-  /** Its screen as placed: brought in to the screens the step has. */
-  where: Where;
-  /** The workspace the step is in. */
-  workspace: number;
-  layout: Layout;
-  pages: Readonly<Record<string, number>>;
+/**
+ * A layout on show: where it is (its screen as placed, brought in to the
+ * screens the step has), and what the page says about it.
+ */
+interface Shown extends Placement {
   screens: number;
   focus: string | undefined;
 }
@@ -199,8 +188,8 @@ let shown: Shown | null = null;
 
 /** The screen a place shows, its screen brought in to the screens there are. */
 function screenAt(where: Where): Shown {
-  const screens = screensAt(where.step, where.open);
-  const screen = Math.max(0, Math.min(screens.length - 1, where.screen));
+  const screens = stepScreens.screens(where.step, where.open);
+  const screen = fitScreen(where.screen, screens.length);
   const { layout, pages } = screens[screen] ?? { layout: {}, pages: {} };
   return {
     where: { ...where, screen },
@@ -298,7 +287,7 @@ function place(to: Where, animate: boolean): void {
   if (
     !animate &&
     player.motion === "first appearance" &&
-    JSON.stringify(before?.layout) === JSON.stringify(next.layout)
+    sameLayout(before?.layout, next.layout)
   )
     return;
   // a motion still running ends here: its windows go to rest first
@@ -387,7 +376,7 @@ function disclose(from: Where | null, to: Where): void {
 
 /** Tell the page step `n`'s disclosure changed: Education's cue, or the archive's openers. */
 function announce(n: number, opened: boolean): void {
-  const kind = inProjects(n) ? "archive" : "open";
+  const kind = inProjects(workspaces, n) ? "archive" : "open";
   if (kind === "archive") {
     for (const b of document.querySelectorAll(ARCHIVE_OPENERS))
       b.setAttribute("aria-expanded", String(opened));
@@ -666,7 +655,7 @@ addEventListener("keydown", (e: KeyboardEvent) => {
   // move on; anywhere else (a status bar number just clicked) it moves a step
   if (e.key === " " && t instanceof HTMLElement && t.closest(".tgl")) return;
   const { step, open } = navigator.where;
-  if (e.key === "Escape" && open && inProjects(step)) {
+  if (e.key === "Escape" && open && inProjects(workspaces, step)) {
     e.preventDefault();
     carry(navigator.take({ kind: "archive", open: false }));
     return;
@@ -716,8 +705,10 @@ function remeasure(): void {
   if (!touch.matches) {
     // a wide tiling in px (the stack's rows) follows the area's new height
     if (
-      JSON.stringify(screensAt(at.step, at.open)[0]?.layout) !==
-      JSON.stringify(shown?.layout)
+      !sameLayout(
+        stepScreens.screens(at.step, at.open)[0]?.layout,
+        shown?.layout,
+      )
     )
       carry(navigator.take({ kind: "refit" }));
     return;

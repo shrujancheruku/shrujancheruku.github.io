@@ -1,9 +1,9 @@
-// The composition kit (#39): what every composition is built on, and the
-// lifecycle that runs it. A composition module default-exports a `Composition`;
-// the desktop script (src/scripts/compositions.ts) loads it when the projects
-// workspace gets close and calls `mount` with the project's slot.
+// The composition kit (#39): what every composition is built on, and `mount`,
+// which ties it to the page. A composition module default-exports a
+// `Composition`; the desktop script (src/scripts/compositions.ts) loads it when
+// the projects workspace gets close and calls `mount` with the project's slot.
 //
-// The lifecycle, for every composition:
+// The lifecycle (src/lib/composition-lifecycle.ts), for every composition:
 // - it plays from its beginning each time its window comes on show
 //   (`composition:enter`), and stops for good when it goes (`composition:leave`);
 // - it stops drawing while its window is out of view or the tab is hidden, and
@@ -161,7 +161,7 @@ export function mount(slot: HTMLElement, composition: Composition): void {
 
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
   const lifecycle = createLifecycle({
-    createClock: () => createClock(),
+    createClock,
     play: (next) => {
       clock = next;
       return composition.play(kit);

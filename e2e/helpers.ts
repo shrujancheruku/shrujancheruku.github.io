@@ -1,5 +1,5 @@
 import { expect, type Page } from "@playwright/test";
-import { settle, type Where, whereOf } from "./desktop";
+import { type ScreenNow, settle, whereOf } from "./desktop";
 
 /**
  * Start the page with the crt effect off, as a visitor who turned it off. The
@@ -214,7 +214,7 @@ export async function swipeScreen(
   page: Page,
   direction: 1 | -1,
   s: Swipe = SWIPES[0] as Swipe,
-): Promise<{ before: Where; after: Where }> {
+): Promise<{ before: ScreenNow; after: ScreenNow }> {
   const before = await whereOf(page);
   await swipe(page, direction, s);
   await expect

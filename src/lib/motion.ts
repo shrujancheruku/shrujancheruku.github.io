@@ -309,7 +309,7 @@ export interface WindowPlan {
  * copy of them, taken before the window shows the next page) roll out as the
  * next page's entries roll in.
  */
-export interface Turn {
+export interface PageTurn {
   id: string;
   out: Slide;
   in: Slide;
@@ -323,7 +323,7 @@ export interface Plan {
   /** Every window moving, in the order its motion is made: the new step's, then the old. */
   windows: WindowPlan[];
   /** The page turns, which copy the entries they leave from before the motion starts. */
-  turns: Turn[];
+  turns: PageTurn[];
   /** The area is clipped while it runs, so no window passes over the status bar. */
   clipsArea: boolean;
   /** How long the motion lasts, in seconds. */
@@ -342,8 +342,11 @@ export interface Placement {
 const isBefore = (a: Where, b: Where): boolean =>
   a.step < b.step || (a.step === b.step && a.screen < b.screen);
 
-const sameLayout = (a: Layout, b: Layout): boolean =>
-  JSON.stringify(a) === JSON.stringify(b);
+/** Whether two layouts put the same windows on the same tiles (none is only the same as none). */
+export const sameLayout = (
+  a: Layout | undefined,
+  b: Layout | undefined,
+): boolean => JSON.stringify(a) === JSON.stringify(b);
 
 /** Two places on one step, its disclosure as open in each (the screens of a phone). */
 const sameStep = (a: Placement, b: Placement): boolean =>
@@ -405,7 +408,7 @@ const travelling = (from: number, to: number, at: number): Slide => ({
 });
 
 /** When the last part of the motion ends. */
-function lastingOf(windows: WindowPlan[], turns: Turn[]): number {
+function lastingOf(windows: WindowPlan[], turns: PageTurn[]): number {
   const parts: (Timing | undefined)[] = [
     ...windows.flatMap((w) => [w.frame, w.fade, w.slide]),
     ...turns.flatMap((t) => [t.out, t.in]),
@@ -511,7 +514,7 @@ function retilePlan(
     }
   }
   // a paged window turning its page, with the layout unchanged around it
-  const turns: Turn[] =
+  const turns: PageTurn[] =
     phone && sameStep(before, after) && sameLayout(before.layout, after.layout)
       ? Object.keys(after.layout)
           .filter((id) => (before.pages[id] ?? 0) !== (after.pages[id] ?? 0))

@@ -345,6 +345,12 @@ export function locate(
   throw new RangeError(`no step ${step}`);
 }
 
+/** Whether step `step` is in the projects workspace. */
+export const inProjects = (
+  workspaces: readonly Workspace[],
+  step: number,
+): boolean => workspaces[locate(workspaces, step).workspace]?.id === "projects";
+
 /** The step one `direction` away, held at the first and last step. */
 export function stepAfter(
   workspaces: readonly Workspace[],

@@ -261,13 +261,13 @@ export async function barItem(page: Page, id: WorkspaceId): Promise<Locator> {
 // ---------------------------------------------------------- where it is
 
 /** The step on show, the screen in it (a phone splits a step into screens), and how many it has. */
-export interface Where {
+export interface ScreenNow {
   step: number;
   screen: number;
   screens: number;
 }
 
-export const whereOf = (page: Page): Promise<Where> =>
+export const whereOf = (page: Page): Promise<ScreenNow> =>
   area(page).evaluate((a) => ({
     step: Number(a.dataset.step),
     screen: Number(a.dataset.screen),
@@ -292,14 +292,19 @@ export const lastStep = async (page: Page): Promise<number> =>
   (await addressesOf(page)).length - 1;
 
 /** Whether a position is the first screen of the first step. */
-export const atStart = (w: Where): boolean => w.step === 0 && w.screen === 0;
+export const atStart = (w: ScreenNow): boolean =>
+  w.step === 0 && w.screen === 0;
 
 /** Whether a position is the last screen of the last step. */
-export const atEnd = async (page: Page, w: Where): Promise<boolean> =>
+export const atEnd = async (page: Page, w: ScreenNow): Promise<boolean> =>
   w.step === (await lastStep(page)) && w.screen === w.screens - 1;
 
 /** Whether `after` is exactly one screen from `before` in `direction`. */
-export function isOneScreen(before: Where, after: Where, direction: 1 | -1) {
+export function isOneScreen(
+  before: ScreenNow,
+  after: ScreenNow,
+  direction: 1 | -1,
+) {
   if (direction === 1)
     return before.screen < before.screens - 1
       ? after.step === before.step && after.screen === before.screen + 1

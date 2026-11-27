@@ -5,17 +5,24 @@ import type { StepScreensReader } from "../lib/step-screens";
 import { type Paged, pagedOf, readWindow } from "./paged";
 import { measureTimeline, openTo } from "./timeline-entries";
 
-/** A reader over the windows `panes`, by their `data-window`. */
-export function layoutReader(panes: readonly HTMLElement[]): StepScreensReader {
-  const windowOf = new Map(panes.map((p) => [p.dataset.window ?? "", p]));
+/** The paged parts of a window among `windows`, by its id, found once. */
+export function pagedWindows(
+  windows: ReadonlyMap<string, HTMLElement>,
+): (id: string) => Paged | undefined {
   const found = new Map<string, Paged | undefined>();
-  const pagedWindow = (id: string): Paged | undefined => {
+  return (id) => {
     if (!found.has(id)) {
-      const pane = windowOf.get(id);
+      const pane = windows.get(id);
       found.set(id, pane && pagedOf(pane));
     }
     return found.get(id);
   };
+}
+
+/** A reader over the windows, through their paged parts (`pagedWindows`). */
+export function layoutReader(
+  pagedWindow: (id: string) => Paged | undefined,
+): StepScreensReader {
   return {
     window: (id, tile) => {
       const paged = pagedWindow(id);

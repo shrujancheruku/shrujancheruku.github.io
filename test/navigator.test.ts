@@ -349,7 +349,7 @@ const phone =
   (step: number, open: boolean): number =>
     open ? 1 : (counts[step] ?? 1);
 
-describe("an input during a motion (was src/lib/mid-motion.ts)", () => {
+describe("an input during a motion", () => {
   test("runs at once when no motion is running", () => {
     expect(booted().jump(PROJECTS)).toMatchObject({
       to: at(PROJECTS),
