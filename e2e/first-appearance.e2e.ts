@@ -23,8 +23,8 @@ interface Run {
   ids: string[];
   /** Each window's box on every frame, in tiling order; null while it is hidden. */
   frames: (Box | null)[][];
-  /** The state of `data-retiling` on the frame the windows were first sampled. */
-  waited: boolean;
+  /** The state of `data-retiling` on the frame the windows were first sampled, if read. */
+  waited?: boolean;
 }
 
 const PANES = ".pane[data-window]";
@@ -439,7 +439,6 @@ test.describe("phone", () => {
     const run: Run = {
       ids: Object.keys(layout),
       frames: frames.map((f) => order.map((i) => f[i] ?? null)),
-      waited: true,
     };
     expectAppeared(run, (_, i) => (i % 2 === 0 ? "right" : "left"));
     const rest = await restOf(await page.context().newPage(), "/", run.ids);
