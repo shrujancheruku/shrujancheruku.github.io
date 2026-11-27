@@ -2,8 +2,9 @@
 // the step changes (src/lib/motion.ts plans the motion, src/scripts/
 // motion-player.ts plays it), and turns wheel, keys and clicks into steps. On
 // touch nothing scrolls: a swipe is one gesture and moves one screen, like a
-// wheel flick moves one step (src/lib/swipe.ts). A step is one or more screens on touch
-// (src/lib/screens.ts), the same step and address.
+// wheel flick moves one step (src/lib/swipe.ts). A step is one or more screens
+// on touch (src/lib/screens.ts), the same step and address.
+//
 // Where the visitor is, and what to do with each input (wait, run, or turn the
 // running motion back), is the navigator's (src/lib/navigator.ts): this script
 // carries out what it says, and hands each motion's plan to the player.
@@ -84,9 +85,8 @@ const navigator = createNavigator({
 
 // ---- screens
 // A step's screens on touch are the step-screens module's (src/lib/
-// step-screens.ts), which reads the windows through the layout reader. This
-// stays for the timeline step's two phone screens (#108, see src/lib/
-// screens.ts); the archive pages the same way.
+// step-screens.ts), which reads the windows through the layout reader (src/
+// scripts/layout-reader.ts).
 
 const windowOf = new Map(panes.map((p) => [p.dataset.window ?? "", p]));
 /** The paged parts of a window, to show a page of its entries. */
