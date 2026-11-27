@@ -115,6 +115,20 @@ test("an unknown path boots the desktop with a not-found terminal offering the s
   await expect(term).toBeVisible();
   await expect(term).toContainText("/no/such/place/");
   await expect(term.locator("a")).toHaveCount(6);
+  // the six places, numbered in the story's order, each linking to its address
+  await expect(term.locator("li")).toHaveText([
+    /^1\s+opening$/,
+    /^2\s+timeline$/,
+    /^3\s+projects$/,
+    /^4\s+about$/,
+    /^5\s+sabbatical$/,
+    /^6\s+contact$/,
+  ]);
+  expect(
+    await term.locator("a").evaluateAll((els) =>
+      els.map((e) => e.getAttribute("href")),
+    ),
+  ).toEqual(["/", "/timeline/", "/work/", "/about/", "/now/", "/contact/"]);
 
   await term.getByRole("link", { name: "timeline" }).click();
   await settle(page);

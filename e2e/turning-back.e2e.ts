@@ -250,9 +250,9 @@ test("any other input waits for the motion, and a jump that waited adds its hist
 }) => {
   // during the change to contact, a jump to the projects and then to about:
   // only the latest runs, once the windows are at rest on contact
-  expect(await midMotion(page, "6", ["3", "2"])).toEqual([true, true]);
+  expect(await midMotion(page, "6", ["3", "4"])).toEqual([true, true]);
   await settle(page);
-  await expect(area(page)).toHaveAttribute("data-workspace", "1");
+  await expect(area(page)).toHaveAttribute("data-workspace", "3");
   await expectNoClone(page);
   // Back goes to contact, whose entry came first, then home
   await page.goBack();
