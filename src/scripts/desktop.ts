@@ -19,15 +19,9 @@ import {
   travelOf,
 } from "../lib/motion";
 import { createNavigator, type Outcome, type Where } from "../lib/navigator";
-import {
-  anchorOf,
-  type EntriesOf,
-  expandScreens,
-  focusAmong,
-  type Screen,
-  screenHolding,
-} from "../lib/screens";
+import { focusAmong, type Screen } from "../lib/screens";
 import { windowChanges } from "../lib/signals";
+import { createStepScreens } from "../lib/step-screens";
 import { createSwipe, UNZOOMED } from "../lib/swipe";
 import { createWheelGate } from "../lib/wheel-gate";
 import {
@@ -42,9 +36,9 @@ import {
   tilingOf,
   type Workspace,
 } from "../lib/workspaces";
+import { layoutReader } from "./layout-reader";
 import { addresses, model } from "./page-data";
-import { measurePages, type Paged, pagedOf, showPage } from "./paged";
-import { fitTimeline } from "./timeline-entries";
+import { type Paged, pagedOf, showPage } from "./paged";
 
 gsap.registerPlugin(Observer);
 
@@ -103,7 +97,7 @@ const navigator = createNavigator({
   workspaces,
   book,
   screens: (n, opened) => screensAt(n, opened).length,
-  screenOfEntry,
+  screenOfEntry: (n, slug) => stepScreens.screenOfEntry(n, slug),
   hasArchive: archiveEl !== null,
 });
 
@@ -111,13 +105,14 @@ const inProjects = (n: number): boolean =>
   workspaces[locate(workspaces, n).workspace]?.id === "projects";
 
 // ---- screens
-// On touch a step is its layouts in order, and a window with more entries than
-// fit (which ones: src/lib/screens.ts) is as many screens as its entries need. The pages are measured in the window as it will be tiled, and kept until
-// the screen changes size or the fonts arrive. This stays for the timeline step's
-// two phone screens (#108, see src/lib/screens.ts); the archive pages the same way.
+// A step's screens on touch are the step-screens module's (src/lib/
+// step-screens.ts), which reads the windows through the layout reader. This
+// stays for the timeline step's two phone screens (#108, see src/lib/
+// screens.ts); the archive pages the same way.
 
 const windowOf = new Map(panes.map((p) => [p.dataset.window ?? "", p]));
 const pagedByWindow = new Map<string, Paged | undefined>();
+/** The paged parts of a window, to show a page of its entries. */
 const pagedWindow = (id: string): Paged | undefined => {
   if (!pagedByWindow.has(id)) {
     const pane = windowOf.get(id);
@@ -125,47 +120,20 @@ const pagedWindow = (id: string): Paged | undefined => {
   }
   return pagedByWindow.get(id);
 };
-const pageCache = new Map<string, number[][]>();
 
-/** The pages a paged window falls into at a tile of the area. */
-function pagesOf(id: string, tile: Layout[string]): number[][] {
-  const paged = pagedWindow(id);
-  if (!paged) return [[]];
-  const key = `${id}:${tile.join(",")}`;
-  let pages = pageCache.get(key);
-  if (!pages) {
-    pages = measurePages(paged, tile);
-    pageCache.set(key, pages);
-  }
-  return pages;
-}
+const stepScreens = createStepScreens({
+  steps,
+  touch: () => touch.matches,
+  layouts: (n, opened) => screensOf(stepAt(workspaces, n), opened),
+  // the stack's height is in px: the area's live height resolves it (#160)
+  wide: (n, opened) =>
+    tilingOf(stepAt(workspaces, n), opened, area.clientHeight),
+  reader: layoutReader(panes),
+});
 
 /** The screens of step `n`; `opened` says whether its disclosure is open. */
-function screensAt(n: number, opened: boolean): Screen[] {
-  const found = stepAt(workspaces, n);
-  // the stack's height is in px: the area's live height resolves it (#160)
-  if (!touch.matches)
-    return [{ layout: tilingOf(found, opened, area.clientHeight), pages: {} }];
-  const layouts = screensOf(found, opened);
-  const counts: Record<string, number> = {};
-  for (const layout of layouts)
-    for (const [id, tile] of Object.entries(layout))
-      if (pagedWindow(id)) counts[id] = pagesOf(id, tile).length;
-  return expandScreens(layouts, counts);
-}
-
-/** The screen of step `n`'s archive that holds an entry (0 on a wide screen). */
-function screenOfEntry(n: number, slug: string): number {
-  const paged = pagedWindow("archive");
-  if (!touch.matches || !slug || !paged) return 0;
-  const at = paged.items.findIndex(
-    (li) => li.dataset.entry?.toLowerCase() === slug.toLowerCase(),
-  );
-  const tile = screensOf(stepAt(workspaces, n), true)[0]?.archive;
-  if (at < 0 || !tile) return 0;
-  const page = pagesOf("archive", tile).findIndex((ix) => ix.includes(at));
-  return Math.max(0, page);
-}
+const screensAt = (n: number, opened: boolean): Screen[] =>
+  stepScreens.screens(n, opened);
 
 /** Whether the not-found terminal is on show, as the navigator last placed it. */
 let notFoundShown = false;
@@ -313,7 +281,7 @@ function writeRest(
       turning.push(turnFrom(paged));
     showPage(
       paged,
-      touch.matches ? pagesOf(id, tile)[pages[id] ?? 0] : undefined,
+      touch.matches ? stepScreens.pagesOf(id, tile)[pages[id] ?? 0] : undefined,
     );
   }
   showNotFound();
@@ -786,7 +754,7 @@ function disclose(from: Where | null, to: Where): void {
   if (opens) announce(to.step, true);
   if (!closes && !opens) return;
   area.dataset.open = String(to.open);
-  pageCache.clear();
+  stepScreens.changed();
 }
 
 /** Tell the page step `n`'s disclosure changed: Education's cue, or the archive's openers. */
@@ -1105,22 +1073,15 @@ for (const [cue, index] of [
 function onLayoutChange(): void {
   swipe.reset();
   swiping = 0;
-  if (touch.matches) fitEntries();
-  pageCache.clear();
+  stepScreens.changed();
   carry(navigator.take({ kind: "refit", screen: 0 }));
 }
 touch.addEventListener("change", onLayoutChange);
 
-/** The entries a paged window shows on a screen, as the cache has them now. */
-const entriesOf: EntriesOf = (s, id) => {
-  const tile = s.layout[id];
-  return tile ? (pagesOf(id, tile)[s.pages[id] ?? 0] ?? []) : [];
-};
-
 /**
  * What fits a page changed: measure again and stay on the same content. The
  * screen that held what was on show may have another index now (the timeline
- * over fewer screens, say), so it is found by its first entry, not its index.
+ * over fewer screens, say), so the module finds it by its first entry.
  */
 function remeasure(): void {
   const at = shown?.where ?? navigator.where;
@@ -1133,26 +1094,8 @@ function remeasure(): void {
       carry(navigator.take({ kind: "refit" }));
     return;
   }
-  fitEntries();
-  const before = screensAt(at.step, at.open)[at.screen];
-  const anchor = before && anchorOf(before, entriesOf);
-  pageCache.clear();
-  const screen = anchor
-    ? screenHolding(screensAt(at.step, at.open), anchor, entriesOf)
-    : undefined;
+  const screen = stepScreens.changed(at);
   carry(navigator.take({ kind: "refit", screen }));
-}
-/**
- * Open the timeline's entries to what the screen holds. Always before the
- * step's screens are counted, so the timeline is never more than one screen.
- */
-function fitEntries(): void {
-  for (let n = 0; n < steps; n++) {
-    const tile = screensOf(stepAt(workspaces, n), false)[0]?.timeline;
-    if (!tile) continue;
-    fitTimeline(tile);
-    return;
-  }
 }
 let measured = "";
 addEventListener("resize", () => {
@@ -1178,7 +1121,6 @@ function appear(): void {
 // the entry page says which step its address opens
 history.scrollRestoration = "manual";
 area.dataset.open = "false";
-if (touch.matches) fitEntries();
 area.dataset.retiling ??= "false";
 // /archive/ and an archive project's address boot with the archive open
 const boot = navigator.take({

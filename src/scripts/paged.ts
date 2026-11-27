@@ -9,7 +9,7 @@
 // pages on touch. src/lib/screens.ts says which windows page and why the
 // multi-screen code stays.
 
-import { paginate } from "../lib/screens";
+import type { Reading, Tile } from "../lib/step-screens";
 
 export interface Paged {
   pane: HTMLElement;
@@ -29,16 +29,12 @@ export function pagedOf(pane: HTMLElement): Paged | undefined {
 const px = (value: string): number => Number.parseFloat(value) || 0;
 
 /**
- * The pages the window's entries fall into when the window has `tile` (left,
- * top, width, height in percent of its area). The window is put at that tile
- * unseen for the reading, then restored: nothing is painted in between.
+ * Run `read` with `pane` put at `tile` (left, top, width, height in percent of
+ * its area) unseen, then restore it: nothing is painted in between. The one
+ * place a window is measured at a tile it is not on.
  */
-export function measurePages(
-  { pane, root, list, items }: Paged,
-  tile: readonly [number, number, number, number],
-): number[][] {
+export function placedAt<T>(pane: HTMLElement, tile: Tile, read: () => T): T {
   const style = pane.style.cssText;
-  const hidden = items.map((i) => i.hidden);
   const [left, top, width, height] = tile;
   Object.assign(pane.style, {
     display: "block",
@@ -48,33 +44,50 @@ export function measurePages(
     width: `${width}%`,
     height: `${height}%`,
   });
-  for (const i of items) i.hidden = false;
-
-  const heights = items.map((i) => Math.ceil(i.getBoundingClientRect().height));
-  // a list with nothing laid out (education's roles, closed) is one page
-  if (heights.every((h) => h === 0)) {
+  try {
+    return read();
+  } finally {
     pane.style.cssText = style;
-    for (const [n, i] of items.entries()) i.hidden = hidden[n] ?? false;
-    return paginate(heights, Number.POSITIVE_INFINITY);
   }
-  const room = getComputedStyle(root);
-  const budget =
-    root.clientHeight - px(room.paddingTop) - px(room.paddingBottom);
-  // what is above the list, and what the list adds around its entries
-  const above =
-    list.getBoundingClientRect().top -
-    root.getBoundingClientRect().top -
-    px(room.paddingTop);
-  const around = Math.max(
-    0,
-    list.getBoundingClientRect().height - heights.reduce((a, h) => a + h, 0),
-  );
-  // a 2px margin for rounding
-  const pages = paginate(heights, Math.floor(budget - above - around) - 2);
+}
 
-  pane.style.cssText = style;
-  for (const [n, i] of items.entries()) i.hidden = hidden[n] ?? false;
-  return pages;
+/**
+ * The window's entries' heights, and the room a page has, when the window has
+ * `tile`. The entries are shown for the reading, then put back.
+ */
+export function readWindow(
+  { pane, root, list, items }: Paged,
+  tile: Tile,
+): Reading {
+  return placedAt(pane, tile, () => {
+    const hidden = items.map((i) => i.hidden);
+    for (const i of items) i.hidden = false;
+    try {
+      const heights = items.map((i) =>
+        Math.ceil(i.getBoundingClientRect().height),
+      );
+      // a list with nothing laid out (education's roles, closed) is one page
+      if (heights.every((h) => h === 0))
+        return { heights, room: Number.POSITIVE_INFINITY };
+      const room = getComputedStyle(root);
+      const budget =
+        root.clientHeight - px(room.paddingTop) - px(room.paddingBottom);
+      // what is above the list, and what the list adds around its entries
+      const above =
+        list.getBoundingClientRect().top -
+        root.getBoundingClientRect().top -
+        px(room.paddingTop);
+      const around = Math.max(
+        0,
+        list.getBoundingClientRect().height -
+          heights.reduce((a, h) => a + h, 0),
+      );
+      // a 2px margin for rounding
+      return { heights, room: Math.floor(budget - above - around) - 2 };
+    } finally {
+      for (const [n, i] of items.entries()) i.hidden = hidden[n] ?? false;
+    }
+  });
 }
 
 /** Show only the entries at `indices`; `undefined` shows them all (a wide screen). */

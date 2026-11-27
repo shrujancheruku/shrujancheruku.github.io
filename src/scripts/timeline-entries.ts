@@ -2,7 +2,9 @@
 // measured from the layout, and past the limit opening one closes the one
 // open longest. The queue rules are src/lib/open-queue.ts; this reads the
 // layout, keeps the markup true to the queue, and takes the taps.
-import { initialQueue, limitOf, toggled, trimmed } from "../lib/open-queue";
+import { initialQueue, toggled, trimmed } from "../lib/open-queue";
+import type { Tile, TimelineProbe } from "../lib/step-screens";
+import { placedAt } from "./paged";
 
 const list = document.querySelector<HTMLElement>("[data-entries]");
 const pane = list?.closest<HTMLElement>(".pane") ?? null;
@@ -34,55 +36,51 @@ const overflows = (): boolean =>
   !!body && body.scrollHeight > body.clientHeight + 1;
 
 /**
- * The most entries that fit open together in the timeline window at `tile`
- * (left, top, width, height in percent of the area). The entries that take the
- * most room are the ones tried, so the limit holds whichever are opened. The
- * window is put at the tile unseen for the reading, then restored.
+ * Run `find` on the timeline window at `tile`: it is given the entries and
+ * whether the tallest `n` fit open together (the tallest are the ones tried,
+ * so the limit holds whichever are opened), and its answer is the limit.
+ * Undefined when the page has no timeline.
  */
-function measureLimit(tile: readonly [number, number, number, number]): number {
-  if (!pane || !list || !body) return articles.length;
-  const style = pane.style.cssText;
-  const [left, top, width, height] = tile;
-  Object.assign(pane.style, {
-    display: "block",
-    visibility: "hidden",
-    left: `${left}%`,
-    top: `${top}%`,
-    width: `${width}%`,
-    height: `${height}%`,
+export function measureTimeline(
+  tile: Tile,
+  find: (probe: TimelineProbe) => number,
+): number | undefined {
+  if (!pane || !list || !body || articles.length === 0) return undefined;
+  const el = list;
+  return placedAt(pane, tile, () => {
+    try {
+      // what each entry adds when it alone is open
+      render([]);
+      el.setAttribute("data-has-open", "");
+      const base = el.getBoundingClientRect().height;
+      const added = articles.map((_, i) => {
+        render([i]);
+        return el.getBoundingClientRect().height - base;
+      });
+      const tallest = added
+        .map((h, i) => ({ h, i }))
+        .sort((a, b) => b.h - a.h)
+        .map((e) => e.i);
+      return find({
+        count: articles.length,
+        fits: (n) => {
+          render(tallest.slice(0, n));
+          return !overflows();
+        },
+      });
+    } finally {
+      render(queue);
+    }
   });
-  // what each entry adds when it alone is open
-  render([]);
-  list.setAttribute("data-has-open", "");
-  const base = list.getBoundingClientRect().height;
-  const added = articles.map((_, i) => {
-    render([i]);
-    return list.getBoundingClientRect().height - base;
-  });
-  const tallest = added
-    .map((h, i) => ({ h, i }))
-    .sort((a, b) => b.h - a.h)
-    .map((e) => e.i);
-  const fit = limitOf(articles.length, (n) => {
-    render(tallest.slice(0, n));
-    return !overflows();
-  });
-  pane.style.cssText = style;
-  render(queue);
-  return fit;
 }
 
 /**
- * Measure the limit at the timeline's tile and bring the open entries to it:
- * untouched they are the top ones up to the limit, touched they are cut to it
- * (the longest-open closing first). Called before the step's screens are
- * counted, so the timeline is always the one screen.
+ * Bring the open entries to `limit`: untouched they are the top ones up to
+ * the limit, touched they are cut to it (the longest-open closing first).
  */
-export function fitTimeline(
-  tile: readonly [number, number, number, number],
-): void {
+export function openTo(newLimit: number): void {
   if (articles.length === 0) return;
-  limit = measureLimit(tile);
+  limit = newLimit;
   queue = touched
     ? trimmed(queue, limit)
     : initialQueue(articles.length, limit);
