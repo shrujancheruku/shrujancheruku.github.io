@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { area, flick, framesOf, settle } from "./helpers";
+import { area, flick, framesOf, ready, settle } from "./helpers";
 
 const NAMES = [
   "opening",
@@ -24,8 +24,7 @@ const shown = (page: Page) =>
   );
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/");
-  await expect(area(page)).toHaveAttribute("data-ready", "true");
+  await ready(page, "/");
 });
 
 test("boots on the opening workspace with its three windows", async ({

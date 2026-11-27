@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { area } from "./helpers";
+import { ready } from "./helpers";
 
 // a beat is 2.2 s and a cycle five of them
 test.describe.configure({ timeout: 60_000 });
@@ -13,8 +13,7 @@ const siteTheme = (page: Page) =>
 const open = async (page: Page, theme?: string) => {
   if (theme)
     await page.addInitScript((t) => localStorage.setItem("theme", t), theme);
-  await page.goto("/work/unmacos/");
-  await expect(area(page)).toHaveAttribute("data-ready", "true");
+  await ready(page, "/work/unmacos/");
   await expect(slot(page)).toHaveAttribute("data-state", "playing");
 };
 
@@ -151,8 +150,7 @@ test("with reduced motion it is frozen at its still frame in the visitor's theme
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(() => localStorage.setItem("theme", "gruvbox"));
-  await page.goto("/work/unmacos/");
-  await expect(area(page)).toHaveAttribute("data-ready", "true");
+  await ready(page, "/work/unmacos/");
   await expect(slot(page)).toHaveAttribute("data-state", "frame");
   await expect(scene(page).locator(".tile")).toHaveCount(4);
   await expect(scene(page).locator(".keys.on")).toHaveCount(0);

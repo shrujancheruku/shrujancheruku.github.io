@@ -1,6 +1,6 @@
 import { devices, expect, type Page, test } from "@playwright/test";
 import { typed, unseen } from "./fit";
-import { area, settle } from "./helpers";
+import { area, ready, settle } from "./helpers";
 
 const shown = (page: Page) =>
   page.$$eval(".pane", (els) =>
@@ -11,8 +11,7 @@ const shown = (page: Page) =>
   );
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/");
-  await expect(area(page)).toHaveAttribute("data-ready", "true");
+  await ready(page, "/");
   // key 5: the sabbatical workspace
   await page.keyboard.press("5");
   await page.waitForTimeout(1100);
@@ -85,8 +84,7 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       defaultBrowserType?: string;
     };
     const page = await browser.newPage(phone);
-    await page.goto("/");
-    await expect(area(page)).toHaveAttribute("data-ready", "true");
+    await ready(page, "/");
     await page.locator(".ws button").nth(4).click();
     await expect(area(page)).toHaveAttribute("data-workspace", "4");
     await settle(page);

@@ -3,10 +3,17 @@ import { expect, type Page } from "@playwright/test";
 /** The desktop's tiling area, which carries the step, workspace and re-tile state. */
 export const area = (page: Page) => page.locator("main.area");
 
-/** Load `path` and wait for the desktop to boot. */
+/**
+ * Load `path` and wait for the desktop to boot, and for its first appearance
+ * to end: the windows slide in with `data-retiling` true, and the wheel and
+ * the swipe wait for them.
+ */
 export async function ready(page: Page, path = "/"): Promise<void> {
   await page.goto(path);
   await expect(area(page)).toHaveAttribute("data-ready", "true");
+  await expect(area(page)).toHaveAttribute("data-retiling", "false", {
+    timeout: 15_000,
+  });
 }
 
 /**
