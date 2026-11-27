@@ -1,12 +1,13 @@
 import { expect, type Page, test } from "@playwright/test";
 import { area, ready as boot, flick, settle } from "./helpers";
 
-const DESCRIPTION = "I design and build. Give me a problem, not a spec.";
+const DESCRIPTION =
+  "I design things and I build them. Give me a problem, not a spec.";
 const workspace = async (page: Page) =>
   Number(await area(page).getAttribute("data-workspace"));
 
 const ADDRESSES: [string, number, string][] = [
-  ["/", 0, "Shrujan Cheruku — Product Engineer"],
+  ["/", 0, "Shrujan Cheruku — Senior Product Engineer"],
   ["/about/", 1, "About — Shrujan Cheruku"],
   ["/work/", 2, "Projects — Shrujan Cheruku"],
   ["/timeline/", 3, "Timeline — Shrujan Cheruku"],

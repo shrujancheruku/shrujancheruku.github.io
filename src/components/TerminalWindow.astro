@@ -50,6 +50,15 @@ const { id, label, exchanges } = Astro.props;
     color: var(--ac);
   }
 
+  /* a phone's terminal is a third of the screen: the longer exchanges still fit */
+  @media (max-width: 760px) {
+    .term {
+      padding: 26px 12px 10px;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+  }
+
   .cur {
     background: var(--fg);
     animation: blink 1s steps(1) infinite;

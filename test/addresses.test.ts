@@ -19,7 +19,7 @@ describe("the address book", () => {
   test("each workspace has its path and title from the spec's table", () => {
     const at = (w: number) => book.forStep(firstStepOf(workspaces, w));
     expect([0, 1, 3, 4, 5].map((w) => [at(w).path, at(w).title])).toEqual([
-      ["/", "Shrujan Cheruku — Product Engineer"],
+      ["/", "Shrujan Cheruku — Senior Product Engineer"],
       ["/about/", "About — Shrujan Cheruku"],
       ["/timeline/", "Timeline — Shrujan Cheruku"],
       ["/now/", "Sabbatical — Shrujan Cheruku"],
@@ -49,7 +49,7 @@ describe("the address book", () => {
   test("other addresses use the standing description", () => {
     expect(book.forStep(0).description).toBe(DESCRIPTION);
     expect(DESCRIPTION).toBe(
-      "I design and build. Give me a problem, not a spec.",
+      "I design things and I build them. Give me a problem, not a spec.",
     );
   });
 
