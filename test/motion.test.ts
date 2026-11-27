@@ -133,11 +133,15 @@ describe("the edge a window opens out of and closes into", () => {
   });
 
   test("the far side from neighbours to its right is the left", () => {
+    const after: Layout = { a: [0, 0, 40, 100], b: [40, 0, 60, 100] };
+    expect(edgeOf("a", { b: [0, 0, 100, 100] }, after)).toBe("left");
+  });
+
+  test("a neighbour that only touches it is none: the fallback holds", () => {
     const before: Layout = { b: [40, 0, 60, 100] };
     const after: Layout = { a: [0, 0, 40, 100], b: [40, 0, 60, 100] };
-    // b doesn't overlap a: no neighbour, so the fallback (a doesn't touch the right)
+    // b doesn't overlap a, and a doesn't touch the right: bottom
     expect(edgeOf("a", before, after)).toBe("bottom");
-    expect(edgeOf("a", { b: [0, 0, 100, 100] }, after)).toBe("left");
   });
 
   test("the far side from a neighbour below is the top", () => {
