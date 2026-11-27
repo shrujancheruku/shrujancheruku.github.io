@@ -3,8 +3,9 @@
 // its entries past inside the window, the archive opens out of the right edge
 // while the copy and the composition close into the left, and a swipe moves
 // nothing until the finger lifts. Shape only, never timing: every frame is
-// sampled and checked for direction, order, which sides move and the final
-// rectangles. Reduced motion places the windows with no frame between.
+// sampled, on the page's clock in fixed frames, and checked for direction,
+// order, which sides move and the final rectangles. Reduced motion places the
+// windows with no frame between.
 import { devices, expect, type Page, test } from "@playwright/test";
 import { area, type Box, framesOf, ready, settle, whereOf } from "./helpers";
 
@@ -12,6 +13,14 @@ const { defaultBrowserType: _, ...pixel } = devices["Pixel 7"];
 test.use({ ...pixel });
 
 const ARCHIVE_PROJECT = "/work/truecrypt-steganography/";
+
+/** One frame of the page's clock, in ms. */
+const FRAME = 16;
+
+test.beforeEach(async ({ page }) => {
+  // the clock flows on its own, except while sample() records a motion
+  await page.clock.install();
+});
 
 const pane = (id: string) => `.pane[data-window="${id}"]`;
 
@@ -23,7 +32,20 @@ async function sample(
 ): Promise<(Box | null)[][]> {
   const a = await area(page).boundingBox();
   if (!a) throw new Error("no area");
-  const frames = await framesOf(page, selector, "rect", action);
+  const frames = await framesOf(page, selector, "rect", async () => {
+    // the motion runs on the page's clock in fixed frames, so a busy machine
+    // cannot skip part of it between two sampled frames
+    const now = await page.evaluate(() => Date.now());
+    await page.clock.pauseAt(new Date(now + 1000));
+    await action();
+    for (
+      let f = 0;
+      f < 400 && (await area(page).getAttribute("data-retiling")) !== "false";
+      f++
+    )
+      await page.clock.runFor(FRAME);
+    await page.clock.resume();
+  });
   return frames.map((f) =>
     f.map((b) =>
       b.width === 0 || b.height === 0
