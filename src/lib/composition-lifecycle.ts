@@ -60,17 +60,17 @@ export interface LifecycleOptions {
   /** Called after every change of what is reported. */
   onChange(report: Report): void;
   /** Hold the end this long, then play again. Without it the end is held for good. */
-  holdMs?: number;
+  holdMs?: number | undefined;
   /** The names of the composition's frames. */
   frames: readonly string[];
   card: string;
-  flashes?: boolean;
+  flashes?: boolean | undefined;
   /** The window is on show to begin with. */
   active?: boolean;
   /** The tab is visible to begin with. */
   visible?: boolean;
   reduced?: boolean;
-  asked?: string;
+  asked?: string | undefined;
 }
 
 export interface Lifecycle {
