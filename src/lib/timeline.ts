@@ -1,6 +1,7 @@
 // The timeline's content: one source for the timeline window, Education &
-// Internships and (later) the resume. Wording is final, from the "Timeline
-// content" decision (#13): British/Indian spelling, month and full year.
+// Internships and the resume (src/lib/resume.ts reads it). Wording is from
+// the portfolio copy spec (#154) and its timeline ticket (#155):
+// British/Indian spelling, month and full year.
 // An entry may carry `resume`, wording the resume uses instead of
 // `description` when it needs fewer words; the site ignores it. `resume.from`
 // is the fingerprint of the site wording it was written from (src/lib/resume.ts):

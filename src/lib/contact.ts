@@ -1,5 +1,5 @@
 // The contact workspace's words and channels: pure, no DOM.
-// Wording is from the spec (#29) and the contact mechanics ticket (#18).
+// Wording is from the copy ticket (#157); the mechanics from #18.
 
 /** The line under `$ contact`, before the channels. */
 export const CONTACT_LINE = "Email reaches me fastest, wherever I am.";
