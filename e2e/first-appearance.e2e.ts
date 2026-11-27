@@ -389,7 +389,22 @@ test.describe("phone", () => {
       };
       requestAnimationFrame(tick);
     }, PANES);
+    // Time is the test's: Playwright's clock fakes requestAnimationFrame and
+    // Date, so GSAP's ticker moves only in the fixed frames run here. A busy
+    // machine can no longer skip the appearance ahead between two frames.
+    await page.clock.install();
+    await page.clock.pauseAt(new Date(Date.now() + 1000));
     await page.goto("/");
+    await expect(area(page)).toHaveAttribute("data-ready", "true");
+    for (let f = 0; f < 200; f++) {
+      await page.clock.runFor(16);
+      const at = await area(page).evaluate((a) => ({
+        step: a.dataset.step,
+        retiling: a.dataset.retiling,
+      }));
+      if (at.step === "1" && at.retiling === "false") break;
+    }
+    await page.clock.resume();
     // once the windows are in, the queued swipe runs: one step down
     await expect(area(page)).toHaveAttribute("data-step", "1");
     await expect(area(page)).toHaveAttribute("data-retiling", "false");
