@@ -3,9 +3,9 @@ import { area, flick, framesOf, ready, settle } from "./helpers";
 
 const NAMES = [
   "opening",
-  "about",
-  "projects",
   "timeline",
+  "projects",
+  "about",
   "sabbatical",
   "contact",
 ];
@@ -209,7 +209,7 @@ test("windows have the decided gap, border, radius and focus gradient", async ({
 });
 
 test("a scrolling window's label sits on an opaque band", async ({ page }) => {
-  await page.keyboard.press("4");
+  await page.keyboard.press("2");
   await settle(page);
   const band = page.locator('[data-window="timeline"] .label');
   expect(
@@ -228,9 +228,9 @@ test("the production build ships all six workspaces from one model with steps in
   );
   expect(model.map((w: { id: string }) => w.id)).toEqual([
     "opening",
-    "about",
-    "projects",
     "timeline",
+    "projects",
+    "about",
     "sabbatical",
     "contact",
   ]);

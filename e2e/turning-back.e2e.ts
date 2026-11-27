@@ -185,13 +185,13 @@ test("a jump back to the workspace a change began from turns it back from where 
 test("Back after a jump turned back by a jump lands where the visitor settled before it", async ({
   page,
 }) => {
-  await page.keyboard.press("2");
+  await page.keyboard.press("4");
   await settle(page);
   const about = await pathOf(page);
   // the jump to contact, turned back by the jump to about it began from
-  expect(await midMotion(page, "6", ["2"])).toEqual([true]);
+  expect(await midMotion(page, "6", ["4"])).toEqual([true]);
   await settle(page);
-  await expect(area(page)).toHaveAttribute("data-workspace", "1");
+  await expect(area(page)).toHaveAttribute("data-workspace", "3");
   expect(await pathOf(page)).toBe(about);
   // the turned-back jump left no entry of its own: Back is home, never contact
   await page.goBack();
