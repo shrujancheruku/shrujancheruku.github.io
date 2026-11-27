@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { ready, settle } from "./helpers";
+import { barItem, expectWorkspace, goTo, ready, settle } from "./desktop";
 
 const root = (page: Page) => page.locator("html");
 
@@ -94,20 +94,11 @@ test("a storage failure falls back to paper without an error", async ({
 test("home and contact jump to their workspaces", async ({ page }) => {
   await ready(page);
   await page.getByRole("button", { name: "contact", exact: true }).click();
-  await expect(page.locator("main.area")).toHaveAttribute(
-    "data-workspace",
-    "5",
-  );
+  await expectWorkspace(page, "contact");
   await page.keyboard.press("h");
-  await expect(page.locator("main.area")).toHaveAttribute(
-    "data-workspace",
-    "0",
-  );
+  await expectWorkspace(page, "opening");
   await page.keyboard.press("c");
-  await expect(page.locator("main.area")).toHaveAttribute(
-    "data-workspace",
-    "5",
-  );
+  await expectWorkspace(page, "contact");
 });
 
 test("the crt toggle shows on or off, is remembered and sets the root attribute", async ({
@@ -185,16 +176,16 @@ test("on touch no tooltip is written out, before or after the first touch", asyn
     })
   ).newPage();
   await ready(page);
-  const shown = page.locator(".tip:visible");
+  const visibleTips = page.locator(".tip:visible");
   // a phone has no keys to name, so none of the tooltips shows while idle
-  await expect(shown).toHaveCount(0);
+  await expect(visibleTips).toHaveCount(0);
   // a touch alone, with no pointer or key event alongside it
   await page.evaluate(() =>
     document.body.dispatchEvent(
       new TouchEvent("touchstart", { bubbles: true, cancelable: true }),
     ),
   );
-  await expect(shown).toHaveCount(0);
+  await expect(visibleTips).toHaveCount(0);
 });
 
 test("after the first interaction each toggle's tooltip shows on keyboard focus", async ({
@@ -253,6 +244,7 @@ test("a tooltip shows its name and key on hover after 250ms", async ({
   await expect(tip).toHaveCSS("opacity", "0");
   await page.locator('[data-act="contact"]').hover();
   await expect(tip).toHaveCSS("opacity", "0");
+  // time itself is under test: the tooltip shows only after its 250 ms delay
   await page.waitForTimeout(600);
   await expect(tip).toHaveCSS("opacity", "1");
   await expect(tip).toHaveText("contact C");
@@ -262,35 +254,20 @@ test("Back after H returns to the previous place, and C is a jump too", async ({
   page,
 }) => {
   await ready(page);
-  await page.keyboard.press("2");
+  await goTo(page, "timeline");
   await settle(page);
-  await expect(page.locator("main.area")).toHaveAttribute(
-    "data-workspace",
-    "1",
-  );
-  const where = new URL(page.url()).pathname;
+  await expectWorkspace(page, "timeline");
+  const address = new URL(page.url()).pathname;
   await page.keyboard.press("h");
-  await expect(page.locator("main.area")).toHaveAttribute(
-    "data-workspace",
-    "0",
-  );
-  expect(new URL(page.url()).pathname).not.toBe(where);
+  await expectWorkspace(page, "opening");
+  expect(new URL(page.url()).pathname).not.toBe(address);
   await page.goBack();
-  await expect(page.locator("main.area")).toHaveAttribute(
-    "data-workspace",
-    "1",
-  );
-  expect(new URL(page.url()).pathname).toBe(where);
+  await expectWorkspace(page, "timeline");
+  expect(new URL(page.url()).pathname).toBe(address);
   await page.getByRole("button", { name: "contact", exact: true }).click();
-  await expect(page.locator("main.area")).toHaveAttribute(
-    "data-workspace",
-    "5",
-  );
+  await expectWorkspace(page, "contact");
   await page.goBack();
-  await expect(page.locator("main.area")).toHaveAttribute(
-    "data-workspace",
-    "1",
-  );
+  await expectWorkspace(page, "timeline");
 });
 
 test("after the first interaction the workspaces tooltip shows on hover and on keyboard focus", async ({
@@ -304,7 +281,7 @@ test("after the first interaction the workspaces tooltip shows on hover and on k
   await expect(tip).toHaveCSS("opacity", "1");
   await page.mouse.move(640, 500);
   await expect(tip).toHaveCSS("opacity", "0");
-  await page.locator(".ws button").nth(1).focus();
+  await (await barItem(page, "timeline")).focus();
   await page.keyboard.press("Tab");
   await page.keyboard.press("Shift+Tab");
   await expect(tip).toHaveCSS("opacity", "1");
@@ -316,8 +293,5 @@ test("shortcuts with shift held are ignored", async ({ page }) => {
     await page.keyboard.press(k);
   await expect(root(page)).toHaveAttribute("data-theme", "paper");
   await expect(root(page)).toHaveAttribute("data-crt", "on");
-  await expect(page.locator("main.area")).toHaveAttribute(
-    "data-workspace",
-    "0",
-  );
+  await expectWorkspace(page, "opening");
 });

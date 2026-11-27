@@ -1,12 +1,19 @@
-import { devices, expect, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import {
-  area,
+  expectStep,
+  expectStepLeft,
+  expectWorkspace,
+  goTo,
   isOneScreen,
+  phones,
+  ready,
+  settle,
+  stepNow,
+} from "./desktop";
+import {
   pinch,
   pinchZoomWorks,
-  ready,
   SWIPES,
-  settle,
   swipe,
   swipeScreen,
   twoFingerSpread,
@@ -25,17 +32,12 @@ import {
 
 test.setTimeout(60_000);
 
-const stepOf = async (page: Page) =>
-  Number(await area(page).getAttribute("data-step"));
 const zoom = (page: Page) =>
   page.evaluate(() => window.visualViewport?.scale ?? 1);
 
-const PHONES = ["Pixel 7", "iPhone 14"] as const;
-for (const phone of PHONES) {
-  test.describe(phone, () => {
-    // CDP touch needs Chromium: the phone's size, touch and agent, not WebKit
-    const { defaultBrowserType: _engine, ...emulation } = devices[phone];
-    test.use(emulation);
+for (const [name, phone] of phones("Pixel 7", "iPhone 14")) {
+  test.describe(name, () => {
+    test.use(phone);
 
     test.beforeEach(async ({ page }) => {
       await ready(page, "/");
@@ -67,12 +69,12 @@ for (const phone of PHONES) {
         ).toContain("pinch-zoom");
       // two fingers, as the page sees them, move no step
       await twoFingerSpread(page);
-      await page.waitForTimeout(300);
-      expect(await stepOf(page)).toBe(0);
+      await settle(page);
+      expect(await stepNow(page)).toBe(0);
       const scale = await pinch(page, 2);
       if (await zoomable(page)) expect(scale).toBeGreaterThan(1.5);
-      await page.waitForTimeout(300);
-      expect(await stepOf(page)).toBe(0);
+      await settle(page);
+      expect(await stepNow(page)).toBe(0);
     });
 
     test("on a zoomed-in page a drag moves no step; zoomed back out, one swipe is one step", async ({
@@ -82,8 +84,8 @@ for (const phone of PHONES) {
         expect(await pinch(page, 2)).toBeGreaterThan(1.5);
         for (const s of SWIPES) {
           await swipe(page, 1, s);
-          await page.waitForTimeout(300);
-          expect(await stepOf(page), `${s.name} drag while zoomed`).toBe(0);
+          await settle(page);
+          expect(await stepNow(page), `${s.name} drag while zoomed`).toBe(0);
         }
       } else {
         await pinch(page, 2);
@@ -92,8 +94,8 @@ for (const phone of PHONES) {
       for (let i = 0; i < 6 && (await zoom(page)) > 1.01; i++)
         await pinch(page, 0.5);
       expect(await zoom(page)).toBeLessThanOrEqual(1.01);
-      await page.waitForTimeout(300);
-      expect(await stepOf(page)).toBe(0);
+      await settle(page);
+      expect(await stepNow(page)).toBe(0);
       for (const s of SWIPES) {
         const { before, after } = await swipeScreen(page, 1, s);
         expect(
@@ -108,19 +110,19 @@ for (const phone of PHONES) {
       // a link: the opening's teaser goes to the now step and its address
       await page.locator("a.teaser").tap();
       await expect(page).toHaveURL(/\/now\/$/);
-      await expect(area(page)).not.toHaveAttribute("data-step", "0");
+      await expectStepLeft(page, 0);
       await settle(page);
       // a button: the status bar's home goes back to the opening
       await page.locator('[data-act="home"]').tap();
-      await expect(area(page)).toHaveAttribute("data-step", "0");
+      await expectStep(page, 0);
       await settle(page);
       // a button: the status bar's contact
       await page.locator('[data-act="contact"]').tap();
       await expect(page).toHaveURL(/\/contact\/$/);
       await settle(page);
       // a button: a workspace number
-      await page.locator(".ws button").nth(3).tap();
-      await expect(area(page)).toHaveAttribute("data-workspace", "3");
+      await goTo(page, "about", "tap");
+      await expectWorkspace(page, "about");
     });
   });
 }

@@ -1,7 +1,19 @@
-import { devices, expect, test } from "@playwright/test";
-import { ready } from "./helpers";
+import { expect, test } from "@playwright/test";
+import {
+  areaBox,
+  barItem,
+  expectScreens,
+  expectStep,
+  expectWorkspace,
+  goTo,
+  PHONES,
+  ready,
+  settle,
+  shown,
+  stepOf,
+} from "./desktop";
 
-test.use({ ...devices["Pixel 7"] });
+test.use(PHONES["Pixel 7"]);
 
 test("at touch width the windows stack in one column and the bar shows numbers at 40px", async ({
   page,
@@ -39,17 +51,14 @@ test("the page does not scroll on touch: a swipe is a step", async ({
   expect(css.snap).toBe("none");
   expect(css.action).toBe("pinch-zoom");
   await page.keyboard.press("ArrowDown");
-  await expect(page.locator("main.area")).toHaveAttribute("data-step", "1");
+  await expectStep(page, await stepOf(page, "timeline"));
 });
 
 test("tapping a number jumps to its workspace", async ({ page }) => {
   await ready(page, "/");
-  await page.locator(".ws button").nth(5).tap();
-  await expect(page.locator("main.area")).toHaveAttribute(
-    "data-workspace",
-    "5",
-  );
-  await expect(page.locator(".ws button").nth(5)).toHaveAttribute(
+  await goTo(page, "contact", "tap");
+  await expectWorkspace(page, "contact");
+  await expect(await barItem(page, "contact")).toHaveAttribute(
     "aria-current",
     "true",
   );
@@ -59,8 +68,8 @@ test("a featured project is one screen: its copy over its composition, no stack"
   page,
 }) => {
   await ready(page, "/work/");
-  await expect(page.locator("main.area")).toHaveAttribute("data-screens", "1");
-  const shown = () =>
+  await expectScreens(page, 1);
+  const stacked = () =>
     page.$$eval(
       '[data-window="copy-1"], [data-window="comp-1"], [data-window="stack"]',
       (els) =>
@@ -73,7 +82,7 @@ test("a featured project is one screen: its copy over its composition, no stack"
           .sort((a, b) => a.top - b.top)
           .map((e) => e.id),
     );
-  await expect.poll(shown).toEqual(["copy-1", "comp-1"]);
+  await expect.poll(stacked).toEqual(["copy-1", "comp-1"]);
 });
 
 test("no hover tooltips and no clock on touch, before or after interaction", async ({
@@ -81,7 +90,7 @@ test("no hover tooltips and no clock on touch, before or after interaction", asy
 }) => {
   await ready(page, "/");
   // before any interaction: no tooltip is written out on a phone, none has keys to name
-  await page.waitForTimeout(1200);
+  await settle(page);
   await expect(page.locator(".tg .tip")).toHaveCount(4);
   for (const tip of await page.locator(".tip").all())
     await expect(tip).toBeHidden();
@@ -93,19 +102,13 @@ test("no hover tooltips and no clock on touch, before or after interaction", asy
 
 test("on touch the archive takes the whole workspace", async ({ page }) => {
   await ready(page, "/archive/");
-  const area = page.locator("main.area");
-  await page.waitForTimeout(1100);
-  const shown = await page.$$eval(".pane", (els) =>
-    els
-      .filter((e) => getComputedStyle(e).display !== "none")
-      .map((e) => (e as HTMLElement).dataset.window),
-  );
-  expect(shown).toEqual(["archive"]);
+  await settle(page);
+  expect(await shown(page)).toEqual(["archive"]);
   const a = await page.locator('[data-window="archive"]').boundingBox();
-  const m = await area.boundingBox();
+  const m = await areaBox(page);
   expect(Math.round(a?.width ?? 0)).toBe(Math.round(m?.width ?? 1));
   expect(Math.round(a?.height ?? 0)).toBe(Math.round(m?.height ?? 1));
   await page.locator(".close").click();
-  await page.waitForTimeout(1100);
+  await settle(page);
   await expect(page).toHaveURL(/\/work\/unmacos\/$/);
 });

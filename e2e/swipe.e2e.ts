@@ -1,15 +1,17 @@
-import { devices, expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import {
-  area,
   atEnd,
+  expectOpen,
   isOneScreen,
+  phones,
   ready,
-  SWIPES,
   settle,
-  swipeScreen,
-  warmUpTouch,
+  stepNow,
+  stepOf,
+  stepOfProject,
   whereOf,
-} from "./helpers";
+} from "./desktop";
+import { SWIPES, swipeScreen, warmUpTouch } from "./helpers";
 
 // One swipe on a phone moves exactly one screen (a step is one or more). Swipes are real touch events
 // (CDP), so the browser's own scrolling gets its chance to take them.
@@ -17,12 +19,9 @@ import {
 // a walk over every screen both ways takes 1.5 to 2 minutes on the CI runner
 test.setTimeout(240_000);
 
-const PHONES = ["Pixel 7", "iPhone 14"] as const;
-for (const phone of PHONES) {
-  test.describe(phone, () => {
-    // CDP touch needs Chromium: the phone's size, touch and agent, not WebKit
-    const { defaultBrowserType: _engine, ...emulation } = devices[phone];
-    test.use(emulation);
+for (const [name, phone] of phones("Pixel 7", "iPhone 14")) {
+  test.describe(name, () => {
+    test.use(phone);
 
     for (const s of SWIPES) {
       test(`a ${s.name} swipe moves exactly one screen, from every screen, both ways`, async ({
@@ -112,45 +111,18 @@ for (const phone of PHONES) {
         page,
       }) => {
         await ready(page, path);
-        await page.waitForTimeout(400);
+        await settle(page);
         const bar = await page.locator("header.bar").boundingBox();
-        const vis = await page.evaluate(
-          ([id, at]) => {
-            const model: { id: string; steps: unknown[] }[] = JSON.parse(
-              document.getElementById("desktop-model")?.textContent ?? "[]",
-            );
-            const index = model.findIndex((w) => w.id === id);
-            const first = model
-              .slice(0, index)
-              .reduce((n, w) => n + w.steps.length, 0);
-            const count = model[index]?.steps.length ?? 0;
-            const position = [
-              ...document.querySelectorAll<HTMLElement>(
-                '[data-window^="comp-"] [data-slot]',
-              ),
-            ].find((s) => s.dataset.composition === at)?.dataset.position;
-            const offset =
-              at === "last"
-                ? count - 1
-                : typeof at === "number"
-                  ? at
-                  : Number(position) - 1;
-            return {
-              want: first + offset,
-              step: Number(
-                document.querySelector("main.area")?.getAttribute("data-step"),
-              ),
-            };
-          },
-          [workspace, within] as const,
-        );
+        const want =
+          within === "last" || typeof within === "number"
+            ? await stepOf(page, workspace, within)
+            : await stepOfProject(page, within);
         expect(bar?.y ?? -1).toBeGreaterThanOrEqual(0);
         expect(bar?.height).toBe(40);
         expect(new URL(page.url()).pathname).toBe(path);
-        expect(Number.isInteger(vis.want)).toBe(true);
-        expect(vis.step).toBe(vis.want);
-        if (within === "last")
-          await expect(area(page)).toHaveAttribute("data-open", "true");
+        expect(Number.isInteger(want)).toBe(true);
+        expect(await stepNow(page)).toBe(want);
+        if (within === "last") await expectOpen(page);
       });
     }
   });

@@ -1,7 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
-import { ready } from "./helpers";
+import { goTo, ready, settle, settleBars } from "./desktop";
 
-const settle = (page: Page) => page.waitForTimeout(1300);
 const fills = (page: Page) =>
   page.$$eval('[data-window="skills"] .fill', (els) =>
     els.map((e) => {
@@ -13,14 +12,14 @@ const fills = (page: Page) =>
 
 async function enter(page: Page) {
   await ready(page, "/");
-  await page.keyboard.press("2");
+  await goTo(page, "timeline");
 }
 
 test("five bars on tracks, no number, Comedic Talent last at full length", async ({
   page,
 }) => {
   await enter(page);
-  await page.waitForTimeout(3500);
+  await settleBars(page);
   const win = page.locator('[data-window="skills"]');
   await expect(win.locator(".name")).toHaveText([
     "Python",
@@ -38,14 +37,16 @@ test("the bars grow in on entry, the joke bar last; replays on re-entry", async 
   page,
 }) => {
   await enter(page);
+  // time itself is under test: the bars are part way a moment after entry
   await page.waitForTimeout(500);
   const early = await fills(page);
   expect(early.some((f) => f.w < 0.5)).toBe(true);
-  await page.waitForTimeout(3500);
+  await settleBars(page);
   expect((await fills(page)).every((f) => f.w > 0.69)).toBe(true);
-  await page.keyboard.press("5");
+  await goTo(page, "sabbatical");
   await settle(page);
-  await page.keyboard.press("2");
+  await goTo(page, "timeline");
+  // time itself is under test: they replay, so they are part way a moment after re-entry
   await page.waitForTimeout(500);
   expect((await fills(page)).some((f) => f.w < 0.5)).toBe(true);
 });
@@ -133,7 +134,7 @@ test.describe("reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
   test("all five bars are at length straight away", async ({ page }) => {
     await enter(page);
-    await page.waitForTimeout(300);
+    await settleBars(page);
     const w = (await fills(page)).map((f) => Math.round(f.w * 100));
     expect(w).toEqual([90, 90, 80, 70, 100]);
   });

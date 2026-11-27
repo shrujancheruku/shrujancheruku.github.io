@@ -3,14 +3,26 @@
 // nothing re-tiles. Shape only, never timing: every frame from the first is
 // sampled and checked for which edge each window comes from, the order they
 // start moving in, no other side moving, and the final rectangles.
-import { devices, expect, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import {
   screensOf,
   stepAt,
   tilingOf,
   type Workspace,
 } from "../src/lib/workspaces";
-import { area, ready, whereOf } from "./helpers";
+import {
+  AREA,
+  areaBox,
+  booted,
+  expectNotRetiling,
+  expectStep,
+  isOpen,
+  isRetiling,
+  modelOf,
+  PHONES,
+  ready,
+  whereOf,
+} from "./desktop";
 
 interface Box {
   left: number;
@@ -31,62 +43,61 @@ const PANES = ".pane[data-window]";
 
 /** Load `path`, sampling every window's box on every frame until the desktop is at rest. */
 async function load(page: Page, path: string): Promise<Run> {
-  await page.addInitScript((sel) => {
-    const w = window as unknown as {
-      __frames: (Box | null)[][];
-      __ids: string[];
-      __waited: boolean;
-    };
-    w.__frames = [];
-    w.__ids = [];
-    w.__waited = false;
-    const tick = () => {
-      const a = document.querySelector<HTMLElement>("main.area");
-      if (a?.dataset.ready === "true") {
-        const panes = [...document.querySelectorAll<HTMLElement>(sel)].filter(
-          (p) => getComputedStyle(p).display !== "none",
-        );
-        if (w.__ids.length === 0) {
-          w.__ids = panes.map((p) => p.dataset.window ?? "");
-          w.__waited = a.dataset.retiling === "true";
+  await page.addInitScript(
+    ({ sel, areaSel }) => {
+      const w = window as unknown as {
+        __frames: (Box | null)[][];
+        __ids: string[];
+        __waited: boolean;
+      };
+      w.__frames = [];
+      w.__ids = [];
+      w.__waited = false;
+      const tick = () => {
+        const a = document.querySelector<HTMLElement>(areaSel);
+        if (a?.dataset.ready === "true") {
+          const panes = [...document.querySelectorAll<HTMLElement>(sel)].filter(
+            (p) => getComputedStyle(p).display !== "none",
+          );
+          if (w.__ids.length === 0) {
+            w.__ids = panes.map((p) => p.dataset.window ?? "");
+            w.__waited = a.dataset.retiling === "true";
+          }
+          const origin = a.getBoundingClientRect();
+          w.__frames.push(
+            w.__ids.map((id) => {
+              const p = document.querySelector<HTMLElement>(
+                `${sel}[data-window="${id}"]`,
+              );
+              const b = p?.getBoundingClientRect();
+              return b
+                ? {
+                    left: b.left - origin.left,
+                    top: b.top - origin.top,
+                    width: b.width,
+                    height: b.height,
+                  }
+                : null;
+            }),
+          );
+          if (a.dataset.retiling === "false") return;
         }
-        const origin = a.getBoundingClientRect();
-        w.__frames.push(
-          w.__ids.map((id) => {
-            const p = document.querySelector<HTMLElement>(
-              `${sel}[data-window="${id}"]`,
-            );
-            const b = p?.getBoundingClientRect();
-            return b
-              ? {
-                  left: b.left - origin.left,
-                  top: b.top - origin.top,
-                  width: b.width,
-                  height: b.height,
-                }
-              : null;
-          }),
-        );
-        if (a.dataset.retiling === "false") return;
-      }
+        requestAnimationFrame(tick);
+      };
       requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }, PANES);
+    },
+    { sel: PANES, areaSel: AREA },
+  );
   // the appearance runs on the page's clock in fixed frames, so a busy machine
   // cannot skip part of it between two sampled frames
   await page.clock.install();
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.goto(path);
-  await expect(area(page)).toHaveAttribute("data-ready", "true");
-  for (
-    let f = 0;
-    f < 400 && (await area(page).getAttribute("data-retiling")) !== "false";
-    f++
-  )
+  await booted(page);
+  for (let f = 0; f < 400 && (await isRetiling(page)); f++)
     await page.clock.runFor(16);
   await page.clock.resume();
-  await expect(area(page)).toHaveAttribute("data-retiling", "false");
+  await expectNotRetiling(page);
   await page.waitForFunction(
     () => (window as unknown as { __ids: string[] }).__ids.length > 0,
   );
@@ -113,22 +124,15 @@ async function load(page: Page, path: string): Promise<Run> {
 
 /** The windows on show, in the order the layout on show writes them. */
 async function tilingOrder(page: Page, ids: string[]): Promise<string[]> {
-  const { model, step, open } = await page.evaluate(() => {
-    const a = document.querySelector<HTMLElement>("main.area");
-    return {
-      model: JSON.parse(
-        document.getElementById("desktop-model")?.textContent ?? "[]",
-      ) as Workspace[],
-      step: Number(a?.dataset.step),
-      open: a?.dataset.open === "true",
-    };
-  });
+  const model = (await modelOf(page)) as unknown as Workspace[];
+  const { step } = await whereOf(page);
+  const open = await isOpen(page);
   const at = stepAt(model, step);
-  const shown = [...ids].sort().join();
+  const onShow = [...ids].sort().join();
   const layout = [tilingOf(at, open), ...screensOf(at, open)].find(
-    (l) => Object.keys(l).sort().join() === shown,
+    (l) => Object.keys(l).sort().join() === onShow,
   );
-  if (!layout) throw new Error(`no layout of step ${step} shows ${shown}`);
+  if (!layout) throw new Error(`no layout of step ${step} shows ${onShow}`);
   return Object.keys(layout);
 }
 
@@ -140,7 +144,7 @@ async function restOf(
 ): Promise<(Box | null)[]> {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await ready(page, path);
-  const a = await area(page).boundingBox();
+  const a = await areaBox(page);
   return Promise.all(
     ids.map(async (id) => {
       const b = await page
@@ -247,7 +251,7 @@ test.describe("wide screen", () => {
     const run = await load(page, "/");
     expect(run.waited).toBe(true);
     expect(run.ids.length).toBeGreaterThan(1);
-    const a = await area(page).boundingBox();
+    const a = await areaBox(page);
     if (!a) throw new Error("no area");
     const end = run.frames.at(-1) as (Box | null)[];
 
@@ -288,7 +292,7 @@ test.describe("wide screen", () => {
   }) => {
     for (const path of ["/archive/", ARCHIVE_PROJECT, "/work/"]) {
       const run = await load(page, path);
-      const a = await area(page).boundingBox();
+      const a = await areaBox(page);
       if (!a) throw new Error("no area");
       expect(run.waited).toBe(true);
       expectAppeared(run, (final) => edgeOfBox(final, a));
@@ -305,7 +309,7 @@ test.describe("wide screen", () => {
   });
 });
 
-const { defaultBrowserType: _, ...pixel } = devices["Pixel 7"];
+const pixel = PHONES["Pixel 7"];
 
 test.describe("phone", () => {
   test.use(pixel);
@@ -336,7 +340,7 @@ test.describe("phone", () => {
     // on the first frame the windows are coming in, a finger swipes up the
     // screen (a step down), as the page's pointer handlers see one: sent from
     // the page, so it can't arrive after the windows are in
-    await page.addInitScript(() => {
+    await page.addInitScript((areaSel) => {
       const w = window as unknown as { __swiped: boolean };
       w.__swiped = false;
       const finger = (type: string, y: number) =>
@@ -351,7 +355,7 @@ test.describe("phone", () => {
           }),
         );
       const tick = () => {
-        const a = document.querySelector<HTMLElement>("main.area");
+        const a = document.querySelector<HTMLElement>(areaSel);
         if (a?.dataset.ready === "true" && a.dataset.retiling === "true") {
           finger("pointerdown", 600);
           for (const y of [560, 500, 420, 360]) finger("pointermove", y);
@@ -362,64 +366,63 @@ test.describe("phone", () => {
         requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
-    });
+    }, AREA);
     // the appearance is sampled on every frame until the swipe, queued,
     // runs: the step changes once every window is in
-    await page.addInitScript((sel) => {
-      const w = window as unknown as {
-        __in: (Box | null)[][];
-        __inIds: string[];
-      };
-      w.__in = [];
-      w.__inIds = [];
-      const tick = () => {
-        const a = document.querySelector<HTMLElement>("main.area");
-        if (a?.dataset.ready === "true") {
-          if (a.dataset.step !== "0") return;
-          if (w.__inIds.length === 0)
-            w.__inIds = [...document.querySelectorAll<HTMLElement>(sel)]
-              .filter((p) => getComputedStyle(p).display !== "none")
-              .map((p) => p.dataset.window ?? "");
-          const origin = a.getBoundingClientRect();
-          w.__in.push(
-            w.__inIds.map((id) => {
-              const b = document
-                .querySelector<HTMLElement>(`${sel}[data-window="${id}"]`)
-                ?.getBoundingClientRect();
-              return b
-                ? {
-                    left: b.left - origin.left,
-                    top: b.top - origin.top,
-                    width: b.width,
-                    height: b.height,
-                  }
-                : null;
-            }),
-          );
-        }
+    await page.addInitScript(
+      ({ sel, areaSel }) => {
+        const w = window as unknown as {
+          __in: (Box | null)[][];
+          __inIds: string[];
+        };
+        w.__in = [];
+        w.__inIds = [];
+        const tick = () => {
+          const a = document.querySelector<HTMLElement>(areaSel);
+          if (a?.dataset.ready === "true") {
+            if (a.dataset.step !== "0") return;
+            if (w.__inIds.length === 0)
+              w.__inIds = [...document.querySelectorAll<HTMLElement>(sel)]
+                .filter((p) => getComputedStyle(p).display !== "none")
+                .map((p) => p.dataset.window ?? "");
+            const origin = a.getBoundingClientRect();
+            w.__in.push(
+              w.__inIds.map((id) => {
+                const b = document
+                  .querySelector<HTMLElement>(`${sel}[data-window="${id}"]`)
+                  ?.getBoundingClientRect();
+                return b
+                  ? {
+                      left: b.left - origin.left,
+                      top: b.top - origin.top,
+                      width: b.width,
+                      height: b.height,
+                    }
+                  : null;
+              }),
+            );
+          }
+          requestAnimationFrame(tick);
+        };
         requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    }, PANES);
+      },
+      { sel: PANES, areaSel: AREA },
+    );
     // Time is the test's: Playwright's clock fakes requestAnimationFrame and
     // Date, so GSAP's ticker moves only in the fixed frames run here. A busy
     // machine can no longer skip the appearance ahead between two frames.
     await page.clock.install();
     await page.clock.pauseAt(new Date(Date.now() + 1000));
     await page.goto("/");
-    await expect(area(page)).toHaveAttribute("data-ready", "true");
+    await booted(page);
     for (let f = 0; f < 200; f++) {
       await page.clock.runFor(16);
-      const at = await area(page).evaluate((a) => ({
-        step: a.dataset.step,
-        retiling: a.dataset.retiling,
-      }));
-      if (at.step === "1" && at.retiling === "false") break;
+      if ((await whereOf(page)).step === 1 && !(await isRetiling(page))) break;
     }
     await page.clock.resume();
     // once the windows are in, the queued swipe runs: one step down
-    await expect(area(page)).toHaveAttribute("data-step", "1");
-    await expect(area(page)).toHaveAttribute("data-retiling", "false");
+    await expectStep(page, 1);
+    await expectNotRetiling(page);
     expect(
       await page.evaluate(
         () => (window as unknown as { __swiped: boolean }).__swiped,
@@ -428,7 +431,7 @@ test.describe("phone", () => {
     expect(await whereOf(page)).toMatchObject({ step: 1, screen: 0 });
 
     // every window still slid all the way into its tile on step 0, in tiling order
-    const { ids, frames, model } = await page.evaluate(() => {
+    const { ids, frames } = await page.evaluate(() => {
       const w = window as unknown as {
         __in: (Box | null)[][];
         __inIds: string[];
@@ -436,17 +439,15 @@ test.describe("phone", () => {
       return {
         ids: w.__inIds,
         frames: w.__in,
-        model: JSON.parse(
-          document.getElementById("desktop-model")?.textContent ?? "[]",
-        ) as Workspace[],
       };
     });
+    const model = (await modelOf(page)) as unknown as Workspace[];
     const at = stepAt(model, 0);
-    const shown = [...ids].sort().join();
+    const onShow = [...ids].sort().join();
     const layout = [tilingOf(at, false), ...screensOf(at, false)].find(
-      (l) => Object.keys(l).sort().join() === shown,
+      (l) => Object.keys(l).sort().join() === onShow,
     );
-    if (!layout) throw new Error(`no layout of step 0 shows ${shown}`);
+    if (!layout) throw new Error(`no layout of step 0 shows ${onShow}`);
     const order = Object.keys(layout).map((id) => ids.indexOf(id));
     const run: Run = {
       ids: Object.keys(layout),

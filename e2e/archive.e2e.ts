@@ -1,13 +1,14 @@
 import { expect, type Page, test } from "@playwright/test";
-import { area, flick, ready, settle } from "./helpers";
+import {
+  areaBox,
+  expectStepLeft,
+  ready,
+  settle,
+  shown,
+  stepNow,
+} from "./desktop";
+import { flick } from "./helpers";
 
-const shown = (page: Page) =>
-  page.$$eval(".pane", (els) =>
-    els
-      .filter((e) => getComputedStyle(e).display !== "none")
-      .map((e) => (e as HTMLElement).dataset.window)
-      .sort(),
-  );
 const box = async (page: Page, id: string) => {
   const b = await page.locator(`[data-window="${id}"]`).boundingBox();
   if (!b) throw new Error(`no box for ${id}`);
@@ -36,7 +37,7 @@ test("it takes the right 58%, the workspace squeezes into the left 42%", async (
   page,
 }) => {
   await ready(page, "/work/unmacos/");
-  const area_ = (await area(page).boundingBox()) ?? { width: 0, x: 0 };
+  const area_ = (await areaBox(page)) ?? { width: 0, x: 0 };
   await page.locator("#archive-more").click();
   await settle(page);
   const a = await box(page, "archive");
@@ -174,7 +175,7 @@ test("a flick that scrolls the archive to its end does not also step; the next f
   expect(
     await list.evaluate((el) => el.scrollHeight - el.clientHeight),
   ).toBeLessThan(400);
-  const step = await area(page).getAttribute("data-step");
+  const step = await stepNow(page);
   const lb = await list.boundingBox();
   const over = {
     x: (lb?.x ?? 0) + (lb?.width ?? 0) / 2,
@@ -189,8 +190,8 @@ test("a flick that scrolls the archive to its end does not also step; the next f
     )
     .toBe(true);
   await settle(page);
-  expect(await area(page).getAttribute("data-step")).toBe(step);
+  expect(await stepNow(page)).toBe(step);
 
   await flick(page, over);
-  await expect(area(page)).not.toHaveAttribute("data-step", step ?? "");
+  await expectStepLeft(page, step);
 });

@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { swatch, THEME_NAMES, THEMES } from "../src/lib/themes";
-import { ready } from "./helpers";
+import { ready } from "./desktop";
 
 const NAMES = THEME_NAMES;
 

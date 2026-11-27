@@ -1,6 +1,7 @@
-import { devices, expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { allPhones, ready, settle, shown, whereOf } from "./desktop";
 import { typed, unseen } from "./fit";
-import { area, ready, SWIPES, settle, swipe, warmUpTouch } from "./helpers";
+import { SWIPES, swipe, warmUpTouch } from "./helpers";
 
 // On a phone a featured project is one screen: the counter, the name, the
 // pitch, the proof lines, the facts, the links and the composition, with the
@@ -9,36 +10,8 @@ import { area, ready, SWIPES, settle, swipe, warmUpTouch } from "./helpers";
 
 test.setTimeout(240_000);
 
-const PHONES = {
-  "Pixel 7": devices["Pixel 7"],
-  "iPhone 14": devices["iPhone 14"],
-  "375x667": {
-    viewport: { width: 375, height: 667 },
-    hasTouch: true,
-    isMobile: true,
-    deviceScaleFactor: 2,
-  },
-} as const;
-
-const where = (page: Page) =>
-  area(page).evaluate((a) => ({
-    step: Number(a.dataset.step),
-    screens: Number(a.dataset.screens),
-  }));
-
-/** The windows on show, by id. */
-const shown = (page: Page) =>
-  page.$$eval(".pane", (els) =>
-    els
-      .filter((e) => getComputedStyle(e).display !== "none")
-      .map((e) => (e as HTMLElement).dataset.window ?? ""),
-  );
-
-for (const [name, emulation] of Object.entries(PHONES)) {
+for (const [name, phone] of allPhones()) {
   test.describe(name, () => {
-    const { defaultBrowserType: _engine, ...phone } = emulation as {
-      defaultBrowserType?: string;
-    };
     test.use(phone);
 
     test("each featured project is one screen with its copy, proof lines and composition, and one swipe reaches the next", async ({
@@ -46,11 +19,11 @@ for (const [name, emulation] of Object.entries(PHONES)) {
     }) => {
       await ready(page, "/work/");
       await warmUpTouch(page);
-      const first = await where(page);
+      const first = await whereOf(page);
       const featured = await page.locator('[data-window^="copy-"]').count();
       expect(featured).toBeGreaterThan(1);
       for (let n = 1; n <= featured; n++) {
-        const at = await where(page);
+        const at = await whereOf(page);
         expect(at.step, `project ${n}`).toBe(first.step + n - 1);
         expect(at.screens, `project ${n} screens`).toBe(1);
         expect(await shown(page), `project ${n} windows`).toEqual(
@@ -72,7 +45,7 @@ for (const [name, emulation] of Object.entries(PHONES)) {
         if (n < featured) {
           await swipe(page, 1, SWIPES[0] as (typeof SWIPES)[number]);
           await expect
-            .poll(async () => (await where(page)).step)
+            .poll(async () => (await whereOf(page)).step)
             .toBe(first.step + n);
           await settle(page);
         }

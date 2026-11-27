@@ -1,6 +1,7 @@
-import { devices, expect, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
+import { allPhones, ready, settle } from "./desktop";
 import { unseen } from "./fit";
-import { ready, settle, warmUpTouch } from "./helpers";
+import { warmUpTouch } from "./helpers";
 
 const cue = (page: Page) => page.locator("[data-cue]");
 const text = (page: Page) => page.locator("[data-cue-text]");
@@ -123,30 +124,7 @@ test.describe("desktop", () => {
   }
 });
 
-for (const [name, opts] of [
-  [
-    "Pixel 7",
-    (() => {
-      const { defaultBrowserType: _e, ...d } = devices["Pixel 7"];
-      return d;
-    })(),
-  ],
-  [
-    "iPhone 14",
-    (() => {
-      const { defaultBrowserType: _e, ...d } = devices["iPhone 14"];
-      return d;
-    })(),
-  ],
-  [
-    "375x667",
-    {
-      viewport: { width: 375, height: 667 },
-      hasTouch: true,
-      isMobile: true,
-    },
-  ],
-] as const) {
+for (const [name, opts] of allPhones()) {
   test.describe(name, () => {
     test.use(opts);
 

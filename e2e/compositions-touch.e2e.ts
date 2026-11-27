@@ -1,7 +1,7 @@
-import { devices, expect, type Page, test } from "@playwright/test";
-import { toComposition } from "./helpers";
+import { expect, type Page, test } from "@playwright/test";
+import { PHONES, toComposition } from "./desktop";
 
-test.use({ ...devices["Pixel 7"] });
+test.use(PHONES["Pixel 7"]);
 
 // the session takes about 17 s and some tests play it twice
 test.describe.configure({ timeout: 90_000 });
@@ -13,7 +13,6 @@ test("on touch orca-flow shows the command, the header, the nine tickets without
 }) => {
   await page.goto("/work/orca-flow/");
   await toComposition(page);
-  await expect(page.locator("main.area")).toHaveAttribute("data-ready", "true");
   await expect(slot(page)).toHaveAttribute("data-state", "held", {
     timeout: 45_000,
   });

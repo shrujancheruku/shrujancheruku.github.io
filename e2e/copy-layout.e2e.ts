@@ -5,41 +5,52 @@
 // left 42%.
 import { expect, type Page, test } from "@playwright/test";
 import { STACK_ROW, stackHeight } from "../src/lib/workspaces";
-import { area, ready, settle } from "./helpers";
+import {
+  areaBox,
+  expectNotRetiling,
+  expectOpen,
+  ready,
+  settle,
+} from "./desktop";
 
 const PROJECTS = ["issho", "rapid-radiology", "orca-flow", "unmacos"];
 /** The stack's height: four featured projects and the archive line. */
 const STACK = stackHeight(PROJECTS.length + 1);
 
 /** The heights the desktop gives the stack and copy panes, and the area's box, in px. */
-const measure = (page: Page, n: number) =>
-  page.evaluate((n) => {
-    const box = (sel: string) => {
-      const el = document.querySelector<HTMLElement>(sel);
-      if (!el) throw new Error(`no ${sel}`);
-      return el.getBoundingClientRect();
-    };
-    const a = box("main.area");
-    const copy = box(`.pane[data-window="copy-${n}"]`);
-    const stack = box('.pane[data-window="stack"]');
-    const comp = box(`.pane[data-window="comp-${n}"]`);
-    return {
-      area: { top: a.top, height: a.height, width: a.width, left: a.left },
-      copy: {
-        top: copy.top,
-        height: copy.height,
-        width: copy.width,
-        left: copy.left,
-      },
-      stack: {
-        top: stack.top,
-        height: stack.height,
-        width: stack.width,
-        left: stack.left,
-      },
-      comp: { width: comp.width, left: comp.left },
-    };
-  }, n);
+const measure = async (page: Page, n: number) => {
+  const a = await areaBox(page);
+  if (!a) throw new Error("no desktop area");
+  return page.evaluate(
+    ([n, a]) => {
+      const box = (sel: string) => {
+        const el = document.querySelector<HTMLElement>(sel);
+        if (!el) throw new Error(`no ${sel}`);
+        return el.getBoundingClientRect();
+      };
+      const copy = box(`.pane[data-window="copy-${n}"]`);
+      const stack = box('.pane[data-window="stack"]');
+      const comp = box(`.pane[data-window="comp-${n}"]`);
+      return {
+        area: { top: a.y, height: a.height, width: a.width, left: a.x },
+        copy: {
+          top: copy.top,
+          height: copy.height,
+          width: copy.width,
+          left: copy.left,
+        },
+        stack: {
+          top: stack.top,
+          height: stack.height,
+          width: stack.width,
+          left: stack.left,
+        },
+        comp: { width: comp.width, left: comp.left },
+      };
+    },
+    [n, a] as const,
+  );
+};
 
 /** How far the copy of project `n` runs past its window, in px (0 when it shows whole). */
 const overflow = (page: Page, n: number) =>
@@ -192,7 +203,7 @@ test("resizing re-resolves the stack's height, with no motion at rest", async ({
       );
     })
     .toBe(true);
-  await expect(area(page)).toHaveAttribute("data-retiling", "false");
+  await expectNotRetiling(page);
   const style = await page
     .locator('.pane[data-window="copy-1"]')
     .evaluate((e) => (e as HTMLElement).style.transform);
@@ -205,7 +216,7 @@ test("with the archive open the layout is the 62/38 tiling: copy 62%, stack 38%,
   await ready(page, "/work/");
   await page.locator("#archive-stack").click();
   await settle(page);
-  await expect(area(page)).toHaveAttribute("data-open", "true");
+  await expectOpen(page);
   const m = await measure(page, 1);
   expect(m.copy.width / m.area.width).toBeCloseTo(0.3 * 0.42, 2);
   expect(m.copy.height / m.area.height).toBeCloseTo(0.62, 2);
@@ -226,7 +237,7 @@ for (const [width, height, h2, gap, pad] of [
     await ready(page, "/work/");
     await page.locator("#archive-stack").click();
     await settle(page);
-    await expect(area(page)).toHaveAttribute("data-open", "true");
+    await expectOpen(page);
     const style = await page
       .locator('.pane[data-window="copy-1"]')
       .evaluate((pane) => {

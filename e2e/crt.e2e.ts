@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { ready } from "./helpers";
+import { expectAreaText, ready } from "./desktop";
 
 const frames = (page: Page) =>
   page
@@ -30,6 +30,7 @@ test("toggling the effect never moves the screen, and off stops the canvas", asy
   await expect(page.locator("#crt-canvas")).toBeHidden();
   expect(await box()).toEqual(before);
   const stopped = await frames(page);
+  // time itself is under test: that the canvas draws no more frames as time passes
   await page.waitForTimeout(300);
   expect(await frames(page)).toBe(stopped);
   await page.keyboard.press("e");
@@ -51,6 +52,7 @@ test("the canvas stops while the tab is hidden and resumes after", async ({
       document.dispatchEvent(new Event("visibilitychange"));
     }, hidden);
   await hide(true);
+  // time itself is under test: the canvas stops drawing, and stays stopped as time passes
   await page.waitForTimeout(100);
   const stopped = await frames(page);
   await page.waitForTimeout(300);
@@ -99,9 +101,7 @@ test("no curvature or fringing: text stays real and untransformed", async ({
   await ready(page);
   await expect(page.locator(".screen")).toHaveCSS("filter", "none");
   await expect(page.locator(".screen")).toHaveCSS("transform", "none");
-  await expect(page.locator("main.area")).toContainText(
-    "senior product engineer",
-  );
+  await expectAreaText(page, "senior product engineer");
 });
 
 /**
@@ -162,6 +162,7 @@ for (const theme of Object.keys(expectation) as (keyof typeof expectation)[]) {
       await ready(page);
       await expect(page.locator("html")).toHaveAttribute("data-crt", crt);
       // Let the boot and the key tips settle; freeze animations and the caret so the frame is stable.
+      // Time itself is under test: the key tips come and go on their own timers, not the desktop's.
       await page.waitForTimeout(2500);
       const png = await page
         .locator(".screen")

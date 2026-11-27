@@ -1,7 +1,7 @@
-import { devices, expect, type Page, test } from "@playwright/test";
-import { toComposition } from "./helpers";
+import { expect, type Page, test } from "@playwright/test";
+import { PHONES, toComposition } from "./desktop";
 
-test.use({ ...devices["Pixel 7"] });
+test.use(PHONES["Pixel 7"]);
 
 const slot = (page: Page) => page.locator('[data-composition="unmacos"]');
 

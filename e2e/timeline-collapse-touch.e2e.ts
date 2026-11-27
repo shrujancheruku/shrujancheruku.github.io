@@ -1,27 +1,25 @@
-import { devices, expect, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
+import {
+  allPhones,
+  expectScreens,
+  isShown,
+  type PhoneName,
+  ready,
+  settle,
+  whereOf,
+} from "./desktop";
 import { unseen } from "./fit";
-import { area, crtOff, ready, settle, warmUpTouch, whereOf } from "./helpers";
+import { crtOff, warmUpTouch } from "./helpers";
 
 // On a phone the timeline step is two screens: the timeline alone, its entries
 // collapsed to their headings (a tap opens or closes one), then education over
 // skills. The entries start open, the top ones up to the most that fit, and
 // past that limit opening one closes the one open longest (#130).
 
-const PHONES = {
-  "Pixel 7": devices["Pixel 7"],
-  "iPhone 14": devices["iPhone 14"],
-  "375x667": {
-    viewport: { width: 375, height: 667 },
-    hasTouch: true,
-    isMobile: true,
-    deviceScaleFactor: 2,
-  },
-} as const;
-
 // The screens the step has with Education & Internships open: as many as on
 // master before #108 (measured there: 2, 4 and 4), never more. The roles page
 // on the two smaller phones.
-const EDUCATION_OPEN_SCREENS: Record<keyof typeof PHONES, number> = {
+const EDUCATION_OPEN_SCREENS: Record<PhoneName, number> = {
   "Pixel 7": 2,
   "iPhone 14": 4,
   "375x667": 4,
@@ -29,7 +27,7 @@ const EDUCATION_OPEN_SCREENS: Record<keyof typeof PHONES, number> = {
 
 // The most entries that fit open together on the timeline's screen, measured
 // from the layout (the page's data-limit says it; this pins what it measured).
-const LIMIT: Record<keyof typeof PHONES, number> = {
+const LIMIT: Record<PhoneName, number> = {
   "Pixel 7": 2,
   "iPhone 14": 1,
   "375x667": 1,
@@ -44,11 +42,6 @@ const limitOf = (page: Page) =>
 const openOnes = async (page: Page) =>
   (await expanded(page)).flatMap((v, i) => (v === "true" ? [i] : []));
 
-const shown = (page: Page, id: string) =>
-  page
-    .locator(`[data-window="${id}"]`)
-    .evaluate((e) => getComputedStyle(e).display !== "none");
-
 const toggles = (page: Page) =>
   page.locator('[data-window="timeline"] button[aria-expanded]');
 
@@ -57,11 +50,8 @@ const expanded = (page: Page) =>
     els.map((e) => e.getAttribute("aria-expanded")),
   );
 
-for (const [name, emulation] of Object.entries(PHONES)) {
+for (const [name, phone] of allPhones()) {
   test.describe(name, () => {
-    const { defaultBrowserType: _engine, ...phone } = emulation as {
-      defaultBrowserType?: string;
-    };
     test.use(phone);
     // the entries, not the crt effect: its software-drawn frames starved the
     // taps and settles on a busy CI runner (see crtOff)
@@ -72,13 +62,11 @@ for (const [name, emulation] of Object.entries(PHONES)) {
     }) => {
       await ready(page, "/timeline/");
       await warmUpTouch(page);
-      const screens = () =>
-        area(page).evaluate((a) => Number(a.dataset.screens));
-      expect(await screens()).toBe(2);
+      await expectScreens(page, 2);
       expect((await whereOf(page)).screen).toBe(0);
-      expect(await shown(page, "timeline")).toBe(true);
-      expect(await shown(page, "education")).toBe(false);
-      expect(await shown(page, "skills")).toBe(false);
+      expect(await isShown(page, "timeline")).toBe(true);
+      expect(await isShown(page, "education")).toBe(false);
+      expect(await isShown(page, "skills")).toBe(false);
       await expect(
         page.locator('[data-window="timeline"] article:not([hidden])'),
       ).toHaveCount(5);
@@ -87,12 +75,12 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       await page.keyboard.press("ArrowDown");
       await settle(page);
       expect((await whereOf(page)).screen).toBe(1);
-      expect(await shown(page, "timeline")).toBe(false);
-      expect(await shown(page, "education")).toBe(true);
-      expect(await shown(page, "skills")).toBe(true);
+      expect(await isShown(page, "timeline")).toBe(false);
+      expect(await isShown(page, "education")).toBe(true);
+      expect(await isShown(page, "skills")).toBe(true);
       expect(await unseen(page)).toEqual([]);
       // no window pages: one more step moves on, never to a third screen
-      expect(await screens()).toBe(2);
+      await expectScreens(page, 2);
       // every skill, language and hobby is still there
       await expect(page.locator('[data-window="skills"] .fill')).toHaveCount(5);
       await expect(
@@ -187,7 +175,7 @@ for (const [name, emulation] of Object.entries(PHONES)) {
     }) => {
       await ready(page, "/timeline/");
       await warmUpTouch(page);
-      const n = LIMIT[name as keyof typeof PHONES];
+      const n = LIMIT[name];
       expect(await limitOf(page)).toBe(n);
       expect(await openOnes(page)).toEqual(
         Array.from({ length: n }, (_, i) => i),
@@ -201,16 +189,18 @@ for (const [name, emulation] of Object.entries(PHONES)) {
           ),
       ).toEqual((await expanded(page)).map((v) => v === "true"));
       expect(await unseen(page)).toEqual([]);
-      await expect(area(page)).toHaveAttribute("data-screens", "2");
+      await expectScreens(page, 2);
     });
 
-    test("opening past the limit closes the longest-open entry, and closing one frees a slot", async ({
+    // three short tests, not one of about sixteen tap-and-settle rounds, which
+    // timed out twice in CI (#169)
+    test("opening past the limit closes the longest-open entry, and the order follows opening", async ({
       page,
     }) => {
       await ready(page, "/timeline/");
       await warmUpTouch(page);
       const buttons = toggles(page);
-      const n = LIMIT[name as keyof typeof PHONES];
+      const n = LIMIT[name];
       const before = await whereOf(page);
       // start: 0..n-1 open, 0 the longest-open. Open entry n: 0 closes.
       await buttons.nth(n).tap();
@@ -228,7 +218,16 @@ for (const [name, emulation] of Object.entries(PHONES)) {
         ),
       );
       expect(await unseen(page)).toEqual([]);
-      // closing by hand frees a slot: the next open closes nothing
+      expect(await whereOf(page)).toEqual(before);
+    });
+
+    test("closing an entry by hand frees a slot: the next open closes nothing", async ({
+      page,
+    }) => {
+      await ready(page, "/timeline/");
+      await warmUpTouch(page);
+      const buttons = toggles(page);
+      const n = LIMIT[name];
       await buttons.nth(0).tap();
       await settle(page);
       expect(await openOnes(page)).toHaveLength(n - 1);
@@ -236,7 +235,16 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       await buttons.nth(free).tap();
       await settle(page);
       expect(await openOnes(page)).toHaveLength(n);
-      // never more than the limit, whichever entries are opened
+    });
+
+    test("never more entries open than the limit, whichever are opened", async ({
+      page,
+    }) => {
+      await ready(page, "/timeline/");
+      await warmUpTouch(page);
+      const buttons = toggles(page);
+      const n = LIMIT[name];
+      const before = await whereOf(page);
       for (let i = 0; i < 5; i++) {
         await buttons.nth(i).tap();
         await settle(page);
@@ -311,19 +319,16 @@ for (const [name, emulation] of Object.entries(PHONES)) {
       await settle(page);
       await page.locator("[data-disclosure=education]").tap();
       await settle(page);
-      expect(await shown(page, "timeline")).toBe(false);
-      expect(await shown(page, "skills")).toBe(false);
-      expect(await shown(page, "education")).toBe(true);
+      expect(await isShown(page, "timeline")).toBe(false);
+      expect(await isShown(page, "skills")).toBe(false);
+      expect(await isShown(page, "education")).toBe(true);
       expect(await unseen(page)).toEqual([]);
       // open, Education's roles page no more than before #108 (#108)
-      await expect(area(page)).toHaveAttribute(
-        "data-screens",
-        String(EDUCATION_OPEN_SCREENS[name as keyof typeof PHONES]),
-      );
+      await expectScreens(page, EDUCATION_OPEN_SCREENS[name]);
       await page.locator("[data-disclosure=education]").tap();
       await settle(page);
-      expect(await shown(page, "education")).toBe(true);
-      expect(await shown(page, "skills")).toBe(true);
+      expect(await isShown(page, "education")).toBe(true);
+      expect(await isShown(page, "skills")).toBe(true);
       expect((await whereOf(page)).screen).toBe(1);
     });
   });
