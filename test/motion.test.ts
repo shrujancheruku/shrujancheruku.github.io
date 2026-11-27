@@ -120,6 +120,15 @@ describe("naming the motion of each window", () => {
     ).toEqual({ a: "re-tiling", b: "closing", c: "opening" });
   });
 
+  test("the new step's windows come first, in tiling order, then those that leave", () => {
+    const ids = planMotion(
+      wide("projects", false, 0),
+      wide("projects", false, 1),
+      false,
+    ).windows.map((w) => w.id);
+    expect(ids).toEqual(["copy-2", "stack", "comp-2", "copy-1", "comp-1"]);
+  });
+
   test("the whole is a re-tiling within a workspace, a change of workspace across one", () => {
     expect(
       planMotion(wide("timeline"), wide("timeline", true), false).motion,
@@ -259,6 +268,35 @@ describe("opening and closing a window", () => {
     expect(
       windows({ ...wide("about"), layout: {} }, wide("about")).about?.edge,
     ).toBe("right");
+  });
+});
+
+describe("a tile collapsed onto an edge", () => {
+  // the window closes into the edge; its neighbour b, where it sits beside
+  // it, says which
+  const tile: [number, number, number, number] = [62, 40, 38, 60];
+  const closing = (beside: Layout) =>
+    windows(
+      placed({ a: tile, ...beside }),
+      placed({ ...(beside.b ? { b: tile } : {}) }),
+    ).a;
+
+  test("keeps the edge's side and loses its extent across it", () => {
+    // no neighbour, and it reaches the right edge: right
+    expect(closing({})?.edge).toBe("right");
+    expect(closing({})?.frame?.to).toEqual([100, 40, 0, 60]);
+    // a neighbour on its right: left
+    const left = closing({ b: [95, 40, 5, 60] });
+    expect(left?.edge).toBe("left");
+    expect(left?.frame?.to).toEqual([62, 40, 0, 60]);
+    // a neighbour below it: top
+    const top = closing({ b: [62, 95, 38, 5] });
+    expect(top?.edge).toBe("top");
+    expect(top?.frame?.to).toEqual([62, 40, 38, 0]);
+    // a neighbour above it: bottom
+    const bottom = closing({ b: [62, 0, 38, 5] });
+    expect(bottom?.edge).toBe("bottom");
+    expect(bottom?.frame?.to).toEqual([62, 100, 38, 0]);
   });
 });
 
@@ -467,6 +505,19 @@ describe("changing workspace", () => {
     expect(
       planMotion(wide("timeline"), wide("timeline", true), false).clipsArea,
     ).toBe(false);
+  });
+
+  test("the written order decides, not the position", () => {
+    const plan = planMotion(
+      placed({ b: [50, 0, 50, 100], a: [0, 0, 50, 100] }),
+      placed({}, firstStepOf(workspaces, ws("contact"))),
+      false,
+    );
+    expect(plan.windows.filter((w) => w.leaves).map((w) => w.id)).toEqual([
+      "b",
+      "a",
+    ]);
+    expect(plan.windows.map((w) => w.slide?.at)).toEqual([0, 0.032]);
   });
 
   test("a jump across several workspaces travels one screen, like a step to the next", () => {
