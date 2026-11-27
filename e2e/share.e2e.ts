@@ -6,7 +6,7 @@ const meta = (page: import("@playwright/test").Page, key: string) =>
     .locator(`meta[property="${key}"], meta[name="${key}"]`)
     .getAttribute("content");
 
-const featured = ["issho", "unmacos", "orca-flow", "rapid-radiology"];
+const featured = ["issho", "rapid-radiology", "orca-flow", "unmacos"];
 
 test("a featured project shares its own card, title and pitch", async ({
   page,
@@ -139,7 +139,7 @@ test("compositions and photos are not in the first load", async ({ page }) => {
   await page.goto("/", { waitUntil: "load" });
   const loadedAt = before.length;
   const first = before.slice(0, loadedAt);
-  for (const name of ["issho", "unmacos", "orca-flow", "rapid-radiology"])
+  for (const name of ["issho", "rapid-radiology", "orca-flow", "unmacos"])
     expect(first.some((u) => u.includes(`/_astro/${name}.`))).toBe(false);
   expect(first.some((u) => /\/_astro\/.+\.(avif|webp|jpe?g)$/.test(u))).toBe(
     false,

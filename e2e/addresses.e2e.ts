@@ -32,7 +32,7 @@ test("a project's address opens its step with the repository name as title", asy
   page,
 }) => {
   await boot(page, "/work/unmacos/");
-  expect(await area(page).getAttribute("data-step")).toBe("3");
+  expect(await area(page).getAttribute("data-step")).toBe("5");
   await expect(page).toHaveTitle("unmacos — Shrujan Cheruku");
   await expect(page.locator('meta[name="description"]')).not.toHaveAttribute(
     "content",
@@ -55,8 +55,8 @@ test("scrolling changes address and title and adds no history entry", async ({
   await expect(page).toHaveTitle("Projects — Shrujan Cheruku");
   await flick(page, { x: 640, y: 400 });
   await settle(page);
-  expect(new URL(page.url()).pathname).toBe("/work/unmacos/");
-  await expect(page).toHaveTitle("unmacos — Shrujan Cheruku");
+  expect(new URL(page.url()).pathname).toBe("/work/rapid-radiology/");
+  await expect(page).toHaveTitle("rapid-radiology — Shrujan Cheruku");
   await page.keyboard.press("ArrowUp");
   await settle(page);
   await page.keyboard.press("ArrowUp");

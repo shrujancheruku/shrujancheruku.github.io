@@ -107,5 +107,5 @@ test("on touch the archive takes the whole workspace", async ({ page }) => {
   expect(Math.round(a?.height ?? 0)).toBe(Math.round(m?.height ?? 1));
   await page.locator(".close").click();
   await page.waitForTimeout(1100);
-  await expect(page).toHaveURL(/\/work\/rapid-radiology\/$/);
+  await expect(page).toHaveURL(/\/work\/unmacos\/$/);
 });

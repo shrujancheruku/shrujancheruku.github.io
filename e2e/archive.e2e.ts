@@ -18,7 +18,7 @@ const archive = (page: Page) => page.locator('[data-window="archive"]');
 test("the line under the last featured project opens the archive; esc closes it and the address returns", async ({
   page,
 }) => {
-  await ready(page, "/work/rapid-radiology/");
+  await ready(page, "/work/unmacos/");
   await page.locator("#archive-more").click();
   await expect(page).toHaveURL(/\/archive\/$/);
   await expect(page).toHaveTitle("Archive — Shrujan Cheruku");
@@ -26,16 +26,16 @@ test("the line under the last featured project opens the archive; esc closes it 
   expect(await shown(page)).toContain("archive");
   await expect(archive(page)).toHaveClass(/focus/);
   await page.keyboard.press("Escape");
-  await expect(page).toHaveURL(/\/work\/rapid-radiology\/$/);
+  await expect(page).toHaveURL(/\/work\/unmacos\/$/);
   await settle(page);
   expect(await shown(page)).not.toContain("archive");
-  await expect(page).toHaveTitle("rapid-radiology — Shrujan Cheruku");
+  await expect(page).toHaveTitle("unmacos — Shrujan Cheruku");
 });
 
 test("it takes the right 58%, the workspace squeezes into the left 42%", async ({
   page,
 }) => {
-  await ready(page, "/work/rapid-radiology/");
+  await ready(page, "/work/unmacos/");
   const area_ = (await area(page).boundingBox()) ?? { width: 0, x: 0 };
   await page.locator("#archive-more").click();
   await settle(page);
@@ -84,11 +84,11 @@ test("there is no status bar item, and the heading and entries are as decided", 
 });
 
 test("✕ closes it", async ({ page }) => {
-  await ready(page, "/work/rapid-radiology/");
+  await ready(page, "/work/unmacos/");
   await page.locator("#archive-more").click();
   await settle(page);
   await archive(page).locator(".close").click();
-  await expect(page).toHaveURL(/\/work\/rapid-radiology\/$/);
+  await expect(page).toHaveURL(/\/work\/unmacos\/$/);
   await settle(page);
   expect(await shown(page)).not.toContain("archive");
 });
@@ -96,7 +96,7 @@ test("✕ closes it", async ({ page }) => {
 test("scrolling to another step closes it and the address follows the step", async ({
   page,
 }) => {
-  await ready(page, "/work/rapid-radiology/");
+  await ready(page, "/work/unmacos/");
   await page.locator("#archive-more").click();
   await settle(page);
   await page.keyboard.press("ArrowDown");
@@ -108,12 +108,12 @@ test("scrolling to another step closes it and the address follows the step", asy
 test("Back after opening closes it; the entry is a history entry", async ({
   page,
 }) => {
-  await ready(page, "/work/rapid-radiology/");
+  await ready(page, "/work/unmacos/");
   await page.locator("#archive-more").click();
   await settle(page);
   await page.goBack();
   await settle(page);
-  await expect(page).toHaveURL(/\/work\/rapid-radiology\/$/);
+  await expect(page).toHaveURL(/\/work\/unmacos\/$/);
   expect(await shown(page)).not.toContain("archive");
   await page.goForward();
   await settle(page);
@@ -130,7 +130,7 @@ test("/archive/ loads the last featured project with the archive open", async ({
     ["archive", "comp-4", "copy-4", "stack"].sort(),
   );
   await page.keyboard.press("Escape");
-  await expect(page).toHaveURL(/\/work\/rapid-radiology\/$/);
+  await expect(page).toHaveURL(/\/work\/unmacos\/$/);
 });
 
 test("/work/<archive slug>/ opens the archive on that entry, titled and described by it", async ({

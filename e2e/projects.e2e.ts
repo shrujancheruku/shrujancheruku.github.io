@@ -1,7 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import { area, ready, settle } from "./helpers";
 
-const SLUGS = ["issho", "unmacos", "orca-flow", "rapid-radiology"];
+const SLUGS = ["issho", "rapid-radiology", "orca-flow", "unmacos"];
 const shown = (page: Page) =>
   page.$$eval(".pane", (els) =>
     els
@@ -37,8 +37,8 @@ test("the copy window shows the counter, name, pitch, proof, links and facts", a
   page,
 }) => {
   await ready(page, "/work/unmacos/");
-  const copy = page.locator('[data-window="copy-2"]');
-  await expect(copy.locator(".kick")).toHaveText("featured 2 / 4");
+  const copy = page.locator('[data-window="copy-4"]');
+  await expect(copy.locator(".kick")).toHaveText("featured 4 / 4");
   await expect(copy.locator("h2")).toHaveText("unmacos");
   expect(
     await copy.locator("h2").evaluate((el) => getComputedStyle(el).fontFamily),
@@ -47,8 +47,8 @@ test("the copy window shows the counter, name, pitch, proof, links and facts", a
     "A keyboard-first desktop for macOS, installed with one command.",
   );
   const proof = await copy.locator(".proof li").allTextContents();
-  expect(proof).toHaveLength(5);
-  for (const line of proof) expect(line.endsWith(".")).toBe(false);
+  expect(proof).toHaveLength(3);
+  for (const line of proof) expect(line.endsWith(".")).toBe(true);
   const links = await copy.locator(".links a").allTextContents();
   expect(links).toEqual(["repository ↗", "live site ↗"]);
   await expect(copy.locator(".facts .version")).toHaveAttribute(
@@ -96,7 +96,7 @@ test("only the last featured project has the archive line, inert for now", async
     "+3 more in the archive →",
   );
   await expect(page.locator("[data-archive-open]")).toHaveCount(2);
-  await ready(page, "/work/rapid-radiology/");
+  await ready(page, "/work/unmacos/");
   await page.locator("#archive-more").click();
   await expect(area(page)).toHaveAttribute("data-step", "5");
 });
@@ -106,11 +106,15 @@ test("each address is titled by the repository and described by the pitch", asyn
 }) => {
   await ready(page, "/work/rapid-radiology/");
   await expect(page).toHaveTitle("rapid-radiology — Shrujan Cheruku");
+  await expect(page.locator('[data-window="copy-2"] .links a')).toHaveText([
+    "repository ↗",
+    "live site ↗",
+  ]);
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
     /shorthand findings into a finished report/,
   );
-  await expect(area(page)).toHaveAttribute("data-step", "5");
+  await expect(area(page)).toHaveAttribute("data-step", "3");
 });
 
 test("a composition slot is told when its step comes on show and goes", async ({
@@ -135,7 +139,7 @@ test("a composition slot is told when its step comes on show and goes", async ({
   await settle(page);
   expect(
     await page.evaluate(() => (window as unknown as { log: string[] }).log),
-  ).toEqual(["leave issho", "enter unmacos"]);
+  ).toEqual(["leave issho", "enter rapid-radiology"]);
   await expect(page.locator('[data-composition="issho"]')).toHaveAttribute(
     "data-active",
     "false",
