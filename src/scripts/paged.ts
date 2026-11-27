@@ -33,11 +33,7 @@ const px = (value: string): number => Number.parseFloat(value) || 0;
  * its area) unseen, then restore it: nothing is painted in between. The one
  * place a window is measured at a tile it is not on.
  */
-export function placedAt<T>(
-  pane: HTMLElement,
-  tile: Tile,
-  read: () => T,
-): T {
+export function placedAt<T>(pane: HTMLElement, tile: Tile, read: () => T): T {
   const style = pane.style.cssText;
   const [left, top, width, height] = tile;
   Object.assign(pane.style, {

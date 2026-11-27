@@ -20,8 +20,8 @@ import {
 } from "../lib/motion";
 import { createNavigator, type Outcome, type Where } from "../lib/navigator";
 import { focusAmong, type Screen } from "../lib/screens";
-import { createStepScreens } from "../lib/step-screens";
 import { windowChanges } from "../lib/signals";
+import { createStepScreens } from "../lib/step-screens";
 import { createSwipe, UNZOOMED } from "../lib/swipe";
 import { createWheelGate } from "../lib/wheel-gate";
 import {
@@ -36,8 +36,8 @@ import {
   tilingOf,
   type Workspace,
 } from "../lib/workspaces";
-import { addresses, model } from "./page-data";
 import { layoutReader } from "./layout-reader";
+import { addresses, model } from "./page-data";
 import { type Paged, pagedOf, showPage } from "./paged";
 
 gsap.registerPlugin(Observer);
