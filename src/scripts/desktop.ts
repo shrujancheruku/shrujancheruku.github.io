@@ -428,7 +428,7 @@ function place(n: number, animate: boolean): void {
   const direction = order >= shownOrder ? 1 : -1;
   const beforeWorkspace = shownWorkspace;
   // a motion still running ends here: its windows go to rest first
-  const interrupted = stopMotion();
+  const stopped = stopMotion();
   turning = [];
 
   const moving = animate && before !== null && !reduced.matches;
@@ -457,7 +457,7 @@ function place(n: number, animate: boolean): void {
       direction,
       sameScreens && !sameLayout,
     );
-  } else if (interrupted) {
+  } else if (stopped) {
     area.dataset.retiling = "false";
     gate.still();
     runWaiting();

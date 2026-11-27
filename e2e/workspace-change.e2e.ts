@@ -278,7 +278,7 @@ test("Back after a workspace change settles on the workspace before with no clon
   await expectNoClone(page);
 });
 
-test("a change interrupted by another leaves no clone and every window at rest", async ({
+test("a change turned back by another leaves no clone and every window at rest", async ({
   page,
 }) => {
   await ready(page, "/");
