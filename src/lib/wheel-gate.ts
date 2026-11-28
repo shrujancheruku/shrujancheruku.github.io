@@ -9,6 +9,11 @@
 // silence, or rises (more than doubles, is big enough to step, and is more
 // per event than the one before) is a new gesture.
 //
+// A trackpad flick speeds up before it slows down, and the gate can step on
+// its way up: 3, 9, 30 steps, and 70 more than doubles. A new flick comes out
+// of a tail that has died down, so a rise is a new gesture only once the
+// event before has fallen to half the gesture's peak or less.
+//
 // On a busy page Chromium coalesces queued wheel events into one: it sums
 // their deltas and keeps the latest one's time. Events queue only while the
 // page is busy, so the caller says how long it was (`stall`, the longest
@@ -83,6 +88,8 @@ export function createWheelGate({
    */
   let cadence = MIN_CADENCE_MS;
   let sum = 0;
+  /** The largest delta of the gesture being stepped: its tail decays from it. */
+  let peak = 0;
 
   const isTail = (
     gap: number,
@@ -97,7 +104,8 @@ export function createWheelGate({
     // tail's merged sum can be many times the event before, but never more
     // per event
     const merged = Math.max(1, Math.min(gap, stall) / cadence);
-    if (size > 2 * was && size >= threshold && size / merged > was)
+    const decayed = 2 * was <= peak;
+    if (decayed && size > 2 * was && size >= threshold && size / merged > was)
       return false;
     if (size === was && gap >= steadyMs && size >= threshold) return false;
     return gap < tailMs || moving;
@@ -125,7 +133,10 @@ export function createWheelGate({
       keep(gap);
 
       if (inTail) {
-        if (tail) return 0;
+        if (tail) {
+          peak = Math.max(peak, Math.abs(delta));
+          return 0;
+        }
         inTail = false;
         sum = 0;
       }
@@ -138,12 +149,15 @@ export function createWheelGate({
       const direction = sum > 0 ? 1 : -1;
       sum = 0;
       inTail = true;
+      peak = Math.abs(delta);
       return direction;
     },
     absorb(time, delta) {
       if (delta === 0) return;
       keep(note(time, delta).gap);
       sum = 0;
+      if (!inTail) peak = 0;
+      peak = Math.max(peak, Math.abs(delta));
       inTail = true;
     },
     moving() {
