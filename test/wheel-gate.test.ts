@@ -165,6 +165,40 @@ describe("the wheel gate", () => {
     });
   });
 
+  describe("a trackpad flick that speeds up before it slows down", () => {
+    // the fingers' push ramps up, so the gate steps on the way up; the rest
+    // of the ramp more than doubles, but it rises out of no decayed tail
+    const ramp = (deltas: number[]): Wheel[] =>
+      deltas.map((d, i) => [i * 16, d]);
+    const RAMPS = {
+      "3, 9, 30, 70, 110": [
+        3, 9, 30, 70, 110, 120, 100, 80, 64, 51, 41, 33, 26, 21, 17, 13, 10, 8,
+        6, 4, 3, 2, 1,
+      ],
+      "1, 4, 18, 45, 95, 140": [
+        1, 4, 18, 45, 95, 140, 120, 96, 77, 61, 49, 39, 31, 25, 20, 16, 12, 9,
+        7, 5, 3, 2, 1,
+      ],
+    };
+    for (const [name, deltas] of Object.entries(RAMPS)) {
+      test(`is one step (${name})`, () => {
+        expect(drive(gate(), ramp(deltas))).toHaveLength(1);
+      });
+      test(`is one step with no motion running (${name})`, () => {
+        const g = gate();
+        expect(ramp(deltas).filter(([t, d]) => g.feed(t, d)).length).toBe(1);
+      });
+    }
+    test("still lets a new flick hard on its tail step", () => {
+      const first = ramp(RAMPS["3, 9, 30, 70, 110"]);
+      const at = (first.at(-1)?.[0] ?? 0) + 40;
+      const second = ramp(RAMPS["3, 9, 30, 70, 110"]).map(
+        ([t, d]): Wheel => [at + t, d],
+      );
+      expect(drive(gate(), [...first, ...second], 200)).toHaveLength(2);
+    });
+  });
+
   test("a new flick out of a decayed tail still steps", () => {
     // the tail has decayed to 20 when a new flick starts at 60
     const events: [number, number][] = [
